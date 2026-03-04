@@ -1,0 +1,5 @@
+{
+  "name": "Seventh Tone News Reader",
+  "description": "An English news reading app featuring articles from Seventh Tone, with offline history tracking.",
+  "requestFramePermissions": []
+}
