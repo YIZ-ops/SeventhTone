@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Search } from "lucide-react";
+import { ChevronLeft, Search } from "lucide-react";
 
 export default function Header() {
   const navigate = useNavigate();
@@ -13,10 +13,10 @@ export default function Header() {
         {isSubPage && (
           <button
             onClick={() => navigate(-1)}
-            className="absolute left-2 p-3 text-gray-500 hover:text-gray-900 transition-all rounded-full hover:bg-gray-100 group z-10"
+            className="absolute left-2 p-3 text-gray-500 hover:text-brand transition-colors group z-10"
             aria-label="Back"
           >
-            <ArrowLeft size={24} className="group-hover:-translate-x-1 transition-transform" />
+            <ChevronLeft size={24} className="group-hover:-translate-x-1 transition-transform" />
           </button>
         )}
 

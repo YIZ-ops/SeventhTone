@@ -339,8 +339,20 @@ export const removeBookmark = (contId: number) => {
 
 export const getBookmarkCategories = (): string[] => {
   const bookmarks = getBookmarks();
-  const categories = new Set(bookmarks.map((b) => b.category));
+  // Filter out empty/falsy categories so deleted-category items (category="") are excluded
+  const categories = new Set(bookmarks.map((b) => b.category).filter(Boolean) as string[]);
   return Array.from(categories);
+};
+
+/** 删除书签分类：将该分类下的书签 category 清空（""），使其只出现在 "All" 视图下 */
+export const reassignBookmarkCategory = (fromCategory: string, defaultCategory = "") => {
+  try {
+    const bookmarks = getBookmarks();
+    const updated = bookmarks.map((b) => (b.category === fromCategory ? { ...b, category: defaultCategory } : b));
+    localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(updated));
+  } catch (e) {
+    console.error("Failed to reassign bookmark category", e);
+  }
 };
 
 // Local storage for highlights
@@ -372,7 +384,15 @@ export const getAllHighlights = (): Highlight[] => {
   }
 };
 
-export const addHighlight = (contId: number, text: string, articleName?: string, start?: number, length?: number) => {
+export const addHighlight = (
+  contId: number,
+  text: string,
+  articleName?: string,
+  start?: number,
+  length?: number,
+  category?: string,
+  thought?: string,
+) => {
   try {
     const allHighlightsStr = localStorage.getItem(HIGHLIGHTS_KEY);
     const allHighlights = allHighlightsStr ? JSON.parse(allHighlightsStr) : {};
@@ -387,6 +407,8 @@ export const addHighlight = (contId: number, text: string, articleName?: string,
       contId,
       text,
       articleName,
+      category: category || "Highlights",
+      thought: thought?.trim() || undefined,
       start,
       length,
       createdAt: Date.now(),
@@ -396,6 +418,35 @@ export const addHighlight = (contId: number, text: string, articleName?: string,
     localStorage.setItem(HIGHLIGHTS_KEY, JSON.stringify(allHighlights));
   } catch (e) {
     console.error("Failed to save highlight", e);
+  }
+};
+
+/** 高亮用到的全部分类（书签分类 + 已有高亮分类，去重） */
+export const getHighlightCategories = (): string[] => {
+  // Only use categories from actual highlights (don't mix in bookmark categories —
+  // that caused deleted highlight-categories to reappear via the bookmark side).
+  const fromHighlights = new Set<string>();
+  getAllHighlights().forEach((h) => {
+    if (h.category) fromHighlights.add(h.category);
+  });
+  // Always offer "Highlights" as the fallback option
+  if (!fromHighlights.has("Highlights")) fromHighlights.add("Highlights");
+  return Array.from(fromHighlights);
+};
+
+/** 删除高亮分类：将该分类下的高亮 category 清空（""），使其只出现在 "All" 视图下 */
+export const reassignHighlightCategory = (fromCategory: string, defaultCategory = "") => {
+  try {
+    const allStr = localStorage.getItem(HIGHLIGHTS_KEY);
+    const all = allStr ? JSON.parse(allStr) : {};
+    for (const contId of Object.keys(all)) {
+      all[contId] = (all[contId] as Highlight[]).map((h) =>
+        (h.category || "Highlights") === fromCategory ? { ...h, category: defaultCategory } : h,
+      );
+    }
+    localStorage.setItem(HIGHLIGHTS_KEY, JSON.stringify(all));
+  } catch (e) {
+    console.error("Failed to reassign highlight category", e);
   }
 };
 
@@ -409,5 +460,26 @@ export const removeHighlight = (contId: number, highlightId: string) => {
     }
   } catch (e) {
     console.error("Failed to remove highlight", e);
+  }
+};
+
+export const updateHighlight = (contId: number, highlightId: string, updates: { thought?: string; category?: string }) => {
+  try {
+    const allHighlightsStr = localStorage.getItem(HIGHLIGHTS_KEY);
+    const allHighlights = allHighlightsStr ? JSON.parse(allHighlightsStr) : {};
+    if (allHighlights[contId]) {
+      allHighlights[contId] = (allHighlights[contId] as Highlight[]).map((h) =>
+        h.id === highlightId
+          ? {
+              ...h,
+              ...(updates.category !== undefined ? { category: updates.category } : {}),
+              thought: updates.thought?.trim() || undefined,
+            }
+          : h,
+      );
+      localStorage.setItem(HIGHLIGHTS_KEY, JSON.stringify(allHighlights));
+    }
+  } catch (e) {
+    console.error("Failed to update highlight", e);
   }
 };

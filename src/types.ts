@@ -54,6 +54,8 @@ export interface Highlight {
   contId: number;
   text: string;
   articleName?: string;
+  category?: string;
+  thought?: string;
   start?: number;
   length?: number;
   createdAt: number;

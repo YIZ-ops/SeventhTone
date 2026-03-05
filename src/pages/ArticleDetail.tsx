@@ -1,11 +1,13 @@
 import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getArticleDetail, addHistory, addBookmark, getBookmarks, removeBookmark, getHighlights, addHighlight, removeHighlight } from "../api/api";
+import { getArticleDetail, addHistory, addBookmark, getBookmarks, removeBookmark, getHighlights, addHighlight, removeHighlight, updateHighlight } from "../api/api";
 import { ArticleDetail, Highlight } from "../types";
 import DOMPurify from "dompurify";
 import Mark from "mark.js";
-import { ArrowLeft, Loader2, Clock, Bookmark, BookmarkCheck, Highlighter, Trash2 } from "lucide-react";
+import { ChevronLeft, Loader2, Clock, Bookmark, BookmarkCheck, Highlighter } from "lucide-react";
 import BookmarkModal from "../components/BookmarkModal";
+import HighlightSaveModal from "../components/HighlightSaveModal";
+import HighlightDetailModal from "../components/HighlightDetailModal";
 import { useSwipeBack } from "../hooks/useSwipeBack";
 
 export default function ArticleDetailView() {
@@ -23,8 +25,11 @@ export default function ArticleDetailView() {
 
   const [highlights, setHighlights] = useState<Highlight[]>([]);
   const [selectionPopup, setSelectionPopup] = useState<{ x: number; y: number; text: string } | null>(null);
-  const [activeHighlightId, setActiveHighlightId] = useState<string | null>(null);
-  const [activeHighlightRect, setActiveHighlightRect] = useState<{ x: number; y: number } | null>(null);
+  // activeHighlight is set directly in handleMarkClick (not via an intermediate
+  // activeHighlightId) so that the scroll-dismiss handler never holds a reference
+  // to it — keyboard appearance causes a scroll event that would otherwise clear
+  // the modal while the user is editing.
+  const [activeHighlight, setActiveHighlight] = useState<Highlight | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -131,49 +136,75 @@ export default function ArticleDetailView() {
     };
   }, []);
 
-  // Dismiss popups on pointerdown outside content area and popup
+  // Dismiss selection popup on pointerdown outside content area and popup
   useEffect(() => {
     const handler = (e: PointerEvent) => {
       const target = e.target as HTMLElement;
       if (target.closest("[data-popup]")) return;
-      if (contentRef.current?.contains(target)) {
-        // Inside content — user may be adjusting selection handles;
-        // only dismiss the highlight-remove popup, keep selection popup alive.
-        setActiveHighlightId(null);
-        return;
-      }
+      if (contentRef.current?.contains(target)) return;
       setSelectionPopup(null);
-      setActiveHighlightId(null);
     };
     document.addEventListener("pointerdown", handler);
     return () => document.removeEventListener("pointerdown", handler);
   }, []);
 
-  // Dismiss popups on scroll
+  // Dismiss the selection popup on scroll (only; activeHighlight modal is intentionally
+  // excluded so keyboard-induced scroll doesn't close it mid-edit).
   useEffect(() => {
-    if (!selectionPopup && !activeHighlightId) return;
-    const handler = () => {
-      setSelectionPopup(null);
-      setActiveHighlightId(null);
-    };
+    if (!selectionPopup) return;
+    const handler = () => setSelectionPopup(null);
     window.addEventListener("scroll", handler, { once: true, passive: true });
     return () => window.removeEventListener("scroll", handler);
-  }, [selectionPopup, activeHighlightId]);
+  }, [selectionPopup]);
 
-  const handleSaveHighlight = useCallback(() => {
-    if (!selectionPopup || !article) return;
-    addHighlight(article.contId, selectionPopup.text, article.name);
-    setHighlights(getHighlights(article.contId));
-    window.getSelection()?.removeAllRanges();
+  const [showHighlightModal, setShowHighlightModal] = useState(false);
+  // Keep a stable copy of the selected text so the modal isn't destroyed when
+  // selectionPopup is cleared (e.g. by the scroll handler when the mobile
+  // keyboard appears and causes a layout/scroll shift).
+  const [pendingHighlightText, setPendingHighlightText] = useState<string | null>(null);
+
+  const handleOpenHighlightModal = useCallback(() => {
+    if (!selectionPopup) return;
+    setPendingHighlightText(selectionPopup.text);
+    // Clear selectionPopup now so the scroll/pointerdown handlers won't
+    // interfere with the modal that is about to open.
     setSelectionPopup(null);
-  }, [selectionPopup, article]);
+    setShowHighlightModal(true);
+  }, [selectionPopup]);
+
+  const handleSaveHighlight = useCallback(
+    (category: string, thought?: string) => {
+      if (!pendingHighlightText || !article) return;
+      addHighlight(article.contId, pendingHighlightText, article.name, undefined, undefined, category, thought);
+      setHighlights(getHighlights(article.contId));
+      window.getSelection()?.removeAllRanges();
+      setPendingHighlightText(null);
+      setShowHighlightModal(false);
+    },
+    [pendingHighlightText, article],
+  );
 
   const handleRemoveHighlight = useCallback(
     (highlightId: string) => {
       if (!article) return;
       removeHighlight(article.contId, highlightId);
       setHighlights(getHighlights(article.contId));
-      setActiveHighlightId(null);
+      setActiveHighlight(null);
+    },
+    [article],
+  );
+
+  const handleUpdateHighlight = useCallback(
+    (highlightId: string, updates: { thought?: string; category?: string }) => {
+      if (!article) return;
+      updateHighlight(article.contId, highlightId, updates);
+      setHighlights(getHighlights(article.contId));
+      // Update the activeHighlight state to reflect the saved changes immediately
+      setActiveHighlight((prev) =>
+        prev && prev.id === highlightId
+          ? { ...prev, ...updates, thought: updates.thought ?? undefined, category: updates.category ?? prev.category }
+          : prev,
+      );
     },
     [article],
   );
@@ -252,14 +283,17 @@ export default function ArticleDetailView() {
       e.stopPropagation();
       const hId = mark.getAttribute("data-highlight-id");
       if (hId) {
-        const rect = mark.getBoundingClientRect();
-        setActiveHighlightId(hId);
-        setActiveHighlightRect({ x: rect.left + rect.width / 2, y: rect.top });
+        // Resolve the highlight object immediately and store it directly.
+        // We intentionally do NOT keep an activeHighlightId in state so that
+        // the scroll-dismiss handler (which fires when the mobile keyboard
+        // appears after the user taps the edit textarea) has nothing to clear.
+        const found = highlights.find((h) => h.id === hId) ?? null;
+        setActiveHighlight(found);
         setSelectionPopup(null);
         window.getSelection()?.removeAllRanges();
       }
     },
-    [],
+    [highlights],
   );
 
   if (loading) {
@@ -296,8 +330,8 @@ export default function ArticleDetailView() {
       {/* Top Navigation */}
       <div className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100 pt-safe">
         <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
-          <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-gray-600 hover:text-brand transition-colors rounded-full hover:bg-brand/5">
-            <ArrowLeft size={24} />
+          <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-gray-500 hover:text-brand transition-colors">
+            <ChevronLeft size={24} />
           </button>
           <div className="flex items-center space-x-2">
             <button
@@ -373,7 +407,7 @@ export default function ArticleDetailView() {
           }}
         >
           <button
-            onClick={handleSaveHighlight}
+            onClick={handleOpenHighlightModal}
             className="flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white text-xs font-semibold rounded-full shadow-xl hover:bg-gray-800 active:scale-95 transition-all"
           >
             <Highlighter size={14} />
@@ -382,28 +416,24 @@ export default function ArticleDetailView() {
         </div>
       )}
 
-      {/* Highlight Remove Popup */}
-      {activeHighlightId && activeHighlightRect && (
-        <div
-          data-popup
-          className="fixed z-[100]"
-          style={{
-            left: Math.max(60, Math.min(activeHighlightRect.x, window.innerWidth - 60)),
-            top: activeHighlightRect.y,
-            transform: activeHighlightRect.y > 60 ? "translate(-50%, -100%) translateY(-10px)" : "translate(-50%, 0) translateY(10px)",
-          }}
-        >
-          <button
-            onClick={() => handleRemoveHighlight(activeHighlightId)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white text-xs font-semibold rounded-full shadow-xl hover:bg-red-600 active:scale-95 transition-all"
-          >
-            <Trash2 size={14} />
-            Remove
-          </button>
-        </div>
+      {/* Highlight Detail Modal */}
+      {activeHighlight && (
+        <HighlightDetailModal
+          highlight={activeHighlight}
+          onClose={() => setActiveHighlight(null)}
+          onDelete={() => handleRemoveHighlight(activeHighlight.id)}
+          onSave={(updates) => handleUpdateHighlight(activeHighlight.id, updates)}
+        />
       )}
 
       {showBookmarkModal && <BookmarkModal onClose={() => setShowBookmarkModal(false)} onSave={handleSaveBookmark} />}
+      {showHighlightModal && pendingHighlightText && (
+        <HighlightSaveModal
+          selectedText={pendingHighlightText}
+          onClose={() => { setShowHighlightModal(false); setPendingHighlightText(null); window.getSelection()?.removeAllRanges(); }}
+          onSave={handleSaveHighlight}
+        />
+      )}
     </div>
   );
 }
