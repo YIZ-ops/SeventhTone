@@ -1,6 +1,6 @@
 import { request } from "../utils/request";
 import { Capacitor, CapacitorHttp } from "@capacitor/core";
-import { ArticleListResponse, ArticleItem, Bookmark, Highlight } from "../types";
+import { ArticleListResponse, ArticleItem, Bookmark, Highlight, WebNode, Category, SearchResponse } from "../types";
 
 const BASE_URL = "https://api.sixthtone.com";
 const SIXTH_TONE_WEB_BASE = "https://www.sixthtone.com";
@@ -161,6 +161,57 @@ const getArticleDetailFromBackendRelay = async (contId: string, backendBase: str
   throw lastError || new Error("Failed to load article detail from backend.");
 };
 
+/** 获取全部节点（分类）原始接口 */
+export const getWebAllNodes = async () => {
+  const res = await request<{ code: number; data: { nodeList: WebNode[] } }>(
+    `${BASE_URL}/node/getWebAllNodes`,
+    { method: "GET" }
+  );
+  if (res?.code !== 200 || !Array.isArray(res?.data?.nodeList)) {
+    throw new Error("Failed to fetch nodes.");
+  }
+  return res;
+};
+
+let categoriesCache: Category[] | null = null;
+
+/** 获取分类列表（映射为前端 Category，带缓存） */
+export const getCategories = async (): Promise<Category[]> => {
+  if (categoriesCache) return categoriesCache;
+  const res = await getWebAllNodes();
+  const list = res.data.nodeList ?? [];
+  categoriesCache = list
+    .filter((node) => node.nodeType === 0 && node.name !== "DAILY TONES")
+    .map((node) => ({
+      id: String(node.nodeId),
+      title: node.name,
+      description: node.description || "",
+      pic: node.pic,
+      tonePic: node.tonePic,
+    }));
+  return categoriesCache;
+};
+
+export interface SearchNewsParams {
+  word: string;
+  pageNum?: number;
+  pageSize?: number;
+  orderType?: number;
+}
+
+/** 搜索新闻：POST /search/news */
+export const searchNews = async (params: SearchNewsParams) => {
+  const { word, pageNum = 1, pageSize = 10, orderType = 1 } = params;
+  const res = await request<SearchResponse>(`${BASE_URL}/search/news`, {
+    method: "POST",
+    body: JSON.stringify({ word, pageNum, pageSize, orderType }),
+  });
+  if (res?.code !== 200 || !res?.data) {
+    throw new Error("Failed to search.");
+  }
+  return res;
+};
+
 export const getArticleList = async (nodeId: string, pageNum: number, pageSize: number = 20) => {
   const res = await request<ArticleListResponse>(`${BASE_URL}/cont/nodeCont/getByNodeId`, {
     method: "POST",
@@ -195,24 +246,54 @@ export const getArticleDetail = async (contId: string) => {
   return await getArticleDetailFromBackendRelay(contId, backendBase, isNative);
 };
 
-// Local storage for history
+// Local storage for history (带阅读时间，用于只显示“今天读过”)
 const HISTORY_KEY = "sixthtone_reading_history";
 
-export const getHistory = (): ArticleItem[] => {
+export interface HistoryEntry {
+  article: ArticleItem;
+  readAt: number;
+}
+
+function getHistoryRaw(): HistoryEntry[] {
   try {
-    const history = localStorage.getItem(HISTORY_KEY);
-    return history ? JSON.parse(history) : [];
+    const raw = localStorage.getItem(HISTORY_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map((item: unknown) => {
+      if (item && typeof item === "object" && "article" in item && "readAt" in item) {
+        return item as HistoryEntry;
+      }
+      return { article: item as ArticleItem, readAt: 0 };
+    });
   } catch (e) {
     console.error("Failed to parse history", e);
     return [];
   }
+}
+
+/** 仅返回今天（本地日期）阅读过的条目（含阅读时间），供 History 页展示 */
+export const getHistoryEntriesToday = (): HistoryEntry[] => {
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const startOfTomorrow = startOfToday + 24 * 60 * 60 * 1000;
+  return getHistoryRaw().filter((e) => e.readAt >= startOfToday && e.readAt < startOfTomorrow);
+};
+
+/** 仅返回今天阅读过的文章列表（兼容用） */
+export const getHistory = (): ArticleItem[] => {
+  return getHistoryEntriesToday().map((e) => e.article);
 };
 
 export const addHistory = (article: ArticleItem) => {
   try {
-    const history = getHistory();
-    const newHistory = [article, ...history.filter((item) => item.contId !== article.contId)].slice(0, 100);
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(newHistory));
+    const raw = getHistoryRaw();
+    const readAt = Date.now();
+    const newRaw = [
+      { article, readAt },
+      ...raw.filter((e) => e.article.contId !== article.contId),
+    ].slice(0, 100);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(newRaw));
   } catch (e) {
     console.error("Failed to save history", e);
   }

@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Search } from "lucide-react";
 
 export default function Header() {
   const navigate = useNavigate();
@@ -9,7 +9,7 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-xl border-b border-gray-200/50 pt-safe shadow-sm">
-      <div className="max-w-4xl mx-auto px-4 h-16 flex items-center relative">
+      <div className="max-w-4xl mx-auto px-4 h-10 flex items-center relative">
         {isSubPage && (
           <button
             onClick={() => navigate(-1)}
@@ -31,11 +31,18 @@ export default function Header() {
           </Link>
         </div>
 
-        <div className="absolute right-4 hidden md:flex items-center space-x-6 text-[10px] font-bold tracking-[0.2em] text-gray-400 uppercase">
-          <Link to="/" className="hover:text-gray-900 transition-colors">
+        <div className="absolute right-4 flex items-center space-x-4 md:space-x-6 text-[10px] font-bold tracking-[0.2em] text-gray-400 uppercase">
+          <Link
+            to="/search"
+            className="p-2 rounded-full hover:bg-gray-100 hover:text-gray-900 transition-colors"
+            aria-label="Search"
+          >
+            <Search size={20} />
+          </Link>
+          <Link to="/" className="hidden md:inline hover:text-gray-900 transition-colors">
             Latest
           </Link>
-          <Link to="/bookmarks" className="hover:text-gray-900 transition-colors">
+          <Link to="/bookmarks" className="hidden md:inline hover:text-gray-900 transition-colors">
             Library
           </Link>
         </div>

@@ -24,18 +24,16 @@ export function useSwipeBack() {
       const dx = touchEnd.x - touchStart.current.x;
       const dy = touchEnd.y - touchStart.current.y;
 
-      // Swipe right (from left to right) to go back - Standard iOS/Android gesture
+      // 从左边缘向右滑：标准边缘返回手势
       if (dx > 70 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-        // Trigger if starting from the left edge (first 60px)
         if (touchStart.current.x < 60) {
           navigate(-1);
         }
       }
 
-      // If the user literally meant "swipe finger to the left" (左滑)
-      // Some users might use this terminology for "going back" in specific apps
+      // 左滑返回：手指向左滑动触发返回（详情页等）
       if (dx < -100 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-        // navigate(-1); // Uncomment if "swipe left" is truly desired for back
+        navigate(-1);
       }
 
       touchStart.current = null;

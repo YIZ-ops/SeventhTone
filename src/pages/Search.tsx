@@ -1,0 +1,209 @@
+import { useState, useCallback } from "react";
+import { Link } from "react-router-dom";
+import DOMPurify from "dompurify";
+import { searchNews } from "../api/api";
+import type { SearchResultItem } from "../types";
+import { Search as SearchIcon, Loader2, ArrowRight } from "lucide-react";
+import { motion } from "motion/react";
+
+const PAGE_SIZE = 10;
+
+const SANITIZE_OPTIONS = {
+  ADD_TAGS: ["font"],
+  ADD_ATTR: ["color"],
+};
+
+const HIGHLIGHT_COLOR = "#065f46"; // 品牌绿，与 brand 一致
+
+function sanitizeHighlightHtml(html: string | undefined): string {
+  if (!html || typeof html !== "string") return "";
+  const sanitized = DOMPurify.sanitize(html, SANITIZE_OPTIONS);
+  // 将接口返回的橙色等高亮统一改为绿色
+  return sanitized.replace(/color\s*=\s*["']?#?[^"'\s]+["']?/gi, `color="${HIGHLIGHT_COLOR}"`);
+}
+
+export default function Search() {
+  const [word, setWord] = useState("");
+  const [submitWord, setSubmitWord] = useState("");
+  const [list, setList] = useState<SearchResultItem[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const doSearch = useCallback(async (searchWord: string, pageNum: number, append: boolean) => {
+    const w = searchWord.trim();
+    if (!w) {
+      setList([]);
+      setHasMore(false);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await searchNews({
+        word: w,
+        pageNum: pageNum,
+        pageSize: PAGE_SIZE,
+        orderType: 1,
+      });
+      const items = res.data?.list ?? [];
+      setList((prev) => (append ? [...prev, ...items] : items));
+      setHasMore(res.data?.hasNext ?? false);
+      setPage(pageNum);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Search failed");
+      if (!append) setList([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const w = word.trim();
+    if (!w) return;
+    setSubmitWord(w);
+    setPage(1);
+    doSearch(w, 1, false);
+  };
+
+  const handleLoadMore = () => {
+    if (!loading && hasMore && submitWord) {
+      doSearch(submitWord, page + 1, true);
+    }
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-6 pb-32">
+      <header className="mb-8">
+        <div className="flex items-center space-x-2 mb-2">
+          <span className="h-px w-8 bg-brand" />
+          <span className="text-xs font-bold tracking-[0.2em] text-brand uppercase">Search</span>
+        </div>
+        <h1 className="text-3xl md:text-4xl font-serif font-bold text-gray-900 tracking-tight">Search</h1>
+      </header>
+
+      <form onSubmit={handleSubmit} className="mb-10">
+        <div className="relative">
+          <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="search"
+            value={word}
+            onChange={(e) => setWord(e.target.value)}
+            placeholder="Search articles..."
+            className="w-full pl-12 pr-5 py-4 rounded-2xl border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand transition-all"
+            autoFocus
+            autoComplete="off"
+          />
+          <button
+            type="submit"
+            disabled={!word.trim() || loading}
+            className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-xl hover:bg-brand transition-colors disabled:opacity-50 disabled:pointer-events-none"
+          >
+            Search
+          </button>
+        </div>
+      </form>
+
+      {error && (
+        <div className="bg-red-50 text-red-600 p-4 rounded-2xl mb-6 text-sm">
+          {error}
+        </div>
+      )}
+
+      {submitWord && !loading && list.length === 0 && !error && (
+        <p className="text-gray-500 text-center py-12">No results for &quot;{submitWord}&quot;</p>
+      )}
+
+      <div className="grid grid-cols-1 gap-6">
+        {list.map((item, index) => {
+          const imgSrc = item.pic || item.appHeadPic;
+          const safeTitle = sanitizeHighlightHtml(item.name);
+          const safeSummary = item.summary ? sanitizeHighlightHtml(item.summary) : "";
+          return (
+            <motion.div
+              key={`${item.contId}-${index}`}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.03 }}
+            >
+              <Link
+                to={`/article/${item.contId}`}
+                className="group block bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-[0_12px_30px_-12px_rgba(0,0,0,0.1)] transition-all active:scale-[0.99]"
+              >
+                {/* 左右布局：图片左侧，标题+时间右侧 */}
+                <div className="flex p-4 gap-4">
+                  <div className="w-24 sm:w-28 shrink-0 aspect-[4/3] rounded-xl bg-gray-100 relative overflow-hidden">
+                    {imgSrc ? (
+                      <img
+                        src={imgSrc}
+                        alt=""
+                        className="absolute inset-0 w-full h-full object-cover"
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center text-gray-300">
+                        <SearchIcon size={22} />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0 flex flex-col justify-center">
+                    {item.nodeInfo?.name && (
+                      <span className="inline-block text-[10px] font-bold tracking-wider text-brand uppercase mb-1">
+                        {item.nodeInfo.name}
+                      </span>
+                    )}
+                    <h3
+                      className="text-base font-serif font-bold text-gray-900 leading-snug group-hover:text-brand transition-colors [&_font]:text-brand"
+                      dangerouslySetInnerHTML={{ __html: safeTitle }}
+                    />
+                    <div className="flex items-center justify-between mt-2">
+                      {item.pubTime && (
+                        <span className="text-xs text-gray-400">{item.pubTime}</span>
+                      )}
+                      <div className="w-8 h-8 rounded-full border border-gray-100 flex items-center justify-center shrink-0 group-hover:bg-brand group-hover:border-brand transition-all">
+                        <ArrowRight size={14} className="text-gray-300 group-hover:text-white transition-colors" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {/* summary 下方整行 */}
+                {safeSummary && (
+                  <div className="px-4 pb-4 pt-0">
+                    <p
+                      className="text-sm text-gray-500 leading-relaxed line-clamp-2 [&_font]:text-brand"
+                      dangerouslySetInnerHTML={{ __html: safeSummary }}
+                    />
+                  </div>
+                )}
+              </Link>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      {loading && (
+        <div className="flex justify-center py-10">
+          <Loader2 className="w-8 h-8 text-brand animate-spin" />
+        </div>
+      )}
+
+      {!loading && hasMore && list.length > 0 && (
+        <div className="flex justify-center mt-8">
+          <button
+            onClick={handleLoadMore}
+            className="px-6 py-3 bg-white border border-gray-200 text-gray-700 font-medium rounded-full hover:bg-gray-50 transition-colors shadow-sm"
+          >
+            Load more
+          </button>
+        </div>
+      )}
+
+      {!loading && !hasMore && list.length > 0 && (
+        <p className="text-center text-gray-400 text-sm mt-8">End of results</p>
+      )}
+    </div>
+  );
+}
