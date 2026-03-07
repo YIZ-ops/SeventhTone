@@ -144,18 +144,18 @@ export default function ArticleList() {
 
   if (categoriesLoading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-slate-900 p-4">
         <Loader2 className="w-10 h-10 text-brand animate-spin mb-4" />
-        <p className="text-gray-500 text-sm">Loading...</p>
+        <p className="text-gray-500 dark:text-gray-400 text-sm">Loading...</p>
       </div>
     );
   }
 
   if (!category) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
-        <div className="bg-white p-8 rounded-2xl shadow-sm text-center max-w-md w-full">
-          <p className="text-red-600 font-medium mb-4">Category not found</p>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-slate-900 p-4">
+        <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm text-center max-w-md w-full">
+          <p className="text-red-600 dark:text-red-400 font-medium mb-4">Category not found</p>
           <button
             onClick={() => navigate("/")}
             className="px-6 py-2 bg-emerald-600 text-white rounded-full font-medium hover:bg-emerald-700 transition-colors"
@@ -171,16 +171,16 @@ export default function ArticleList() {
     <>
       {/* 下滑后出现的固定顶栏 */}
       <header
-        className={`fixed top-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-xl border-b border-gray-200/50 pt-safe shadow-sm transition-all duration-300 ${
+        className={`fixed top-0 left-0 right-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-gray-200/50 dark:border-slate-700/50 pt-safe shadow-sm transition-all duration-300 ${
           headerVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-full pointer-events-none"
         }`}
       >
         <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-center">
           <Link to="/" className="flex items-center space-x-3 group">
-            <div className="w-6 h-6 bg-gray-900 rounded-lg flex items-center justify-center group-hover:bg-brand transition-colors duration-300">
-              <span className="text-white font-serif font-bold text-lg">S</span>
+            <div className="w-6 h-6 bg-gray-900 dark:bg-gray-100 rounded-lg flex items-center justify-center group-hover:bg-brand dark:group-hover:bg-emerald-500 transition-colors duration-300">
+              <span className="text-white dark:text-slate-900 font-serif font-bold text-lg">S</span>
             </div>
-            <span className="text-lg font-serif font-bold tracking-[0.15em] text-gray-900 group-hover:text-brand transition-colors duration-300">
+            <span className="text-lg font-serif font-bold tracking-[0.15em] text-gray-900 dark:text-gray-100 group-hover:text-brand dark:group-hover:text-emerald-400 transition-colors duration-300">
               Seventh Tone
             </span>
           </Link>
@@ -204,7 +204,7 @@ export default function ArticleList() {
 
         {/* Banner：全宽铺满视口，图片居中覆盖 */}
         <div
-          className={`relative w-[100vw] left-1/2 -translate-x-1/2 min-h-[200px] md:min-h-[240px] flex flex-col justify-end px-4 pt-safe pt-12 pb-8 md:px-10 overflow-hidden ${!category.tonePic ? "bg-gray-100" : ""}`}
+          className={`relative w-[100vw] left-1/2 -translate-x-1/2 min-h-[200px] md:min-h-[240px] flex flex-col justify-end px-4 pt-safe pt-12 pb-8 md:px-10 overflow-hidden ${!category.tonePic ? "bg-gray-100 dark:bg-slate-800" : ""}`}
         >
           {category.tonePic && (
             <>
@@ -217,8 +217,8 @@ export default function ArticleList() {
           )}
           <div className="relative z-10 max-w-4xl mx-auto w-full">
             <span className={`inline-block h-px w-6 mb-3 ${category.tonePic ? "bg-white/80" : "bg-brand"}`} />
-            <span className={`block text-[10px] font-bold tracking-[0.3em] uppercase mb-2 ${category.tonePic ? "text-white/90" : "text-gray-500"}`}>Section</span>
-            <h1 className={`text-3xl md:text-5xl font-serif font-bold tracking-tight uppercase ${category.tonePic ? "text-white drop-shadow-md" : "text-gray-900"}`}>
+            <span className={`block text-[10px] font-bold tracking-[0.3em] uppercase mb-2 ${category.tonePic ? "text-white/90" : "text-gray-500 dark:text-gray-400"}`}>Section</span>
+            <h1 className={`text-3xl md:text-5xl font-serif font-bold tracking-tight uppercase ${category.tonePic ? "text-white drop-shadow-md" : "text-gray-900 dark:text-gray-100"}`}>
               {category.title}
             </h1>
           </div>
@@ -226,17 +226,17 @@ export default function ArticleList() {
 
       <div className="max-w-4xl mx-auto px-4 mt-8">
         {category.description && (
-          <p className="text-gray-500 leading-relaxed max-w-2xl text-sm md:text-base italic font-serif mb-10">
+          <p className="text-gray-500 dark:text-gray-400 leading-relaxed max-w-2xl text-sm md:text-base italic font-serif mb-10">
             {category.description}
           </p>
         )}
 
         {error && (
-          <div className="bg-red-50 text-red-600 p-6 rounded-3xl mb-10 text-sm flex items-center justify-between">
+          <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-6 rounded-3xl mb-10 text-sm flex items-center justify-between">
             <span>{error}</span>
             <button
               onClick={() => fetchArticles(page)}
-              className="px-4 py-2 bg-white rounded-full shadow-sm text-xs font-bold uppercase tracking-wider"
+              className="px-4 py-2 bg-white dark:bg-slate-800 rounded-full shadow-sm text-xs font-bold uppercase tracking-wider"
             >
               Retry
             </button>
@@ -266,14 +266,14 @@ export default function ArticleList() {
           <div className="flex justify-center mt-8">
             <button
               onClick={handleLoadMore}
-              className="px-6 py-3 bg-white border border-gray-200 text-gray-700 font-medium rounded-full hover:bg-gray-50 transition-colors shadow-sm"
+              className="px-6 py-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 text-gray-700 dark:text-gray-200 font-medium rounded-full hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
             >
               Load More
             </button>
           </div>
         )}
 
-        {!loading && !hasMore && articles.length > 0 && <p className="text-center text-gray-500 mt-8 text-sm">You've reached the end.</p>}
+        {!loading && !hasMore && articles.length > 0 && <p className="text-center text-gray-500 dark:text-gray-400 mt-8 text-sm">You've reached the end.</p>}
       </div>
       </motion.div>
     </>

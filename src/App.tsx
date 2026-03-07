@@ -24,7 +24,7 @@ function AppContent() {
   const isArticleList = location.pathname.startsWith("/category/");
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 font-sans">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100 font-sans">
       {/* 文章列表页顶栏由 ArticleList 内随滚动显示，此处不渲染 */}
       {!isArticleDetail && !isDailyTones && !isArticleList && <Header />}
       <main className={isArticleDetail || isDailyTones ? "" : "pb-16"}>

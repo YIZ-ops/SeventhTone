@@ -21,3 +21,9 @@ npm install @capacitor/android
 npm run build
 npx cap sync android 
 rerun androidstudio app
+
+
+api:
+https://github.com/meetDeveloper/freeDictionaryAPI
+https://xxapi.cn/doc/englishwords
+https://free-api.com/

@@ -175,20 +175,20 @@ export default function Bookmarks() {
       {/* Page header */}
       <div className="mb-6">
         <div className="flex items-center space-x-2 mb-3">
-          <span className="h-px w-6 bg-brand" />
-          <span className="text-[10px] font-bold tracking-[0.3em] text-brand uppercase">Library</span>
+          <span className="h-px w-6 bg-brand dark:bg-emerald-400" />
+          <span className="text-[10px] font-extrabold tracking-[0.3em] text-brand dark:text-emerald-400 uppercase">Library</span>
         </div>
-        <h1 className="text-4xl md:text-5xl font-serif font-bold text-gray-900 tracking-tight">Collected</h1>
+        <h1 className="text-4xl md:text-5xl font-serif font-bold text-gray-900 dark:text-gray-100 tracking-tight">Collected</h1>
       </div>
 
       {/* Bookmarks / Highlights tab */}
-      <div className="flex rounded-2xl bg-gray-100 p-1 mb-4">
+      <div className="flex rounded-2xl bg-gray-100 dark:bg-slate-700/50 p-1 mb-4">
         <button type="button" onClick={() => setTab("bookmarks")}
-          className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${tab === "bookmarks" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"}`}>
+          className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${tab === "bookmarks" ? "bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 shadow-sm" : "text-gray-500 dark:text-gray-400"}`}>
           Bookmarks {bookmarks.length > 0 && `(${bookmarks.length})`}
         </button>
         <button type="button" onClick={() => setTab("highlights")}
-          className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${tab === "highlights" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"}`}>
+          className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${tab === "highlights" ? "bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 shadow-sm" : "text-gray-500 dark:text-gray-400"}`}>
           Highlights {highlights.length > 0 && `(${highlights.length})`}
         </button>
       </div>
@@ -198,14 +198,14 @@ export default function Bookmarks() {
         <div className="flex gap-2 mb-5">
           <button type="button" onClick={() => setCurrentView("default")}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all ${
-              currentView === "default" ? "bg-gray-900 text-white shadow" : "bg-white border border-gray-100 text-gray-400 hover:text-gray-700 hover:border-gray-300"
+              currentView === "default" ? "bg-gray-900 dark:bg-emerald-600 text-white shadow" : "bg-white dark:bg-slate-700 border border-gray-100 dark:border-slate-600 text-gray-400 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-100 hover:border-gray-300 dark:hover:border-slate-500"
             }`}>
             <List size={13} />
             Default
           </button>
           <button type="button" onClick={() => setCurrentView("grid")}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all ${
-              currentView === "grid" ? "bg-gray-900 text-white shadow" : "bg-white border border-gray-100 text-gray-400 hover:text-gray-700 hover:border-gray-300"
+              currentView === "grid" ? "bg-gray-900 dark:bg-emerald-600 text-white shadow" : "bg-white dark:bg-slate-700 border border-gray-100 dark:border-slate-600 text-gray-400 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-100 hover:border-gray-300 dark:hover:border-slate-500"
             }`}>
             <LayoutGrid size={13} />
             Categories
@@ -217,14 +217,14 @@ export default function Bookmarks() {
       {isDetail && (
         <div className="flex items-center gap-3 mb-5">
           <button type="button" onClick={() => setCurrentView("grid")}
-            className="flex items-center justify-center w-8 h-8 rounded-full bg-white border border-gray-100 shadow-sm text-gray-600 hover:text-brand hover:border-brand/30 transition-colors">
+            className="flex items-center justify-center w-8 h-8 rounded-full bg-white dark:bg-slate-700 border border-gray-100 dark:border-slate-600 shadow-sm text-gray-600 dark:text-gray-300 hover:text-brand dark:hover:text-emerald-400 hover:border-brand/30 dark:hover:border-emerald-500/50 transition-colors">
             <ChevronLeft size={20} />
           </button>
           <div className="flex-1 min-w-0">
             <p className="text-[10px] font-bold text-brand uppercase tracking-widest">Category</p>
-            <h2 className="text-lg font-bold text-gray-900 truncate">{currentView}</h2>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 truncate">{currentView}</h2>
           </div>
-          <span className="text-xs text-gray-400 shrink-0">
+          <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0">
             {tab === "bookmarks" ? filteredBookmarks.length : filteredHighlights.length} items
           </span>
         </div>
@@ -232,21 +232,21 @@ export default function Bookmarks() {
 
       {/* Empty states */}
       {isEmpty && tab === "bookmarks" && (
-        <div className="text-center py-32 bg-white rounded-[2rem] border border-gray-100 shadow-sm">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gray-50 mb-6">
-            <BookmarkIcon size={32} className="text-gray-200" />
+        <div className="text-center py-32 bg-white dark:bg-slate-800 rounded-[2rem] border border-gray-100 dark:border-slate-600 shadow-sm">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gray-50 dark:bg-slate-700 mb-6">
+            <BookmarkIcon size={32} className="text-gray-200 dark:text-gray-500" />
           </div>
-          <h2 className="text-2xl font-serif font-bold text-gray-900 mb-2">No bookmarks yet</h2>
-          <p className="text-gray-400 text-sm max-w-xs mx-auto">Save articles to your collection from the article page.</p>
+          <h2 className="text-2xl font-serif font-bold text-gray-900 dark:text-gray-100 mb-2">No bookmarks yet</h2>
+          <p className="text-gray-400 dark:text-gray-500 text-sm max-w-xs mx-auto">Save articles to your collection from the article page.</p>
         </div>
       )}
       {isEmpty && tab === "highlights" && (
-        <div className="text-center py-32 bg-white rounded-[2rem] border border-gray-100 shadow-sm">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gray-50 mb-6">
-            <Highlighter size={32} className="text-gray-200" />
+        <div className="text-center py-32 bg-white dark:bg-slate-800 rounded-[2rem] border border-gray-100 dark:border-slate-600 shadow-sm">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gray-50 dark:bg-slate-700 mb-6">
+            <Highlighter size={32} className="text-gray-200 dark:text-gray-500" />
           </div>
-          <h2 className="text-2xl font-serif font-bold text-gray-900 mb-2">No highlights yet</h2>
-          <p className="text-gray-400 text-sm max-w-xs mx-auto">Select text in an article and tap Highlight to save quotes.</p>
+          <h2 className="text-2xl font-serif font-bold text-gray-900 dark:text-gray-100 mb-2">No highlights yet</h2>
+          <p className="text-gray-400 dark:text-gray-500 text-sm max-w-xs mx-auto">Select text in an article and tap Highlight to save quotes.</p>
         </div>
       )}
 
@@ -266,7 +266,7 @@ export default function Bookmarks() {
                         <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/30 to-black/10" />
                       </>
                     ) : (
-                      <div className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-50" />
+                      <div className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-50 dark:from-slate-700 dark:to-slate-800" />
                     )}
                     {/* Delete btn */}
                     <button type="button"
@@ -276,8 +276,8 @@ export default function Bookmarks() {
                     </button>
                     {/* Content */}
                     <div className="absolute bottom-0 left-0 right-0 p-3">
-                      <p className={`text-sm font-bold leading-snug truncate ${cat.cover ? "text-white" : "text-gray-900"}`}>{cat.name}</p>
-                      <p className={`text-xs mt-0.5 ${cat.cover ? "text-white/60" : "text-gray-400"}`}>{cat.count} {cat.count === 1 ? "item" : "items"}</p>
+                      <p className={`text-sm font-bold leading-snug truncate ${cat.cover ? "text-white" : "text-gray-900 dark:text-gray-100"}`}>{cat.name}</p>
+                      <p className={`text-xs mt-0.5 ${cat.cover ? "text-white/60" : "text-gray-400 dark:text-gray-500"}`}>{cat.count} {cat.count === 1 ? "item" : "items"}</p>
                     </div>
                   </div>
                 ))}
@@ -288,7 +288,7 @@ export default function Bookmarks() {
               <div className="grid grid-cols-2 gap-3">
                 {namedHighlightCats.map((cat) => (
                   <div key={cat.name}
-                    className="relative rounded-2xl overflow-hidden min-h-[140px] bg-white border border-gray-100 cursor-pointer group hover:shadow-md hover:border-brand/20 transition-all p-4 flex flex-col"
+                    className="relative rounded-2xl overflow-hidden min-h-[140px] bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-600 cursor-pointer group hover:shadow-md hover:border-brand/20 dark:hover:border-emerald-500/30 transition-all p-4 flex flex-col"
                     onClick={() => setHighlightView(cat.name)}>
                     {/* Delete btn */}
                     <button type="button"
@@ -298,13 +298,13 @@ export default function Bookmarks() {
                     </button>
                     {/* Preview quote */}
                     {cat.preview && (
-                      <p className="text-xs text-gray-400 font-serif italic line-clamp-3 flex-1 mb-2 leading-relaxed">
+                      <p className="text-xs text-gray-400 dark:text-gray-500 font-serif italic line-clamp-3 flex-1 mb-2 leading-relaxed">
                         &ldquo;{cat.preview}&rdquo;
                       </p>
                     )}
                     <div className="mt-auto">
-                      <p className="text-sm font-bold text-gray-900 truncate">{cat.name}</p>
-                      <p className="text-xs text-brand/60 mt-0.5">{cat.count} {cat.count === 1 ? "highlight" : "highlights"}</p>
+                      <p className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{cat.name}</p>
+                      <p className="text-xs text-brand/60 dark:text-emerald-400/70 mt-0.5">{cat.count} {cat.count === 1 ? "highlight" : "highlights"}</p>
                     </div>
                   </div>
                 ))}
@@ -318,17 +318,17 @@ export default function Bookmarks() {
           <motion.div key={`list-${currentView}`} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }} transition={{ duration: 0.18 }}>
             {/* Empty inside category */}
             {isDetail && tab === "bookmarks" && filteredBookmarks.length === 0 && (
-              <div className="text-center py-20 text-gray-400 text-sm">No bookmarks in this category.</div>
+              <div className="text-center py-20 text-gray-400 dark:text-gray-500 text-sm">No bookmarks in this category.</div>
             )}
             {isDetail && tab === "highlights" && filteredHighlights.length === 0 && (
-              <div className="text-center py-20 text-gray-400 text-sm">No highlights in this category.</div>
+              <div className="text-center py-20 text-gray-400 dark:text-gray-500 text-sm">No highlights in this category.</div>
             )}
 
             <div className="space-y-3">
               {tab === "bookmarks" && filteredBookmarks.map((bookmark, index) => (
                 <motion.div key={bookmark.article.contId}
                   initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.03 }}
-                  className="bg-white rounded-xl border border-gray-100 hover:shadow-sm transition-all overflow-hidden">
+                  className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-600 hover:shadow-sm transition-all overflow-hidden">
                   <div className="flex items-center justify-between px-3 pt-2.5 pb-1.5">
                     <div className="flex items-center gap-1.5 text-[11px] text-gray-400">
                       <Clock size={10} className="shrink-0" />
@@ -343,7 +343,7 @@ export default function Bookmarks() {
                     <img src={bookmark.article.pic || bookmark.article.appHeadPic} alt={bookmark.article.name}
                       className="w-20 h-20 rounded-lg object-cover shrink-0 bg-gray-100" loading="lazy" referrerPolicy="no-referrer" />
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-semibold text-gray-900 line-clamp-2 mb-1.5 group-hover:text-brand transition-colors">
+                      <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 line-clamp-2 mb-1.5 group-hover:text-brand dark:group-hover:text-emerald-400 transition-colors">
                         {bookmark.article.name}
                       </h3>
                       <div className="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 text-[11px] text-gray-400">
@@ -359,32 +359,32 @@ export default function Bookmarks() {
 
               {tab === "highlights" && filteredHighlights.map((h, index) => (
                 <motion.div key={h.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.03 }}>
-                  <div className="bg-white rounded-2xl border border-gray-100 hover:shadow-sm transition-all overflow-hidden">
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-600 hover:shadow-sm transition-all overflow-hidden">
                     <div className="flex items-center justify-between px-4 pt-3 pb-1">
-                      <div className="flex items-center gap-1.5 text-[11px] text-gray-400">
+                      <div className="flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500">
                         <Clock size={10} className="shrink-0" />
                         <span>{timeAgo(h.createdAt)}</span>
                         {h.category && (
-                          <><span className="text-gray-200">·</span><span className="text-brand font-semibold">{h.category}</span></>
+                          <><span className="text-gray-200 dark:text-gray-600">·</span><span className="text-brand dark:text-emerald-400 font-semibold">{h.category}</span></>
                         )}
                       </div>
                       <div className="flex gap-0.5">
                         <button onClick={() => setActiveQuote(h)}
-                          className="p-1.5 text-gray-300 hover:text-brand transition-colors rounded-full hover:bg-brand/5" title="Generate Quote Image">
+                          className="p-1.5 text-gray-300 dark:text-gray-500 hover:text-brand dark:hover:text-emerald-400 transition-colors rounded-full hover:bg-brand/5 dark:hover:bg-emerald-500/10" title="Generate Quote Image">
                           <ImageIcon size={14} />
                         </button>
                         <button onClick={(e) => handleRemoveHighlight(e, h.contId, h.id)}
-                          className="p-1.5 text-gray-300 hover:text-red-500 transition-colors rounded-full hover:bg-red-50" title="Remove Highlight">
+                          className="p-1.5 text-gray-300 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors rounded-full hover:bg-red-50 dark:hover:bg-red-900/30" title="Remove Highlight">
                           <Trash2 size={14} />
                         </button>
                       </div>
                     </div>
                     <Link to={`/article/${h.contId}`} className="block px-4 pb-4 pt-0">
                       <div className="relative pl-8">
-                        <span className="absolute left-0 top-0 text-3xl font-serif text-brand/25 leading-none select-none" aria-hidden>&ldquo;</span>
-                        <p className="text-sm text-gray-700 font-serif leading-relaxed italic line-clamp-3">{h.text}</p>
-                        {h.thought && <p className="text-sm text-gray-500 mt-2 line-clamp-2">&mdash; {h.thought}</p>}
-                        <span className="text-[11px] text-brand font-medium mt-2 block">{h.articleName || "Unknown article"}</span>
+                        <span className="absolute left-0 top-0 text-3xl font-serif text-brand/25 dark:text-emerald-400/25 leading-none select-none" aria-hidden>&ldquo;</span>
+                        <p className="text-sm text-gray-700 dark:text-gray-200 font-serif leading-relaxed italic line-clamp-3">{h.text}</p>
+                        {h.thought && <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 line-clamp-2">&mdash; {h.thought}</p>}
+                        <span className="text-[11px] text-brand dark:text-emerald-400 font-medium mt-2 block">{h.articleName || "Unknown article"}</span>
                       </div>
                     </Link>
                   </div>

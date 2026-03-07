@@ -54,31 +54,31 @@ export default function ConfirmModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 8 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="relative w-full max-w-sm bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden"
+            className="relative w-full max-w-sm bg-white dark:bg-slate-800 rounded-3xl shadow-xl border border-gray-100 dark:border-slate-600 overflow-hidden"
           >
             <div className="p-6 sm:p-8 text-center">
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gray-100 mb-5">
-                <AlertCircle size={28} className={variant === "danger" ? "text-red-500" : "text-gray-600"} />
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gray-100 dark:bg-slate-700 mb-5">
+                <AlertCircle size={28} className={variant === "danger" ? "text-red-500" : "text-gray-600 dark:text-gray-400"} />
               </div>
-              <h3 className="text-lg font-serif font-bold text-gray-900 mb-2">{title}</h3>
-              <p className="text-sm text-gray-500 leading-relaxed">{message}</p>
+              <h3 className="text-lg font-serif font-bold text-gray-900 dark:text-gray-100 mb-2">{title}</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{message}</p>
             </div>
-            <div className="flex border-t border-gray-100">
+            <div className="flex border-t border-gray-100 dark:border-slate-600">
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 py-4 text-sm font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-50 transition-colors"
+                className="flex-1 py-4 text-sm font-semibold text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
               >
                 Cancel
               </button>
-              <span className="w-px bg-gray-100" />
+              <span className="w-px bg-gray-100 dark:bg-slate-600" />
               <button
                 type="button"
                 onClick={handleConfirm}
                 className={`flex-1 py-4 text-sm font-semibold transition-colors ${
                   variant === "danger"
-                    ? "text-red-600 hover:bg-red-50 hover:text-red-700"
-                    : "text-gray-900 hover:bg-gray-100"
+                    ? "text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-900/30 dark:hover:text-red-300"
+                    : "text-gray-900 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-slate-700"
                 }`}
               >
                 {confirmLabel}

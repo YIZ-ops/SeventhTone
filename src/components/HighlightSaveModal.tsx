@@ -42,35 +42,35 @@ export default function HighlightSaveModal({ selectedText, onClose, onSave }: Pr
       onClick={() => { if (!justOpenedRef.current) onClose(); }}
     >
       <div
-        className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-sm overflow-hidden shadow-2xl animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200"
+        className="bg-white dark:bg-slate-800 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-sm overflow-hidden shadow-2xl animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-4 border-b border-gray-100">
-          <h3 className="font-semibold text-gray-900">Save Highlight</h3>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
+        <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-slate-600">
+          <h3 className="font-semibold text-gray-900 dark:text-gray-100">Save Highlight</h3>
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors">
             <X size={20} />
           </button>
         </div>
 
         <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
           <div>
-            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">Quote</label>
-            <p className="text-sm text-gray-700 font-serif italic line-clamp-3 bg-gray-50 rounded-xl p-3">&ldquo;{selectedText}&rdquo;</p>
+            <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1.5">Quote</label>
+            <p className="text-sm text-gray-700 dark:text-gray-200 font-serif italic line-clamp-3 bg-gray-50 dark:bg-slate-700/50 rounded-xl p-3">&ldquo;{selectedText}&rdquo;</p>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">Your thought (optional)</label>
+            <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1.5">Your thought (optional)</label>
             <textarea
               value={thought}
               onChange={(e) => setThought(e.target.value)}
               placeholder="Add a note or idea..."
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand resize-none"
+              className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 rounded-xl text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 bg-white dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-brand/30 dark:focus:ring-emerald-500/30 focus:border-brand dark:focus:border-emerald-500 resize-none"
               rows={3}
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">Category</label>
+            <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1.5">Category</label>
             {isNewCategory ? (
               <div className="space-y-2">
                 <input
@@ -78,13 +78,13 @@ export default function HighlightSaveModal({ selectedText, onClose, onSave }: Pr
                   value={newCategoryName}
                   onChange={(e) => setNewCategoryName(e.target.value)}
                   placeholder="Category name"
-                  className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand"
+                  className="w-full px-3 py-2.5 border border-gray-200 dark:border-slate-600 rounded-xl text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-brand/30 dark:focus:ring-emerald-500/30 focus:border-brand dark:focus:border-emerald-500"
                   autoFocus
                 />
                 <button
                   type="button"
                   onClick={() => { setIsNewCategory(false); setNewCategoryName(""); }}
-                  className="text-xs text-gray-500 hover:text-gray-700"
+                  className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                 >
                   Cancel
                 </button>
@@ -97,7 +97,7 @@ export default function HighlightSaveModal({ selectedText, onClose, onSave }: Pr
                     type="button"
                     onClick={() => setSelectedCategory(cat)}
                     className={`px-4 py-2 rounded-full text-xs font-semibold transition-all ${
-                      selectedCategory === cat ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      selectedCategory === cat ? "bg-gray-900 dark:bg-emerald-600 text-white" : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600"
                     }`}
                   >
                     {cat}
@@ -106,7 +106,7 @@ export default function HighlightSaveModal({ selectedText, onClose, onSave }: Pr
                 <button
                   type="button"
                   onClick={() => setIsNewCategory(true)}
-                  className="px-4 py-2 rounded-full text-xs font-semibold border border-dashed border-gray-300 text-gray-400 hover:border-brand hover:text-brand transition-all flex items-center gap-1"
+                  className="px-4 py-2 rounded-full text-xs font-semibold border border-dashed border-gray-300 dark:border-slate-500 text-gray-400 dark:text-gray-500 hover:border-brand dark:hover:border-emerald-500 hover:text-brand dark:hover:text-emerald-400 transition-all flex items-center gap-1"
                 >
                   <Plus size={12} />
                   New
@@ -116,17 +116,17 @@ export default function HighlightSaveModal({ selectedText, onClose, onSave }: Pr
           </div>
         </div>
 
-        <div className="px-4 pt-4 pb-safe-or-4 border-t border-gray-100 flex gap-3">
+        <div className="px-4 pt-4 pb-safe-or-4 border-t border-gray-100 dark:border-slate-600 flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 py-2.5 text-sm font-semibold text-gray-500 rounded-full border border-gray-200 hover:bg-gray-50 transition-colors"
+            className="flex-1 py-2.5 text-sm font-semibold text-gray-500 dark:text-gray-400 rounded-full border border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={isNewCategory && !newCategoryName.trim()}
-            className="flex-1 py-2.5 text-sm font-semibold text-white bg-gray-900 rounded-full hover:bg-brand transition-colors disabled:opacity-50"
+            className="flex-1 py-2.5 text-sm font-semibold text-white bg-gray-900 dark:bg-emerald-600 rounded-full hover:bg-brand dark:hover:bg-emerald-500 transition-colors disabled:opacity-50"
           >
             Save
           </button>

@@ -78,28 +78,28 @@ export default function Search() {
     <div className="max-w-4xl mx-auto px-4 py-6 pb-32">
       <header className="mb-8">
         <div className="flex items-center space-x-2 mb-2">
-          <span className="h-px w-8 bg-brand" />
-          <span className="text-xs font-bold tracking-[0.2em] text-brand uppercase">Search</span>
+          <span className="h-px w-8 bg-brand dark:bg-emerald-400" />
+          <span className="text-xs font-extrabold tracking-[0.2em] text-brand dark:text-emerald-400 uppercase">Search</span>
         </div>
-        <h1 className="text-3xl md:text-4xl font-serif font-bold text-gray-900 tracking-tight">Search</h1>
+        <h1 className="text-3xl md:text-4xl font-serif font-bold text-gray-900 dark:text-gray-100 tracking-tight">Search</h1>
       </header>
 
       <form onSubmit={handleSubmit} className="mb-10">
         <div className="relative">
-          <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
           <input
             type="search"
             value={word}
             onChange={(e) => setWord(e.target.value)}
             placeholder="Search articles..."
-            className="w-full pl-12 pr-5 py-4 rounded-2xl border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand transition-all"
+            className="w-full pl-12 pr-5 py-4 rounded-2xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand transition-all"
             autoFocus
             autoComplete="off"
           />
           <button
             type="submit"
             disabled={!word.trim() || loading}
-            className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-xl hover:bg-brand transition-colors disabled:opacity-50 disabled:pointer-events-none"
+            className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-2 bg-gray-900 dark:bg-emerald-600 text-white text-sm font-medium rounded-xl hover:bg-brand dark:hover:bg-emerald-500 transition-colors disabled:opacity-50 disabled:pointer-events-none"
           >
             Search
           </button>
@@ -107,13 +107,13 @@ export default function Search() {
       </form>
 
       {error && (
-        <div className="bg-red-50 text-red-600 p-4 rounded-2xl mb-6 text-sm">
+        <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-4 rounded-2xl mb-6 text-sm">
           {error}
         </div>
       )}
 
       {submitWord && !loading && list.length === 0 && !error && (
-        <p className="text-gray-500 text-center py-12">No results for &quot;{submitWord}&quot;</p>
+        <p className="text-gray-500 dark:text-gray-400 text-center py-12">No results for &quot;{submitWord}&quot;</p>
       )}
 
       <div className="grid grid-cols-1 gap-6">
@@ -130,11 +130,11 @@ export default function Search() {
             >
               <Link
                 to={`/article/${item.contId}`}
-                className="group block bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-[0_12px_30px_-12px_rgba(0,0,0,0.1)] transition-all active:scale-[0.99]"
+                className="group block bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-600 overflow-hidden hover:shadow-[0_12px_30px_-12px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_12px_30px_-12px_rgba(0,0,0,0.3)] transition-all active:scale-[0.99]"
               >
                 {/* 左右布局：图片左侧，标题+时间右侧 */}
                 <div className="flex p-4 gap-4">
-                  <div className="w-24 sm:w-28 shrink-0 aspect-[4/3] rounded-xl bg-gray-100 relative overflow-hidden">
+                  <div className="w-24 sm:w-28 shrink-0 aspect-[4/3] rounded-xl bg-gray-100 dark:bg-slate-700 relative overflow-hidden">
                     {imgSrc ? (
                       <img
                         src={imgSrc}
@@ -156,7 +156,7 @@ export default function Search() {
                       </span>
                     )}
                     <h3
-                      className="text-base font-serif font-bold text-gray-900 leading-snug group-hover:text-brand transition-colors [&_font]:text-brand"
+                      className="text-base font-serif font-bold text-gray-900 dark:text-gray-100 leading-snug group-hover:text-brand dark:group-hover:text-emerald-400 transition-colors [&_font]:text-brand"
                       dangerouslySetInnerHTML={{ __html: safeTitle }}
                     />
                     <div className="flex items-center justify-between mt-2">

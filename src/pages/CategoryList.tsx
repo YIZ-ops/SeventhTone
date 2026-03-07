@@ -21,7 +21,7 @@ export default function CategoryList() {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8 pb-32 flex flex-col items-center justify-center min-h-[40vh]">
         <Loader2 className="w-10 h-10 text-brand animate-spin mb-4" />
-        <p className="text-gray-500 text-sm">Loading sections...</p>
+        <p className="text-gray-500 dark:text-gray-400 text-sm">Loading sections...</p>
       </div>
     );
   }
@@ -29,7 +29,7 @@ export default function CategoryList() {
   if (error) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8 pb-32 flex flex-col items-center justify-center min-h-[40vh]">
-        <p className="text-red-600 mb-4">{error}</p>
+        <p className="text-red-600 dark:text-red-400 mb-4">{error}</p>
         <button
           onClick={() => {
             setLoading(true);
@@ -51,10 +51,10 @@ export default function CategoryList() {
     <div className="max-w-4xl mx-auto px-4 py-8 pb-32">
       <header className="mb-12">
         <div className="flex items-center space-x-2 mb-2">
-          <span className="h-px w-8 bg-brand"></span>
-          <span className="text-xs font-bold tracking-[0.2em] text-brand uppercase">Explore</span>
+          <span className="h-px w-8 bg-brand dark:bg-emerald-400"></span>
+          <span className="text-xs font-extrabold tracking-[0.2em] text-brand dark:text-emerald-400 uppercase">Explore</span>
         </div>
-        <h1 className="text-4xl md:text-5xl font-serif font-bold text-gray-900 tracking-tight">Sections</h1>
+        <h1 className="text-4xl md:text-5xl font-serif font-bold text-gray-900 dark:text-gray-100 tracking-tight">Sections</h1>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -62,7 +62,7 @@ export default function CategoryList() {
           <motion.div key={category.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }}>
             <Link
               to={`/category/${category.id}`}
-              className={`group block relative h-full min-h-[200px] p-8 rounded-3xl border border-gray-100 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.07)] hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)] transition-all duration-500 active:scale-[0.98] overflow-hidden ${!category.tonePic ? "bg-white" : ""}`}
+              className={`group block relative h-full min-h-[200px] p-8 rounded-3xl border border-gray-100 dark:border-slate-700 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.07)] dark:shadow-none hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)] dark:hover:shadow-none transition-all duration-500 active:scale-[0.98] overflow-hidden ${!category.tonePic ? "bg-white dark:bg-slate-800" : ""}`}
             >
               {/* 有 tonePic 时：背景图 + 渐变遮罩，白色文字 */}
               {category.tonePic && (
@@ -79,10 +79,10 @@ export default function CategoryList() {
                 <span className={`inline-block text-[10px] font-bold tracking-[0.2em] uppercase mb-4 transition-colors ${category.tonePic ? "text-white/80 group-hover:text-white" : "text-gray-400 group-hover:text-brand"}`}>
                   {index + 1 < 10 ? `0${index + 1}` : index + 1}
                 </span>
-                <h2 className={`text-2xl font-bold mb-4 tracking-tight group-hover:translate-x-1 transition-transform duration-300 ${category.tonePic ? "text-white drop-shadow-sm" : "text-emerald-600"}`}>
+                <h2 className={`text-2xl font-bold mb-4 tracking-tight group-hover:translate-x-1 transition-transform duration-300 ${category.tonePic ? "text-white drop-shadow-sm" : "text-emerald-600 dark:text-emerald-400"}`}>
                   {category.title}
                 </h2>
-                <p className={`leading-relaxed text-sm md:text-base line-clamp-3 transition-colors ${category.tonePic ? "text-white/90 group-hover:text-white drop-shadow-sm" : "text-gray-500 group-hover:text-gray-600"}`}>
+                <p className={`leading-relaxed text-sm md:text-base line-clamp-3 transition-colors ${category.tonePic ? "text-white/90 group-hover:text-white drop-shadow-sm" : "text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300"}`}>
                   {category.description}
                 </p>
               </div>

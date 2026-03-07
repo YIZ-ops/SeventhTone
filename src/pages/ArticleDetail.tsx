@@ -4,11 +4,90 @@ import { getArticleDetail, addHistory, addBookmark, getBookmarks, removeBookmark
 import { ArticleDetail, Highlight } from "../types";
 import DOMPurify from "dompurify";
 import Mark from "mark.js";
-import { ChevronLeft, Loader2, Clock, Bookmark, BookmarkCheck, Highlighter } from "lucide-react";
+import { ChevronLeft, Loader2, Clock, Bookmark, BookmarkCheck, Highlighter, X } from "lucide-react";
 import BookmarkModal from "../components/BookmarkModal";
 import HighlightSaveModal from "../components/HighlightSaveModal";
 import HighlightDetailModal from "../components/HighlightDetailModal";
 import { useSwipeBack } from "../hooks/useSwipeBack";
+import { request } from "../utils/request";
+
+// 英语单词详解 API (v2.xxapi.cn) 响应类型
+interface DictPhrase {
+  p_cn: string;
+  p_content: string;
+}
+interface DictRelWordHwd {
+  hwd: string;
+  tran: string;
+}
+interface DictRelWord {
+  Hwds: DictRelWordHwd[];
+  Pos: string;
+}
+interface DictSentence {
+  s_cn: string;
+  s_content: string;
+}
+interface DictSynonymHwd {
+  word: string;
+}
+interface DictSynonym {
+  Hwds: DictSynonymHwd[];
+  pos: string;
+  tran: string;
+}
+interface DictTranslation {
+  pos: string;
+  tran_cn: string;
+}
+interface DictData {
+  word: string;
+  bookId?: string;
+  ukphone?: string;
+  ukspeech?: string;
+  usphone?: string;
+  usspeech?: string;
+  phrases?: DictPhrase[];
+  relWords?: DictRelWord[];
+  sentences?: DictSentence[];
+  synonyms?: DictSynonym[];
+  translations?: DictTranslation[];
+}
+interface DictApiResponse {
+  code: number;
+  msg: string;
+  data?: DictData;
+}
+
+const DICT_API_BASE = "https://v2.xxapi.cn/api/englishwords";
+
+function getWordAtPoint(clientX: number, clientY: number): { word: string; rect: DOMRect } | null {
+  const doc = document;
+  let range: Range | null = null;
+  if (doc.caretRangeFromPoint) {
+    range = doc.caretRangeFromPoint(clientX, clientY);
+  } else if (doc.caretPositionFromPoint) {
+    const pos = (doc as Document & { caretPositionFromPoint(x: number, y: number): { offsetNode: Node; offset: number } | null }).caretPositionFromPoint(clientX, clientY);
+    if (!pos) return null;
+    range = doc.createRange();
+    range.setStart(pos.offsetNode, pos.offset);
+    range.setEnd(pos.offsetNode, pos.offset);
+  }
+  if (!range) return null;
+  const node = range.startContainer;
+  if (node.nodeType !== Node.TEXT_NODE) return null;
+  const text = node.textContent || "";
+  const offset = range.startOffset;
+  const before = text.slice(0, offset).match(/([a-zA-Z'-]*)$/);
+  const after = text.slice(offset).match(/^([a-zA-Z'-]*)/);
+  const start = offset - (before ? before[1].length : 0);
+  const end = offset + (after ? after[1].length : 0);
+  const word = text.slice(start, end).replace(/^[-']+|[-']+$/g, "").trim();
+  if (!word || word.length < 2) return null;
+  range.setStart(node, start);
+  range.setEnd(node, end);
+  return { word, rect: range.getBoundingClientRect() };
+}
 
 export default function ArticleDetailView() {
   const { id } = useParams<{ id: string }>();
@@ -31,6 +110,13 @@ export default function ArticleDetailView() {
   // the modal while the user is editing.
   const [activeHighlight, setActiveHighlight] = useState<Highlight | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const dictAudioRef = useRef<HTMLAudioElement>(null);
+
+  // Dictionary lookup popup (click word to show definition) — declared early so useEffects below can reference it
+  const [dictPopup, setDictPopup] = useState<{ x: number; y: number; word: string } | null>(null);
+  const [dictData, setDictData] = useState<DictData | null>(null);
+  const [dictLoading, setDictLoading] = useState(false);
+  const [dictError, setDictError] = useState<string | null>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -115,7 +201,6 @@ export default function ArticleDetailView() {
       const range = sel.getRangeAt(0);
       const rect = range.getBoundingClientRect();
       setSelectionPopup({ x: rect.left + rect.width / 2, y: rect.top, text });
-      setActiveHighlightId(null);
     };
 
     const onSelectionChange = () => {
@@ -136,26 +221,30 @@ export default function ArticleDetailView() {
     };
   }, []);
 
-  // Dismiss selection popup on pointerdown outside content area and popup
+  // Dismiss selection popup and dictionary popup on pointerdown outside content area and popups
   useEffect(() => {
     const handler = (e: PointerEvent) => {
       const target = e.target as HTMLElement;
       if (target.closest("[data-popup]")) return;
       if (contentRef.current?.contains(target)) return;
       setSelectionPopup(null);
+      setDictPopup(null);
     };
     document.addEventListener("pointerdown", handler);
     return () => document.removeEventListener("pointerdown", handler);
   }, []);
 
-  // Dismiss the selection popup on scroll (only; activeHighlight modal is intentionally
+  // Dismiss the selection popup and dictionary popup on scroll (only; activeHighlight modal is intentionally
   // excluded so keyboard-induced scroll doesn't close it mid-edit).
   useEffect(() => {
-    if (!selectionPopup) return;
-    const handler = () => setSelectionPopup(null);
+    if (!selectionPopup && !dictPopup) return;
+    const handler = () => {
+      setSelectionPopup(null);
+      setDictPopup(null);
+    };
     window.addEventListener("scroll", handler, { once: true, passive: true });
     return () => window.removeEventListener("scroll", handler);
-  }, [selectionPopup]);
+  }, [selectionPopup, dictPopup]);
 
   const [showHighlightModal, setShowHighlightModal] = useState(false);
   // Keep a stable copy of the selected text so the modal isn't destroyed when
@@ -296,9 +385,50 @@ export default function ArticleDetailView() {
     [highlights],
   );
 
+  // Fetch dictionary when user clicks a word (GET ?word=xxx)
+  useEffect(() => {
+    if (!dictPopup?.word) return;
+    const word = dictPopup.word;
+    setDictData(null);
+    setDictError(null);
+    setDictLoading(true);
+    const url = `${DICT_API_BASE}?word=${encodeURIComponent(word)}`;
+    request<DictApiResponse>(url)
+      .then((res) => {
+        if (res?.code === 200 && res?.data) {
+          setDictData(res.data);
+          setDictError(null);
+        } else {
+          setDictData(null);
+          setDictError(res?.msg || "未找到释义");
+        }
+      })
+      .catch(() => {
+        setDictData(null);
+        setDictError("未找到释义");
+      })
+      .finally(() => setDictLoading(false));
+  }, [dictPopup?.word]);
+
+  const handleContentClick = useCallback(
+    (e: React.MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest("a") || target.closest("mark[data-highlight-id]")) return;
+      if (window.getSelection()?.toString().trim()) return;
+      const hit = getWordAtPoint(e.clientX, e.clientY);
+      if (!hit) return;
+      setDictPopup({
+        x: hit.rect.left + hit.rect.width / 2,
+        y: hit.rect.bottom,
+        word: hit.word,
+      });
+    },
+    [],
+  );
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900">
         <Loader2 className="w-10 h-10 text-emerald-600 animate-spin" />
       </div>
     );
@@ -306,9 +436,9 @@ export default function ArticleDetailView() {
 
   if (error || !article) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
-        <div className="bg-white p-8 rounded-2xl shadow-sm text-center max-w-md w-full">
-          <p className="text-red-600 font-medium mb-4">{error || "Article not found"}</p>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-slate-900 p-4">
+        <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm text-center max-w-md w-full">
+          <p className="text-red-600 dark:text-red-400 font-medium mb-4">{error || "Article not found"}</p>
           <button
             onClick={() => navigate(-1)}
             className="px-6 py-2 bg-emerald-600 text-white rounded-full font-medium hover:bg-emerald-700 transition-colors"
@@ -321,23 +451,23 @@ export default function ArticleDetailView() {
   }
 
   return (
-    <div className="bg-white min-h-screen pb-32">
+    <div className="bg-white dark:bg-slate-900 min-h-screen pb-32">
       {/* Progress Bar */}
       <div className="fixed top-0 left-0 w-full h-1 z-[60] pointer-events-none">
         <div className="h-full bg-brand transition-all duration-300" style={{ width: `${scrollProgress}%` }} />
       </div>
 
       {/* Top Navigation */}
-      <div className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100 pt-safe">
+      <div className="sticky top-0 z-50 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-gray-100 dark:border-slate-700 pt-safe">
         <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
-          <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-gray-500 hover:text-brand transition-colors">
+          <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-gray-500 dark:text-gray-400 hover:text-brand dark:hover:text-emerald-400 transition-colors">
             <ChevronLeft size={24} />
           </button>
           <div className="flex items-center space-x-2">
             <button
               onClick={toggleBookmark}
               className={`p-2 transition-colors rounded-full ${
-                isBookmarked ? "text-brand bg-brand/10 hover:bg-brand/20" : "text-gray-600 hover:text-brand hover:bg-brand/5"
+                isBookmarked ? "text-brand dark:text-emerald-400 bg-brand/10 dark:bg-emerald-500/20 hover:bg-brand/20" : "text-gray-600 dark:text-gray-400 hover:text-brand dark:hover:text-emerald-400 hover:bg-brand/5 dark:hover:bg-emerald-500/10"
               }`}
             >
               {isBookmarked ? <BookmarkCheck size={20} /> : <Bookmark size={20} />}
@@ -347,13 +477,27 @@ export default function ArticleDetailView() {
       </div>
 
       <article className="max-w-3xl mx-auto px-4 py-6 md:py-10 select-text relative">
-        {/* Header */}
+        {/* Header：标题和 summary 支持点击查词 */}
         <header className="mb-8">
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-serif font-bold text-gray-900 leading-tight mb-6">{article.name}</h1>
+          <h1
+            className="text-3xl md:text-4xl lg:text-5xl font-serif font-bold text-gray-900 dark:text-gray-100 leading-tight mb-6 cursor-text"
+            onClick={(e) => {
+              if (!(e.target as HTMLElement).closest("a")) handleContentClick(e);
+            }}
+          >
+            {article.name}
+          </h1>
 
-          <p className="text-lg md:text-xl text-gray-600 font-serif italic mb-8 leading-relaxed">{article.summary}</p>
+          <p
+            className="text-lg md:text-xl text-gray-600 dark:text-gray-300 font-serif italic mb-8 leading-relaxed cursor-text"
+            onClick={(e) => {
+              if (!(e.target as HTMLElement).closest("a")) handleContentClick(e);
+            }}
+          >
+            {article.summary}
+          </p>
 
-          <div className="flex items-center justify-between py-4 border-y border-gray-100">
+          <div className="flex items-center justify-between py-4 border-y border-gray-100 dark:border-slate-700">
             <div className="flex items-center space-x-3">
               {article.authorList?.[0]?.pic && (
                 <img
@@ -364,8 +508,8 @@ export default function ArticleDetailView() {
                 />
               )}
               <div>
-                <p className="text-sm font-semibold text-gray-900">{article.authorList?.map((a) => a.name).join(", ") || "Seventh Tone"}</p>
-                <div className="flex items-center text-xs text-gray-500 mt-0.5">
+                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{article.authorList?.map((a) => a.name).join(", ") || "Seventh Tone"}</p>
+                <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                   <Clock size={12} className="mr-1" />
                   <time dateTime={article.pubTime}>{article.pubTime}</time>
                 </div>
@@ -380,7 +524,7 @@ export default function ArticleDetailView() {
             <img
               src={article.headPic}
               alt={article.name}
-              className="w-full h-auto sm:rounded-xl object-cover bg-gray-100"
+              className="w-full h-auto sm:rounded-xl object-cover bg-gray-100 dark:bg-slate-800"
               referrerPolicy="no-referrer"
             />
           </figure>
@@ -389,11 +533,170 @@ export default function ArticleDetailView() {
         {/* Content */}
         <div
           ref={contentRef}
-          className="prose prose-lg md:prose-xl prose-emerald max-w-none prose-p:font-serif prose-p:leading-relaxed prose-p:text-gray-800 prose-a:text-emerald-600 prose-img:rounded-xl select-text"
+          className="prose prose-lg md:prose-xl prose-emerald max-w-none prose-p:font-serif prose-p:leading-relaxed prose-p:text-gray-800 dark:prose-p:text-gray-200 prose-a:text-emerald-600 dark:prose-a:text-emerald-400 prose-img:rounded-xl select-text"
           dangerouslySetInnerHTML={{ __html: highlightedContent }}
-          onClick={handleMarkClick}
+          onClick={(e) => {
+            handleMarkClick(e);
+            if (!(e.target as HTMLElement).closest("mark[data-highlight-id]")) handleContentClick(e);
+          }}
         />
       </article>
+
+      {/* Dictionary popup: 移动端占满下半屏 */}
+      {dictPopup && (
+        <div
+          data-popup
+          className="fixed inset-x-0 bottom-0 z-[100] h-[55vh] min-h-[280px] max-h-[85vh] flex flex-col rounded-t-2xl bg-white dark:bg-slate-800 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.3)] border border-gray-100 dark:border-slate-600 border-b-0 md:left-1/2 md:right-auto md:top-auto md:w-[min(96vw,420px)] md:max-h-[70vh] md:min-h-0 md:rounded-b-2xl md:border-b md:-translate-x-1/2 md:bottom-6"
+        >
+          <audio ref={dictAudioRef} className="hidden" />
+          <div className="flex-shrink-0 flex items-center justify-between gap-2 px-4 py-3 border-b border-gray-100 dark:border-slate-600 bg-gray-50/90 dark:bg-slate-700/50">
+            <span className="font-semibold text-gray-900 dark:text-gray-100 truncate">{dictPopup.word}</span>
+            <button
+              type="button"
+              onClick={() => setDictPopup(null)}
+              className="p-1.5 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-600 hover:text-gray-700 dark:hover:text-gray-100 transition-colors"
+              aria-label="关闭"
+            >
+              <X size={18} />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto overscroll-contain p-4">
+            {dictLoading && (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
+              </div>
+            )}
+            {dictError && !dictLoading && (
+              <p className="text-gray-500 dark:text-gray-400 text-sm py-6">{dictError}</p>
+            )}
+            {dictData && !dictLoading && (
+              <div className="space-y-5 text-sm dark:text-gray-200">
+                {/* 音标 + 发音 */}
+                {(dictData.ukphone || dictData.usphone) && (
+                  <div className="flex flex-wrap items-center gap-3">
+                    {dictData.ukphone && (
+                      <span className="text-gray-500 dark:text-gray-400">英 /{dictData.ukphone}/</span>
+                    )}
+                    {dictData.usphone && (
+                      <span className="text-gray-500 dark:text-gray-400">美 /{dictData.usphone}/</span>
+                    )}
+                    {dictData.ukspeech && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const el = dictAudioRef.current;
+                          if (el) {
+                            el.src = dictData.ukspeech!;
+                            el.play().catch(() => {});
+                          }
+                        }}
+                        className="text-emerald-600 dark:text-emerald-400 hover:underline"
+                      >
+                        英音
+                      </button>
+                    )}
+                    {dictData.usspeech && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const el = dictAudioRef.current;
+                          if (el) {
+                            el.src = dictData.usspeech!;
+                            el.play().catch(() => {});
+                          }
+                        }}
+                        className="text-emerald-600 dark:text-emerald-400 hover:underline"
+                      >
+                        美音
+                      </button>
+                    )}
+                  </div>
+                )}
+                {/* 翻译 */}
+                {dictData.translations && dictData.translations.length > 0 && (
+                  <section>
+                    <h4 className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-2">释义</h4>
+                    <ul className="space-y-1 list-none pl-0">
+                      {dictData.translations.map((t, i) => (
+                        <li key={i} className="text-gray-800 dark:text-gray-200">
+                          <span className="text-gray-500 dark:text-gray-400">{t.pos}.</span> {t.tran_cn}
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
+                {/* 短语 */}
+                {dictData.phrases && dictData.phrases.length > 0 && (
+                  <section>
+                    <h4 className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-2">短语</h4>
+                    <ul className="space-y-1.5 list-none pl-0">
+                      {dictData.phrases.slice(0, 12).map((p, i) => (
+                        <li key={i} className="text-gray-800 dark:text-gray-200">
+                          <span className="font-medium text-gray-900 dark:text-gray-100">{p.p_content}</span>
+                          <span className="text-gray-500 dark:text-gray-400"> — {p.p_cn}</span>
+                        </li>
+                      ))}
+                      {dictData.phrases.length > 12 && (
+                        <li className="text-gray-400 dark:text-gray-500 text-xs">共 {dictData.phrases.length} 条</li>
+                      )}
+                    </ul>
+                  </section>
+                )}
+                {/* 同根词 */}
+                {dictData.relWords && dictData.relWords.length > 0 && (
+                  <section>
+                    <h4 className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-2">同根词</h4>
+                    <div className="space-y-2">
+                      {dictData.relWords.map((g, i) => (
+                        <div key={i}>
+                          <span className="text-gray-500 dark:text-gray-400">{g.Pos}</span>
+                          {" "}
+                          {g.Hwds.map((h, j) => (
+                            <span key={j} className="text-gray-800 dark:text-gray-200">
+                              {h.hwd}
+                              <span className="text-gray-500 dark:text-gray-400"> {h.tran}</span>
+                              {j < g.Hwds.length - 1 ? "；" : ""}
+                            </span>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+                {/* 近义词 */}
+                {dictData.synonyms && dictData.synonyms.length > 0 && (
+                  <section>
+                    <h4 className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-2">近义词</h4>
+                    <ul className="space-y-1 list-none pl-0">
+                      {dictData.synonyms.map((s, i) => (
+                        <li key={i} className="text-gray-800 dark:text-gray-200">
+                          <span className="text-gray-500 dark:text-gray-400">{s.pos}</span> {s.tran}
+                          {" — "}
+                          {s.Hwds.map((h) => h.word).join(", ")}
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
+                {/* 例句 */}
+                {dictData.sentences && dictData.sentences.length > 0 && (
+                  <section>
+                    <h4 className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-2">例句</h4>
+                    <ul className="space-y-2 list-none pl-0">
+                      {dictData.sentences.slice(0, 5).map((s, i) => (
+                        <li key={i} className="text-gray-800 dark:text-gray-200">
+                          <p className="text-gray-900 dark:text-gray-100">{s.s_content}</p>
+                          <p className="text-gray-500 dark:text-gray-400 italic mt-0.5">{s.s_cn}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Selection Popup */}
       {selectionPopup && (

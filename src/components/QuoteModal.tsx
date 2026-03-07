@@ -2,6 +2,7 @@ import React, { useRef, useState } from "react";
 import html2canvas from "html2canvas";
 import { Capacitor } from "@capacitor/core";
 import { Media } from "@capacitor-community/media";
+import { Filesystem } from "@capacitor/filesystem";
 import { X, Download, Loader2, Check } from "lucide-react";
 import { motion } from "motion/react";
 
@@ -17,9 +18,37 @@ export default function QuoteModal({ text, articleTitle, author, onClose }: Quot
   const [isGenerating, setIsGenerating] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const saveToGallery = async (canvas: HTMLCanvasElement) => {
+  const saveToGallery = async (canvas: HTMLCanvasElement, fileName: string) => {
     const dataUrl = canvas.toDataURL("image/png");
-    await Media.savePhoto({ path: dataUrl });
+    const base64 = dataUrl.replace(/^data:image\/png;base64,/, "");
+    const opts: { path: string; albumIdentifier?: string; fileName?: string } = {
+      path: dataUrl,
+      fileName: fileName.replace(/\.png$/i, ""),
+    };
+    if (Capacitor.getPlatform() === "android") {
+      try {
+        const { albums } = await Media.getAlbums();
+        const cameraRoll = albums.find((a) => a.name === "Camera Roll" || a.name === "Recent");
+        if (cameraRoll?.identifier) opts.albumIdentifier = cameraRoll.identifier;
+        else if (albums[0]?.identifier) opts.albumIdentifier = albums[0].identifier;
+      } catch {
+        // ignore
+      }
+    }
+    try {
+      await Media.savePhoto(opts);
+    } catch (e) {
+      if (Capacitor.getPlatform() === "android") {
+        const { uri } = await Filesystem.writeFile({
+          path: fileName,
+          data: base64,
+          directory: Filesystem.Directory.Cache,
+        });
+        await Media.savePhoto({ path: uri });
+      } else {
+        throw e;
+      }
+    }
   };
 
   const saveViaWeb = async (canvas: HTMLCanvasElement, fileName: string) => {
@@ -29,16 +58,20 @@ export default function QuoteModal({ text, articleTitle, author, onClose }: Quot
     if (!blob) throw new Error("Failed to create blob");
 
     const file = new File([blob], fileName, { type: "image/png" });
-    if (navigator.canShare?.({ files: [file] })) {
+    if (typeof navigator !== "undefined" && navigator.canShare?.({ files: [file] })) {
       await navigator.share({ files: [file], title: "Quote" });
-    } else {
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.download = fileName;
-      link.href = url;
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      return;
     }
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.download = fileName;
+    link.href = url;
+    link.rel = "noopener";
+    link.style.display = "none";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
   };
 
   const handleDownload = async () => {
@@ -47,15 +80,17 @@ export default function QuoteModal({ text, articleTitle, author, onClose }: Quot
     setSaved(false);
     try {
       const canvas = await html2canvas(cardRef.current, {
-        scale: 3,
+        scale: 2,
         useCORS: true,
+        allowTaint: true,
         backgroundColor: "#ffffff",
+        logging: false,
       });
 
       const fileName = `quote-${Date.now()}.png`;
 
       if (Capacitor.isNativePlatform()) {
-        await saveToGallery(canvas);
+        await saveToGallery(canvas, fileName);
       } else {
         await saveViaWeb(canvas, fileName);
       }
