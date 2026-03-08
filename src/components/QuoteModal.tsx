@@ -2,7 +2,6 @@ import React, { useRef, useState } from "react";
 import html2canvas from "html2canvas";
 import { Capacitor } from "@capacitor/core";
 import { Media } from "@capacitor-community/media";
-import { Filesystem } from "@capacitor/filesystem";
 import { X, Download, Loader2, Check } from "lucide-react";
 import { motion } from "motion/react";
 
@@ -19,8 +18,8 @@ export default function QuoteModal({ text, articleTitle, author, onClose }: Quot
   const [saved, setSaved] = useState(false);
 
   const saveToGallery = async (canvas: HTMLCanvasElement, fileName: string) => {
+    // @capacitor-community/media 的 savePhoto 直接支持 base64 data URL
     const dataUrl = canvas.toDataURL("image/png");
-    const base64 = dataUrl.replace(/^data:image\/png;base64,/, "");
     const opts: { path: string; albumIdentifier?: string; fileName?: string } = {
       path: dataUrl,
       fileName: fileName.replace(/\.png$/i, ""),
@@ -28,27 +27,13 @@ export default function QuoteModal({ text, articleTitle, author, onClose }: Quot
     if (Capacitor.getPlatform() === "android") {
       try {
         const { albums } = await Media.getAlbums();
-        const cameraRoll = albums.find((a) => a.name === "Camera Roll" || a.name === "Recent");
-        if (cameraRoll?.identifier) opts.albumIdentifier = cameraRoll.identifier;
-        else if (albums[0]?.identifier) opts.albumIdentifier = albums[0].identifier;
+        const target = albums.find((a) => a.name === "Camera Roll" || a.name === "Recent") ?? albums[0];
+        if (target?.identifier) opts.albumIdentifier = target.identifier;
       } catch {
-        // ignore
+        // ignore album lookup errors
       }
     }
-    try {
-      await Media.savePhoto(opts);
-    } catch (e) {
-      if (Capacitor.getPlatform() === "android") {
-        const { uri } = await Filesystem.writeFile({
-          path: fileName,
-          data: base64,
-          directory: Filesystem.Directory.Cache,
-        });
-        await Media.savePhoto({ path: uri });
-      } else {
-        throw e;
-      }
-    }
+    await Media.savePhoto(opts);
   };
 
   const saveViaWeb = async (canvas: HTMLCanvasElement, fileName: string) => {

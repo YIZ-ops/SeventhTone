@@ -4,11 +4,57 @@ import { getCategories } from "../api/api";
 import type { Category } from "../types";
 import { motion } from "motion/react";
 import { ArrowRight, Loader2 } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
+import { App as CapacitorApp } from "@capacitor/app";
 
 export default function CategoryList() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Android 物理返回键：连按两次退出程序
+  useEffect(() => {
+    if (Capacitor.getPlatform() !== "android") return;
+    let lastBackAt = 0;
+    let toastEl: HTMLDivElement | null = null;
+    let toastTimer: ReturnType<typeof setTimeout> | null = null;
+    let handle: { remove: () => Promise<void> } | null = null;
+
+    const showExitToast = () => {
+      if (toastEl) return;
+      toastEl = document.createElement("div");
+      toastEl.textContent = "再按一次退出程序";
+      Object.assign(toastEl.style, {
+        position: "fixed", bottom: "96px", left: "50%",
+        transform: "translateX(-50%)",
+        background: "rgba(0,0,0,0.75)", color: "white",
+        padding: "10px 22px", borderRadius: "24px",
+        fontSize: "14px", zIndex: "9999",
+        pointerEvents: "none", whiteSpace: "nowrap",
+      });
+      document.body.appendChild(toastEl);
+      toastTimer = setTimeout(() => {
+        if (toastEl && document.body.contains(toastEl)) document.body.removeChild(toastEl);
+        toastEl = null;
+      }, 2000);
+    };
+
+    CapacitorApp.addListener("backButton", () => {
+      const now = Date.now();
+      if (now - lastBackAt < 2000) {
+        CapacitorApp.exitApp();
+      } else {
+        lastBackAt = now;
+        showExitToast();
+      }
+    }).then((h) => { handle = h; });
+
+    return () => {
+      handle?.remove?.();
+      if (toastTimer) clearTimeout(toastTimer);
+      if (toastEl && document.body.contains(toastEl)) document.body.removeChild(toastEl);
+    };
+  }, []);
 
   useEffect(() => {
     getCategories()
@@ -82,7 +128,7 @@ export default function CategoryList() {
                 <h2 className={`text-2xl font-bold mb-4 tracking-tight group-hover:translate-x-1 transition-transform duration-300 ${category.tonePic ? "text-white drop-shadow-sm" : "text-emerald-600 dark:text-emerald-400"}`}>
                   {category.title}
                 </h2>
-                <p className={`leading-relaxed text-sm md:text-base line-clamp-3 transition-colors ${category.tonePic ? "text-white/90 group-hover:text-white drop-shadow-sm" : "text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300"}`}>
+                <p className={`leading-relaxed text-sm md:text-base line-clamp-3 transition-colors ${category.tonePic ? "text-white/90 group-hover:text-white drop-shadow-sm" : "text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-500"}`}>
                   {category.description}
                 </p>
               </div>

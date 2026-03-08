@@ -6,7 +6,8 @@
 import { useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
-import { StatusBar } from "@capacitor/status-bar";
+import { StatusBar, Style } from "@capacitor/status-bar";
+import { useTheme } from "./contexts/ThemeContext";
 import CategoryList from "./pages/CategoryList";
 import ArticleList from "./pages/ArticleList";
 import ArticleDetailView from "./pages/ArticleDetail";
@@ -44,11 +45,13 @@ function AppContent() {
 }
 
 export default function App() {
+  const { theme } = useTheme();
+
   useEffect(() => {
-    if (Capacitor.isNativePlatform()) {
-      StatusBar.hide();
-    }
-  }, []);
+    if (!Capacitor.isNativePlatform()) return;
+    // Style.Dark = 浅色文字，用于深色背景；Style.Light = 深色文字，用于浅色背景
+    StatusBar.setStyle({ style: theme === "dark" ? Style.Dark : Style.Light }).catch(() => {});
+  }, [theme]);
 
   return (
     <Router>

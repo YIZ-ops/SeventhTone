@@ -29,7 +29,7 @@ export default function ArticleCard({ article }: Props) {
           />
           {article.nodeInfo?.name && (
             <div className="absolute top-4 left-4">
-              <span className="px-3 py-1 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm text-[10px] font-bold text-brand uppercase tracking-[0.1em] rounded-full shadow-sm">
+              <span className="px-3 py-1 bg-white/90 backdrop-blur-sm text-[10px] font-bold text-brand uppercase tracking-[0.1em] rounded-full shadow-sm">
                 {article.nodeInfo.name}
               </span>
             </div>
@@ -55,7 +55,7 @@ export default function ArticleCard({ article }: Props) {
                     referrerPolicy="no-referrer"
                   />
                 )}
-                <span className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors">
+                <span className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider group-hover:text-gray-600 dark:group-hover:text-gray-500 transition-colors">
                   {article.userInfo.name}
                 </span>
               </div>
@@ -63,7 +63,7 @@ export default function ArticleCard({ article }: Props) {
               <span className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Seventh Tone</span>
             )}
             <div className="w-8 h-8 rounded-full border border-gray-100 dark:border-slate-600 flex items-center justify-center group-hover:bg-brand dark:group-hover:bg-emerald-500 group-hover:border-brand dark:group-hover:border-emerald-500 transition-all duration-300">
-              <ArrowRight size={14} className="text-gray-300 dark:text-gray-500 group-hover:text-white transition-colors" />
+              <ArrowRight size={14} className="text-gray-500 dark:text-gray-500 group-hover:text-white transition-colors" />
             </div>
           </div>
         </div>

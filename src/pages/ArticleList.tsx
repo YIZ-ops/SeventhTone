@@ -6,7 +6,8 @@ import ArticleCard from "../components/ArticleCard";
 import { Loader2 } from "lucide-react";
 import { motion } from "motion/react";
 import { getArticleListCache, setArticleListCache } from "../store/articleListCache";
-import { useSwipeBack } from "../hooks/useSwipeBack";
+import { Capacitor } from "@capacitor/core";
+import { App as CapacitorApp } from "@capacitor/app";
 
 const PULL_THRESHOLD = 70;
 const PULL_MAX = 100;
@@ -15,7 +16,6 @@ const SCROLL_HEADER_THRESHOLD = 80;
 export default function ArticleList() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  useSwipeBack();
 
   const [category, setCategory] = useState<Category | null>(null);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
@@ -28,6 +28,16 @@ export default function ArticleList() {
   const [refreshing, setRefreshing] = useState(false);
   const [headerVisible, setHeaderVisible] = useState(false);
   const pullYRef = useRef(0);
+
+  // Android 物理/系统返回键：直接返回上一页（无弹窗需关闭）
+  useEffect(() => {
+    if (Capacitor.getPlatform() !== "android") return;
+    let listenerHandle: { remove: () => Promise<void> } | null = null;
+    CapacitorApp.addListener("backButton", ({ canGoBack }) => {
+      if (canGoBack) { navigate(-1); } else { CapacitorApp.exitApp(); }
+    }).then((h) => { listenerHandle = h; });
+    return () => { listenerHandle?.remove?.(); };
+  }, [navigate]);
 
   const fetchArticles = useCallback(
     async (pageNum: number, isLoadMore: boolean = false) => {

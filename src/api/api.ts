@@ -1,6 +1,6 @@
 import { request } from "../utils/request";
 import { Capacitor, CapacitorHttp } from "@capacitor/core";
-import { ArticleListResponse, ArticleItem, Bookmark, Highlight, WebNode, Category, SearchResponse } from "../types";
+import { ArticleListResponse, ArticleItem, Bookmark, Highlight, WebNode, Category, SearchResponse, VocabWord } from "../types";
 
 const BASE_URL = "https://api.sixthtone.com";
 const SIXTH_TONE_WEB_BASE = "https://www.sixthtone.com";
@@ -344,7 +344,29 @@ export const getBookmarkCategories = (): string[] => {
   return Array.from(categories);
 };
 
-/** 删除书签分类：将该分类下的书签 category 清空（""），使其只出现在 "All" 视图下 */
+/** 重命名书签分类：将所有 category === oldName 的书签改为 newName */
+export const renameBookmarkCategory = (oldName: string, newName: string) => {
+  try {
+    const bookmarks = getBookmarks();
+    const updated = bookmarks.map((b) => (b.category === oldName ? { ...b, category: newName } : b));
+    localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(updated));
+  } catch (e) {
+    console.error("Failed to rename bookmark category", e);
+  }
+};
+
+/** 删除书签分类：逐一调用 removeBookmark 删除该分类下的所有书签 */
+export const deleteBookmarkCategory = (category: string) => {
+  try {
+    getBookmarks()
+      .filter((b) => b.category === category)
+      .forEach((b) => removeBookmark(b.article.contId));
+  } catch (e) {
+    console.error("Failed to delete bookmark category", e);
+  }
+};
+
+/** @deprecated 保留兼容，建议改用 deleteBookmarkCategory */
 export const reassignBookmarkCategory = (fromCategory: string, defaultCategory = "") => {
   try {
     const bookmarks = getBookmarks();
@@ -423,18 +445,42 @@ export const addHighlight = (
 
 /** 高亮用到的全部分类（书签分类 + 已有高亮分类，去重） */
 export const getHighlightCategories = (): string[] => {
-  // Only use categories from actual highlights (don't mix in bookmark categories —
-  // that caused deleted highlight-categories to reappear via the bookmark side).
-  const fromHighlights = new Set<string>();
+  const cats = new Set<string>();
   getAllHighlights().forEach((h) => {
-    if (h.category) fromHighlights.add(h.category);
+    // 空/未设置的 category 归入 "Highlights" 默认分类
+    cats.add(h.category || "Highlights");
   });
-  // Always offer "Highlights" as the fallback option
-  if (!fromHighlights.has("Highlights")) fromHighlights.add("Highlights");
-  return Array.from(fromHighlights);
+  return Array.from(cats);
 };
 
-/** 删除高亮分类：将该分类下的高亮 category 清空（""），使其只出现在 "All" 视图下 */
+/** 重命名高亮分类：将所有 category === oldName 的高亮改为 newName */
+export const renameHighlightCategory = (oldName: string, newName: string) => {
+  try {
+    const allStr = localStorage.getItem(HIGHLIGHTS_KEY);
+    const all = allStr ? JSON.parse(allStr) : {};
+    for (const contId of Object.keys(all)) {
+      all[contId] = (all[contId] as Highlight[]).map((h) =>
+        (h.category || "Highlights") === oldName ? { ...h, category: newName } : h,
+      );
+    }
+    localStorage.setItem(HIGHLIGHTS_KEY, JSON.stringify(all));
+  } catch (e) {
+    console.error("Failed to rename highlight category", e);
+  }
+};
+
+/** 删除高亮分类：逐一调用 removeHighlight 删除该分类下的所有高亮 */
+export const deleteHighlightCategory = (category: string) => {
+  try {
+    getAllHighlights()
+      .filter((h) => (h.category || "Highlights") === category)
+      .forEach((h) => removeHighlight(h.contId, h.id));
+  } catch (e) {
+    console.error("Failed to delete highlight category", e);
+  }
+};
+
+/** @deprecated 保留兼容 */
 export const reassignHighlightCategory = (fromCategory: string, defaultCategory = "") => {
   try {
     const allStr = localStorage.getItem(HIGHLIGHTS_KEY);
@@ -462,6 +508,47 @@ export const removeHighlight = (contId: number, highlightId: string) => {
     console.error("Failed to remove highlight", e);
   }
 };
+
+// ── 生词本 ──────────────────────────────────────────────────────────────
+const VOCAB_KEY = "sixthtone_vocabulary";
+
+export const getVocab = (): VocabWord[] => {
+  try {
+    const raw = localStorage.getItem(VOCAB_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+
+export const isInVocab = (word: string): boolean =>
+  getVocab().some((v) => v.word.toLowerCase() === word.toLowerCase());
+
+export const addVocab = (word: string, phonetic?: string, translations: string[] = []) => {
+  try {
+    const vocab = getVocab();
+    if (vocab.some((v) => v.word.toLowerCase() === word.toLowerCase())) return;
+    const newWord: VocabWord = {
+      id: Math.random().toString(36).substring(2, 9),
+      word,
+      phonetic,
+      translations,
+      addedAt: Date.now(),
+    };
+    localStorage.setItem(VOCAB_KEY, JSON.stringify([newWord, ...vocab]));
+  } catch {
+    console.error("Failed to save vocab word");
+  }
+};
+
+export const removeVocab = (id: string) => {
+  try {
+    localStorage.setItem(VOCAB_KEY, JSON.stringify(getVocab().filter((v) => v.id !== id)));
+  } catch {
+    console.error("Failed to remove vocab word");
+  }
+};
+// ────────────────────────────────────────────────────────────────────────
 
 export const updateHighlight = (contId: number, highlightId: string, updates: { thought?: string; category?: string }) => {
   try {

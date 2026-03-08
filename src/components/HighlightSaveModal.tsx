@@ -47,7 +47,7 @@ export default function HighlightSaveModal({ selectedText, onClose, onSave }: Pr
       >
         <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-slate-600">
           <h3 className="font-semibold text-gray-900 dark:text-gray-100">Save Highlight</h3>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors">
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-500 rounded-full hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors">
             <X size={20} />
           </button>
         </div>
@@ -84,7 +84,7 @@ export default function HighlightSaveModal({ selectedText, onClose, onSave }: Pr
                 <button
                   type="button"
                   onClick={() => { setIsNewCategory(false); setNewCategoryName(""); }}
-                  className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                  className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-500"
                 >
                   Cancel
                 </button>
@@ -97,7 +97,7 @@ export default function HighlightSaveModal({ selectedText, onClose, onSave }: Pr
                     type="button"
                     onClick={() => setSelectedCategory(cat)}
                     className={`px-4 py-2 rounded-full text-xs font-semibold transition-all ${
-                      selectedCategory === cat ? "bg-gray-900 dark:bg-emerald-600 text-white" : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-600"
+                      selectedCategory === cat ? "bg-gray-900 dark:bg-emerald-600 text-white" : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-500 hover:bg-gray-200 dark:hover:bg-slate-600"
                     }`}
                   >
                     {cat}

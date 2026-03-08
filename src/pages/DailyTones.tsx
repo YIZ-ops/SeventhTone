@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { Capacitor } from "@capacitor/core";
+import { App as CapacitorApp } from "@capacitor/app";
 import { ChevronLeft, ChevronRight, ImageOff, Loader2, Calendar as CalendarIcon, X } from "lucide-react";
 import { getDailyTonesByDate, getDailyTonesCalendar } from "../api/api";
 import { ArticleItem } from "../types";
@@ -39,6 +41,7 @@ const getDaysInMonth = (year: number, month: number) => new Date(year, month + 1
 const getFirstDayOfMonth = (year: number, month: number) => new Date(year, month, 1).getDay();
 
 export default function DailyTones() {
+  const navigate = useNavigate();
   const today = new Date();
   const [selectedDate, setSelectedDate] = useState(toInputDate(today));
   const [monthCursor, setMonthCursor] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
@@ -49,6 +52,13 @@ export default function DailyTones() {
   const [activeSlide, setActiveSlide] = useState(0);
   const [showCalendar, setShowCalendar] = useState(false);
   const sliderRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (Capacitor.getPlatform() !== "android") return;
+    let handle: { remove: () => Promise<void> } | null = null;
+    CapacitorApp.addListener("backButton", () => { navigate("/"); }).then((h) => { handle = h; });
+    return () => { handle?.remove?.(); };
+  }, [navigate]);
 
   useEffect(() => {
     const loadCalendar = async () => {
@@ -280,15 +290,16 @@ export default function DailyTones() {
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.4, ease: "easeOut" }}
               >
-                <p className="text-emerald-400 text-[10px] font-bold uppercase tracking-[0.2em] mb-3">{formatDisplayDate(selectedDate)}</p>
                 <Link to={`/article/${items[activeSlide]?.contId}`}>
                   <h2 className="text-3xl md:text-5xl font-serif font-bold leading-tight mb-4 text-white hover:text-emerald-300 transition-colors">
                     {items[activeSlide]?.name}
                   </h2>
+                  {items[activeSlide]?.summary && (
+                    <p className="text-white/70 text-sm md:text-base leading-relaxed font-serif italic">
+                      {items[activeSlide].summary}
+                    </p>
+                  )}
                 </Link>
-                <p className="text-white/70 text-sm md:text-base leading-relaxed line-clamp-3 font-serif italic">
-                  {items[activeSlide]?.summary || "No description available."}
-                </p>
               </motion.div>
             </AnimatePresence>
 

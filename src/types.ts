@@ -109,6 +109,15 @@ export interface SearchResultItem {
   [key: string]: unknown;
 }
 
+/** 生词本单词 */
+export interface VocabWord {
+  id: string;
+  word: string;
+  phonetic?: string;
+  translations: string[];
+  addedAt: number;
+}
+
 /** 搜索接口响应 */
 export interface SearchResponse {
   code: number;

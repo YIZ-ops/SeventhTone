@@ -1,15 +1,20 @@
-import { useEffect, useState, useMemo, useRef, useCallback } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback, type MouseEvent } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getArticleDetail, addHistory, addBookmark, getBookmarks, removeBookmark, getHighlights, addHighlight, removeHighlight, updateHighlight } from "../api/api";
+import { getArticleDetail, addHistory, addBookmark, getBookmarks, removeBookmark, getHighlights, addHighlight, removeHighlight, updateHighlight, addVocab, isInVocab } from "../api/api";
 import { ArticleDetail, Highlight } from "../types";
 import DOMPurify from "dompurify";
 import Mark from "mark.js";
-import { ChevronLeft, Loader2, Clock, Bookmark, BookmarkCheck, Highlighter, X } from "lucide-react";
+import { ChevronLeft, Loader2, Clock, Bookmark, BookmarkCheck, BookmarkPlus, X, Share2, Volume2 } from "lucide-react";
 import BookmarkModal from "../components/BookmarkModal";
 import HighlightSaveModal from "../components/HighlightSaveModal";
 import HighlightDetailModal from "../components/HighlightDetailModal";
-import { useSwipeBack } from "../hooks/useSwipeBack";
 import { request } from "../utils/request";
+import { Capacitor } from "@capacitor/core";
+import { App as CapacitorApp } from "@capacitor/app";
+import { Share } from "@capacitor/share";
+import TextSelectionHighlight from "../plugins/textSelectionHighlight";
+
+const SIXTH_TONE_WEB = "https://www.sixthtone.com";
 
 // 英语单词详解 API (v2.xxapi.cn) 响应类型
 interface DictPhrase {
@@ -92,7 +97,6 @@ function getWordAtPoint(clientX: number, clientY: number): { word: string; rect:
 export default function ArticleDetailView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  useSwipeBack();
   const [article, setArticle] = useState<ArticleDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -103,12 +107,13 @@ export default function ArticleDetailView() {
   const [scrollProgress, setScrollProgress] = useState(0);
 
   const [highlights, setHighlights] = useState<Highlight[]>([]);
-  const [selectionPopup, setSelectionPopup] = useState<{ x: number; y: number; text: string } | null>(null);
   // activeHighlight is set directly in handleMarkClick (not via an intermediate
   // activeHighlightId) so that the scroll-dismiss handler never holds a reference
   // to it — keyboard appearance causes a scroll event that would otherwise clear
   // the modal while the user is editing.
   const [activeHighlight, setActiveHighlight] = useState<Highlight | null>(null);
+  const [showHighlightModal, setShowHighlightModal] = useState(false);
+  const [pendingHighlightText, setPendingHighlightText] = useState<string | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const dictAudioRef = useRef<HTMLAudioElement>(null);
 
@@ -182,84 +187,77 @@ export default function ArticleDetailView() {
     }
   }, [article]);
 
-  // Text selection detection — use adaptive debounce:
-  // touch devices get 800ms to allow handle adjustment, mouse gets 150ms.
-  useEffect(() => {
-    let timer: ReturnType<typeof setTimeout>;
-    const isTouch = window.matchMedia("(pointer: coarse)").matches;
-    const DEBOUNCE = isTouch ? 800 : 150;
-
-    const showPopupForSelection = () => {
-      const sel = window.getSelection();
-      if (!sel || sel.isCollapsed || !sel.toString().trim()) {
-        setSelectionPopup(null);
-        return;
-      }
-      if (!contentRef.current?.contains(sel.anchorNode)) return;
-      const text = sel.toString().trim();
-      if (text.length < 2) return;
-      const range = sel.getRangeAt(0);
-      const rect = range.getBoundingClientRect();
-      setSelectionPopup({ x: rect.left + rect.width / 2, y: rect.top, text });
-    };
-
-    const onSelectionChange = () => {
-      clearTimeout(timer);
-      const sel = window.getSelection();
-      if (!sel || sel.isCollapsed || !sel.toString().trim()) {
-        timer = setTimeout(() => setSelectionPopup(null), 200);
-        return;
-      }
-      if (!contentRef.current?.contains(sel.anchorNode)) return;
-      timer = setTimeout(showPopupForSelection, DEBOUNCE);
-    };
-
-    document.addEventListener("selectionchange", onSelectionChange);
-    return () => {
-      document.removeEventListener("selectionchange", onSelectionChange);
-      clearTimeout(timer);
-    };
-  }, []);
-
-  // Dismiss selection popup and dictionary popup on pointerdown outside content area and popups
+  // Dismiss dictionary popup on pointerdown outside content area and popups
   useEffect(() => {
     const handler = (e: PointerEvent) => {
       const target = e.target as HTMLElement;
       if (target.closest("[data-popup]")) return;
       if (contentRef.current?.contains(target)) return;
-      setSelectionPopup(null);
       setDictPopup(null);
     };
     document.addEventListener("pointerdown", handler);
     return () => document.removeEventListener("pointerdown", handler);
   }, []);
 
-  // Dismiss the selection popup and dictionary popup on scroll (only; activeHighlight modal is intentionally
-  // excluded so keyboard-induced scroll doesn't close it mid-edit).
+  // Dismiss dictionary popup on scroll
   useEffect(() => {
-    if (!selectionPopup && !dictPopup) return;
-    const handler = () => {
-      setSelectionPopup(null);
-      setDictPopup(null);
-    };
+    if (!dictPopup) return;
+    const handler = () => setDictPopup(null);
     window.addEventListener("scroll", handler, { once: true, passive: true });
     return () => window.removeEventListener("scroll", handler);
-  }, [selectionPopup, dictPopup]);
+  }, [dictPopup]);
 
-  const [showHighlightModal, setShowHighlightModal] = useState(false);
-  // Keep a stable copy of the selected text so the modal isn't destroyed when
-  // selectionPopup is cleared (e.g. by the scroll handler when the mobile
-  // keyboard appears and causes a layout/scroll shift).
-  const [pendingHighlightText, setPendingHighlightText] = useState<string | null>(null);
+  // Android 原生文本选择菜单中的「高亮」：监听插件事件，用选中文本打开高亮弹窗
+  useEffect(() => {
+    if (Capacitor.getPlatform() !== "android") return;
+    let removeListener: (() => Promise<void>) | null = null;
+    TextSelectionHighlight.addListener("highlightSelection", (e) => {
+      const text = (e?.selectedText ?? "").trim();
+      if (text.length < 2) return;
+      setPendingHighlightText(text);
+      setShowHighlightModal(true);
+    }).then((h) => {
+      removeListener = h.remove;
+    });
+    TextSelectionHighlight.enable().catch(() => {});
+    return () => {
+      removeListener?.();
+    };
+  }, []);
 
-  const handleOpenHighlightModal = useCallback(() => {
-    if (!selectionPopup) return;
-    setPendingHighlightText(selectionPopup.text);
-    // Clear selectionPopup now so the scroll/pointerdown handlers won't
-    // interfere with the modal that is about to open.
-    setSelectionPopup(null);
-    setShowHighlightModal(true);
-  }, [selectionPopup]);
+  // 用 ref 持有最新的弹窗状态，供 backButton handler 读取
+  // 这样 listener 只注册一次，不会因状态变化反复重新注册
+  const backStateRef = useRef({
+    dictPopup: null as typeof dictPopup,
+    activeHighlight: null as typeof activeHighlight,
+    showHighlightModal: false,
+    showBookmarkModal: false,
+  });
+  backStateRef.current = { dictPopup, activeHighlight, showHighlightModal, showBookmarkModal };
+
+  // Android 物理/系统返回键：由 Capacitor 原生层触发，不监听任何手势
+  useEffect(() => {
+    if (Capacitor.getPlatform() !== "android") return;
+    let listenerHandle: { remove: () => Promise<void> } | null = null;
+    CapacitorApp.addListener("backButton", (e: { canGoBack: boolean }) => {
+      const s = backStateRef.current;
+      if (s.dictPopup) { setDictPopup(null); return; }
+      if (s.activeHighlight) { setActiveHighlight(null); return; }
+      if (s.showHighlightModal) {
+        setShowHighlightModal(false);
+        setPendingHighlightText(null);
+        window.getSelection()?.removeAllRanges();
+        return;
+      }
+      if (s.showBookmarkModal) { setShowBookmarkModal(false); return; }
+      if (e.canGoBack) { navigate(-1); } else { CapacitorApp.exitApp(); }
+    }).then((h) => { listenerHandle = h; });
+    return () => { listenerHandle?.remove?.(); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigate]); // 仅 navigate 稳定后重绑定，navigate 本身是稳定引用
+
+  // pendingHighlightText: stable copy of selected text so the modal isn't destroyed when
+  // selectionPopup is cleared (e.g. by the scroll handler when the mobile keyboard appears).
 
   const handleSaveHighlight = useCallback(
     (category: string, thought?: string) => {
@@ -297,6 +295,27 @@ export default function ArticleDetailView() {
     },
     [article],
   );
+
+  const handleShare = useCallback(async () => {
+    if (!article) return;
+    const url = `${SIXTH_TONE_WEB}/news/${article.contId}`;
+    try {
+      const { value: canShareValue } = await Share.canShare();
+      if (canShareValue) {
+        await Share.share({
+          title: article.name,
+          text: article.name,
+          url,
+          dialogTitle: "分享文章",
+        });
+      } else {
+        // 降级：复制链接到剪贴板
+        await navigator.clipboard.writeText(url);
+      }
+    } catch {
+      // 用户取消或出错，静默忽略
+    }
+  }, [article]);
 
   const toggleBookmark = () => {
     if (isBookmarked && article) {
@@ -366,7 +385,7 @@ export default function ArticleDetailView() {
   }, [sanitizedContent, highlights]);
 
   const handleMarkClick = useCallback(
-    (e: React.MouseEvent) => {
+    (e: MouseEvent<HTMLElement>) => {
       const mark = (e.target as HTMLElement).closest("mark[data-highlight-id]") as HTMLElement | null;
       if (!mark) return;
       e.stopPropagation();
@@ -378,7 +397,6 @@ export default function ArticleDetailView() {
         // appears after the user taps the edit textarea) has nothing to clear.
         const found = highlights.find((h) => h.id === hId) ?? null;
         setActiveHighlight(found);
-        setSelectionPopup(null);
         window.getSelection()?.removeAllRanges();
       }
     },
@@ -410,21 +428,32 @@ export default function ArticleDetailView() {
       .finally(() => setDictLoading(false));
   }, [dictPopup?.word]);
 
-  const handleContentClick = useCallback(
-    (e: React.MouseEvent) => {
+  // 双击触发查词（移动端双击会先选词，不能用 selection 判断，直接查词）
+  const handleContentDblClick = useCallback(
+    (e: MouseEvent<HTMLElement>) => {
       const target = e.target as HTMLElement;
       if (target.closest("a") || target.closest("mark[data-highlight-id]")) return;
-      if (window.getSelection()?.toString().trim()) return;
       const hit = getWordAtPoint(e.clientX, e.clientY);
       if (!hit) return;
-      setDictPopup({
-        x: hit.rect.left + hit.rect.width / 2,
-        y: hit.rect.bottom,
-        word: hit.word,
-      });
+      // 清除双击产生的文本选中，再显示弹窗
+      window.getSelection()?.removeAllRanges();
+      setDictPopup({ x: hit.rect.left + hit.rect.width / 2, y: hit.rect.bottom, word: hit.word });
     },
     [],
   );
+
+  // 生词本：当前弹窗单词是否已收录
+  const [wordInVocab, setWordInVocab] = useState(false);
+  useEffect(() => {
+    setWordInVocab(dictPopup?.word ? isInVocab(dictPopup.word) : false);
+  }, [dictPopup?.word]);
+
+  const handleAddToVocab = useCallback(() => {
+    if (!dictPopup || wordInVocab) return;
+    const translations = dictData?.translations?.map((t) => `${t.pos}. ${t.tran_cn}`) ?? [];
+    addVocab(dictPopup.word, dictData?.ukphone, translations);
+    setWordInVocab(true);
+  }, [dictPopup, wordInVocab, dictData]);
 
   if (loading) {
     return (
@@ -463,12 +492,20 @@ export default function ArticleDetailView() {
           <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-gray-500 dark:text-gray-400 hover:text-brand dark:hover:text-emerald-400 transition-colors">
             <ChevronLeft size={24} />
           </button>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-1">
+            <button
+              onClick={handleShare}
+              className="p-2 transition-colors rounded-full text-gray-600 dark:text-gray-400 hover:text-brand dark:hover:text-emerald-400 hover:bg-brand/5 dark:hover:bg-emerald-500/10"
+              aria-label="分享文章"
+            >
+              <Share2 size={20} />
+            </button>
             <button
               onClick={toggleBookmark}
               className={`p-2 transition-colors rounded-full ${
                 isBookmarked ? "text-brand dark:text-emerald-400 bg-brand/10 dark:bg-emerald-500/20 hover:bg-brand/20" : "text-gray-600 dark:text-gray-400 hover:text-brand dark:hover:text-emerald-400 hover:bg-brand/5 dark:hover:bg-emerald-500/10"
               }`}
+              aria-label={isBookmarked ? "取消收藏" : "收藏文章"}
             >
               {isBookmarked ? <BookmarkCheck size={20} /> : <Bookmark size={20} />}
             </button>
@@ -481,17 +518,17 @@ export default function ArticleDetailView() {
         <header className="mb-8">
           <h1
             className="text-3xl md:text-4xl lg:text-5xl font-serif font-bold text-gray-900 dark:text-gray-100 leading-tight mb-6 cursor-text"
-            onClick={(e) => {
-              if (!(e.target as HTMLElement).closest("a")) handleContentClick(e);
+            onDoubleClick={(e) => {
+              if (!(e.target as HTMLElement).closest("a")) handleContentDblClick(e);
             }}
           >
             {article.name}
           </h1>
 
           <p
-            className="text-lg md:text-xl text-gray-600 dark:text-gray-300 font-serif italic mb-8 leading-relaxed cursor-text"
-            onClick={(e) => {
-              if (!(e.target as HTMLElement).closest("a")) handleContentClick(e);
+            className="text-lg md:text-xl text-gray-600 dark:text-gray-500 font-serif italic mb-8 leading-relaxed cursor-text"
+            onDoubleClick={(e) => {
+              if (!(e.target as HTMLElement).closest("a")) handleContentDblClick(e);
             }}
           >
             {article.summary}
@@ -535,13 +572,23 @@ export default function ArticleDetailView() {
           ref={contentRef}
           className="prose prose-lg md:prose-xl prose-emerald max-w-none prose-p:font-serif prose-p:leading-relaxed prose-p:text-gray-800 dark:prose-p:text-gray-200 prose-a:text-emerald-600 dark:prose-a:text-emerald-400 prose-img:rounded-xl select-text"
           dangerouslySetInnerHTML={{ __html: highlightedContent }}
-          onClick={(e) => {
-            handleMarkClick(e);
-            if (!(e.target as HTMLElement).closest("mark[data-highlight-id]")) handleContentClick(e);
-          }}
+          onClick={handleMarkClick}
+          onDoubleClick={handleContentDblClick}
         />
       </article>
 
+      {/* 单词弹窗遮罩：背景模糊、不可操作，点击关闭。
+          必须加 data-popup 让 pointerdown-dismiss handler 忽略此元素，
+          否则 pointerdown 会先于 onClick 把 popup 关掉，导致点击穿透。 */}
+      {dictPopup && (
+        <button
+          type="button"
+          data-popup
+          aria-label="关闭单词释义"
+          className="fixed inset-0 z-[99] bg-black/30 backdrop-blur-sm cursor-default"
+          onClick={() => setDictPopup(null)}
+        />
+      )}
       {/* Dictionary popup: 移动端占满下半屏 */}
       {dictPopup && (
         <div
@@ -551,14 +598,30 @@ export default function ArticleDetailView() {
           <audio ref={dictAudioRef} className="hidden" />
           <div className="flex-shrink-0 flex items-center justify-between gap-2 px-4 py-3 border-b border-gray-100 dark:border-slate-600 bg-gray-50/90 dark:bg-slate-700/50">
             <span className="font-semibold text-gray-900 dark:text-gray-100 truncate">{dictPopup.word}</span>
-            <button
-              type="button"
-              onClick={() => setDictPopup(null)}
-              className="p-1.5 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-600 hover:text-gray-700 dark:hover:text-gray-100 transition-colors"
-              aria-label="关闭"
-            >
-              <X size={18} />
-            </button>
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                type="button"
+                onClick={handleAddToVocab}
+                disabled={wordInVocab}
+                className={`p-1.5 rounded-full transition-colors ${
+                  wordInVocab
+                    ? "text-emerald-500 dark:text-emerald-400"
+                    : "text-gray-400 dark:text-gray-500 hover:text-brand dark:hover:text-emerald-400 hover:bg-gray-100 dark:hover:bg-slate-600"
+                }`}
+                aria-label={wordInVocab ? "已加入生词本" : "加入生词本"}
+                title={wordInVocab ? "已加入生词本" : "加入生词本"}
+              >
+                {wordInVocab ? <BookmarkCheck size={18} /> : <BookmarkPlus size={18} />}
+              </button>
+              <button
+                type="button"
+                onClick={() => setDictPopup(null)}
+                className="p-1.5 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-600 hover:text-gray-700 dark:hover:text-gray-100 transition-colors"
+                aria-label="关闭"
+              >
+                <X size={18} />
+              </button>
+            </div>
           </div>
           <div className="flex-1 overflow-y-auto overscroll-contain p-4">
             {dictLoading && (
@@ -571,44 +634,46 @@ export default function ArticleDetailView() {
             )}
             {dictData && !dictLoading && (
               <div className="space-y-5 text-sm dark:text-gray-200">
-                {/* 音标 + 发音 */}
+                {/* 音标 + 发音图标 */}
                 {(dictData.ukphone || dictData.usphone) && (
-                  <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
                     {dictData.ukphone && (
-                      <span className="text-gray-500 dark:text-gray-400">英 /{dictData.ukphone}/</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">英</span>
+                        <span className="text-sm text-gray-600 dark:text-gray-500 font-mono">/{dictData.ukphone}/</span>
+                        {dictData.ukspeech && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const el = dictAudioRef.current;
+                              if (el) { el.src = dictData.ukspeech!; el.play().catch(() => {}); }
+                            }}
+                            className="p-1 rounded-full text-emerald-500 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors"
+                            aria-label="播放英音"
+                          >
+                            <Volume2 size={14} />
+                          </button>
+                        )}
+                      </div>
                     )}
                     {dictData.usphone && (
-                      <span className="text-gray-500 dark:text-gray-400">美 /{dictData.usphone}/</span>
-                    )}
-                    {dictData.ukspeech && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const el = dictAudioRef.current;
-                          if (el) {
-                            el.src = dictData.ukspeech!;
-                            el.play().catch(() => {});
-                          }
-                        }}
-                        className="text-emerald-600 dark:text-emerald-400 hover:underline"
-                      >
-                        英音
-                      </button>
-                    )}
-                    {dictData.usspeech && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const el = dictAudioRef.current;
-                          if (el) {
-                            el.src = dictData.usspeech!;
-                            el.play().catch(() => {});
-                          }
-                        }}
-                        className="text-emerald-600 dark:text-emerald-400 hover:underline"
-                      >
-                        美音
-                      </button>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">美</span>
+                        <span className="text-sm text-gray-600 dark:text-gray-500 font-mono">/{dictData.usphone}/</span>
+                        {dictData.usspeech && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const el = dictAudioRef.current;
+                              if (el) { el.src = dictData.usspeech!; el.play().catch(() => {}); }
+                            }}
+                            className="p-1 rounded-full text-emerald-500 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors"
+                            aria-label="播放美音"
+                          >
+                            <Volume2 size={14} />
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
                 )}
@@ -695,27 +760,6 @@ export default function ArticleDetailView() {
               </div>
             )}
           </div>
-        </div>
-      )}
-
-      {/* Selection Popup */}
-      {selectionPopup && (
-        <div
-          data-popup
-          className="fixed z-[100]"
-          style={{
-            left: Math.max(60, Math.min(selectionPopup.x, window.innerWidth - 60)),
-            top: selectionPopup.y,
-            transform: selectionPopup.y > 60 ? "translate(-50%, -100%) translateY(-10px)" : "translate(-50%, 0) translateY(10px)",
-          }}
-        >
-          <button
-            onClick={handleOpenHighlightModal}
-            className="flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white text-xs font-semibold rounded-full shadow-xl hover:bg-gray-800 active:scale-95 transition-all"
-          >
-            <Highlighter size={14} />
-            Highlight
-          </button>
         </div>
       )}
 

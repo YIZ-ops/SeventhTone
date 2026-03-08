@@ -1,5 +1,7 @@
-import { useState, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { useState, useCallback, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Capacitor } from "@capacitor/core";
+import { App as CapacitorApp } from "@capacitor/app";
 import DOMPurify from "dompurify";
 import { searchNews } from "../api/api";
 import type { SearchResultItem } from "../types";
@@ -23,6 +25,7 @@ function sanitizeHighlightHtml(html: string | undefined): string {
 }
 
 export default function Search() {
+  const navigate = useNavigate();
   const [word, setWord] = useState("");
   const [submitWord, setSubmitWord] = useState("");
   const [list, setList] = useState<SearchResultItem[]>([]);
@@ -58,6 +61,13 @@ export default function Search() {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (Capacitor.getPlatform() !== "android") return;
+    let handle: { remove: () => Promise<void> } | null = null;
+    CapacitorApp.addListener("backButton", () => { navigate("/"); }).then((h) => { handle = h; });
+    return () => { handle?.remove?.(); };
+  }, [navigate]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -144,7 +154,7 @@ export default function Search() {
                         referrerPolicy="no-referrer"
                       />
                     ) : (
-                      <div className="absolute inset-0 flex items-center justify-center text-gray-300">
+                      <div className="absolute inset-0 flex items-center justify-center text-gray-500">
                         <SearchIcon size={22} />
                       </div>
                     )}
@@ -164,7 +174,7 @@ export default function Search() {
                         <span className="text-xs text-gray-400">{item.pubTime}</span>
                       )}
                       <div className="w-8 h-8 rounded-full border border-gray-100 flex items-center justify-center shrink-0 group-hover:bg-brand group-hover:border-brand transition-all">
-                        <ArrowRight size={14} className="text-gray-300 group-hover:text-white transition-colors" />
+                        <ArrowRight size={14} className="text-gray-500 group-hover:text-white transition-colors" />
                       </div>
                     </div>
                   </div>

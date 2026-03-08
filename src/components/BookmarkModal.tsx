@@ -41,7 +41,7 @@ export default function BookmarkModal({ onClose, onSave }: Props) {
       <div className="bg-white dark:bg-slate-800 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-sm overflow-hidden shadow-2xl animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-slate-600">
           <h3 className="font-semibold text-gray-900 dark:text-gray-100">Save to Bookmarks</h3>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors">
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-500 rounded-full hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors">
             <X size={20} />
           </button>
         </div>
@@ -49,7 +49,7 @@ export default function BookmarkModal({ onClose, onSave }: Props) {
         <div className="p-4 max-h-[60vh] overflow-y-auto">
           {isCreating ? (
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New Category</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-500 mb-1">New Category</label>
               <input
                 type="text"
                 autoFocus
@@ -93,7 +93,7 @@ export default function BookmarkModal({ onClose, onSave }: Props) {
           {isCreating && (
             <button
               onClick={() => setIsCreating(false)}
-              className="px-4 py-2 text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-widest hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+              className="px-4 py-2 text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-widest hover:text-gray-600 dark:hover:text-gray-500 transition-colors"
             >
               Cancel
             </button>

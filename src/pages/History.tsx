@@ -1,19 +1,28 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { Capacitor } from "@capacitor/core";
+import { App as CapacitorApp } from "@capacitor/app";
 import { getHistoryEntriesToday, clearHistory } from "../api/api";
 import type { HistoryEntry } from "../api/api";
 import { Trash2, Clock } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
 import { motion } from "motion/react";
 import ConfirmModal from "../components/ConfirmModal";
 
 export default function History() {
+  const navigate = useNavigate();
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   useEffect(() => {
     setEntries(getHistoryEntriesToday());
   }, []);
+
+  useEffect(() => {
+    if (Capacitor.getPlatform() !== "android") return;
+    let handle: { remove: () => Promise<void> } | null = null;
+    CapacitorApp.addListener("backButton", () => { navigate("/"); }).then((h) => { handle = h; });
+    return () => { handle?.remove?.(); };
+  }, [navigate]);
 
   const handleClearClick = () => setShowClearConfirm(true);
 
@@ -23,9 +32,10 @@ export default function History() {
     setShowClearConfirm(false);
   };
 
-  const readTimeAgo = (readAt: number) => {
+  const formatTime = (ts: number) => {
     try {
-      return formatDistanceToNow(readAt, { addSuffix: true });
+      const d = new Date(ts);
+      return `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
     } catch {
       return "";
     }
@@ -62,7 +72,7 @@ export default function History() {
           <p className="text-gray-400 dark:text-gray-500 text-sm max-w-xs mx-auto">Articles you read today will appear here.</p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {entries.map((entry, index) => (
             <motion.div
               key={`${entry.article.contId}-${index}`}
@@ -72,25 +82,25 @@ export default function History() {
             >
               <Link
                 to={`/article/${entry.article.contId}`}
-                className="flex items-center gap-3 p-3 bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-600 hover:shadow-sm transition-all group"
+                className="relative overflow-hidden flex items-center gap-3 p-3 bg-white dark:bg-slate-800 group hover:bg-gray-50 dark:hover:bg-slate-700/60 transition-colors rounded-2xl border border-gray-100 dark:border-slate-600"
               >
                 <img
                   src={entry.article.pic || entry.article.appHeadPic}
                   alt={entry.article.name}
-                  className="w-20 h-20 rounded-lg object-cover shrink-0 bg-gray-100 dark:bg-slate-700"
+                  className="w-16 h-16 rounded-xl object-cover shrink-0 bg-gray-100 dark:bg-slate-700"
                   loading="lazy"
                   referrerPolicy="no-referrer"
                 />
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 line-clamp-2 mb-1.5 group-hover:text-brand dark:group-hover:text-emerald-400 transition-colors">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 line-clamp-2 leading-snug mb-1 group-hover:text-brand dark:group-hover:text-emerald-400 transition-colorss">
                     {entry.article.name}
                   </h3>
                   <div className="flex items-center flex-wrap gap-x-1.5 gap-y-0.5 text-[11px] text-gray-400 dark:text-gray-500">
                     <Clock size={10} className="shrink-0" />
-                    <span>Read {readTimeAgo(entry.readAt)}</span>
+                    <span>{formatTime(entry.readAt)}</span>
                     {entry.article.userInfo && (
                       <>
-                        <span className="text-gray-200">·</span>
+                        <span className="text-[11px] text-gray-400 dark:text-gray-500 truncate">·</span>
                         <span>{entry.article.userInfo.name}</span>
                       </>
                     )}
