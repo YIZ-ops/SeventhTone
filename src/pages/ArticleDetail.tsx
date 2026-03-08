@@ -4,7 +4,7 @@ import { getArticleDetail, addHistory, addBookmark, getBookmarks, removeBookmark
 import { ArticleDetail, Highlight } from "../types";
 import DOMPurify from "dompurify";
 import Mark from "mark.js";
-import { ChevronLeft, Loader2, Clock, Bookmark, BookmarkCheck, BookmarkPlus, X, Share2, Volume2 } from "lucide-react";
+import { ChevronLeft, Loader2, Clock, Bookmark, BookmarkCheck, BookmarkPlus, X, Share2, Volume2, Brain } from "lucide-react";
 import BookmarkModal from "../components/BookmarkModal";
 import HighlightSaveModal from "../components/HighlightSaveModal";
 import HighlightDetailModal from "../components/HighlightDetailModal";
@@ -575,6 +575,36 @@ export default function ArticleDetailView() {
           onClick={handleMarkClick}
           onDoubleClick={handleContentDblClick}
         />
+
+        {/* AI Practice CTA */}
+        <div className="mt-14 pt-8 border-t border-gray-100 dark:border-slate-700/60">
+          <div className="rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border border-emerald-100 dark:border-emerald-800/40 p-6 text-center">
+            <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/40 rounded-2xl flex items-center justify-center mx-auto mb-3">
+              <Brain className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-1">
+              Test Your Understanding
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+              5 minute AI exercises based on this article
+            </p>
+            <button
+              type="button"
+              onClick={() =>
+                navigate(`/practice/${article.contId}`, {
+                  state: {
+                    title: article.name,
+                    contentHtml: article.content,
+                  },
+                })
+              }
+              className="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-semibold text-sm rounded-full transition-colors"
+            >
+              <Brain size={16} />
+              Start Practice
+            </button>
+          </div>
+        </div>
       </article>
 
       {/* 单词弹窗遮罩：背景模糊、不可操作，点击关闭。

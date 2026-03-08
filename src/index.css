@@ -15,7 +15,8 @@
 
 @layer utilities {
   .pt-safe {
-    padding-top: env(safe-area-inset-top, 0px);
+    /* --sat is set by JS on native (see App.tsx); env() is used on web/iOS */
+    padding-top: var(--sat, env(safe-area-inset-top, 0px));
   }
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom, 0px);
