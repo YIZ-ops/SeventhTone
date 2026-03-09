@@ -23,7 +23,9 @@ export default function HighlightDetailModal({ highlight, onClose, onDelete, onS
   const justOpenedRef = useRef(false);
   useEffect(() => {
     justOpenedRef.current = true;
-    const t = setTimeout(() => { justOpenedRef.current = false; }, 350);
+    const t = setTimeout(() => {
+      justOpenedRef.current = false;
+    }, 350);
     return () => clearTimeout(t);
   }, []);
 
@@ -51,12 +53,11 @@ export default function HighlightDetailModal({ highlight, onClose, onDelete, onS
     <div
       data-popup
       className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 backdrop-blur-sm"
-      onClick={() => { if (!justOpenedRef.current) onClose(); }}
+      onClick={() => {
+        if (!justOpenedRef.current) onClose();
+      }}
     >
-      <div
-        className="bg-white dark:bg-slate-800 rounded-t-2xl w-full overflow-hidden shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="bg-white dark:bg-slate-800 rounded-t-2xl w-full overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-gray-100 dark:border-slate-600">
           <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">Highlight</h3>
@@ -71,7 +72,9 @@ export default function HighlightDetailModal({ highlight, onClose, onDelete, onS
               </button>
             )}
             <button
-              onClick={() => { if (!justOpenedRef.current) setShowDeleteConfirm(true); }}
+              onClick={() => {
+                if (!justOpenedRef.current) setShowDeleteConfirm(true);
+              }}
               className="p-2 text-gray-400 hover:text-red-500 dark:hover:text-red-400 rounded-full hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
               aria-label="Delete"
             >
@@ -90,18 +93,14 @@ export default function HighlightDetailModal({ highlight, onClose, onDelete, onS
         <div className="px-4 py-4 space-y-4 max-h-[70vh] overflow-y-auto">
           {/* Quote */}
           <div className="relative pl-4 border-l-2 border-brand/40 dark:border-emerald-500/40">
-            <p className="text-sm text-gray-700 dark:text-gray-200 font-serif italic leading-relaxed line-clamp-4">
-              {highlight.text}
-            </p>
+            <p className="text-sm text-gray-700 dark:text-gray-200 font-serif italic leading-relaxed line-clamp-4">{highlight.text}</p>
           </div>
 
           {/* Thought */}
           {isEditing ? (
             <div className="space-y-3">
               <div>
-                <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1.5">
-                  Your thought
-                </label>
+                <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1.5">Your thought</label>
                 <textarea
                   value={thought}
                   onChange={(e) => setThought(e.target.value)}
@@ -114,9 +113,7 @@ export default function HighlightDetailModal({ highlight, onClose, onDelete, onS
 
               {/* Category picker */}
               <div>
-                <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1.5">
-                  Category
-                </label>
+                <label className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1.5">Category</label>
                 {isNewCategory ? (
                   <div className="space-y-2">
                     <input
@@ -128,8 +125,11 @@ export default function HighlightDetailModal({ highlight, onClose, onDelete, onS
                     />
                     <button
                       type="button"
-                      onClick={() => { setIsNewCategory(false); setNewCategoryName(""); }}
-                      className="text-s text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-500"
+                      onClick={() => {
+                        setIsNewCategory(false);
+                        setNewCategoryName("");
+                      }}
+                      className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-500"
                     >
                       Cancel new
                     </button>
@@ -141,7 +141,7 @@ export default function HighlightDetailModal({ highlight, onClose, onDelete, onS
                         key={cat}
                         type="button"
                         onClick={() => setCategory(cat)}
-                        className={`px-3 py-1.5 rounded-full text-s font-semibold transition-all ${
+                        className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
                           category === cat
                             ? "bg-gray-900 dark:bg-emerald-600 text-white"
                             : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-500 hover:bg-gray-200 dark:hover:bg-slate-600"
@@ -153,7 +153,7 @@ export default function HighlightDetailModal({ highlight, onClose, onDelete, onS
                     <button
                       type="button"
                       onClick={() => setIsNewCategory(true)}
-                      className="px-3 py-1.5 rounded-full text-s font-semibold border border-dashed border-gray-300 dark:border-slate-500 text-gray-400 dark:text-gray-500 hover:border-brand dark:hover:border-emerald-500 hover:text-brand dark:hover:text-emerald-400 transition-all"
+                      className="px-3 py-1.5 rounded-full text-xs font-semibold border border-dashed border-gray-300 dark:border-slate-500 text-gray-400 dark:text-gray-500 hover:border-brand dark:hover:border-emerald-500 hover:text-brand dark:hover:text-emerald-400 transition-all"
                     >
                       + New
                     </button>
@@ -181,7 +181,7 @@ export default function HighlightDetailModal({ highlight, onClose, onDelete, onS
               )}
 
               {/* Category display */}
-              <div className="flex items-center gap-1.5 text-s text-gray-400 dark:text-gray-500">
+              <div className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
                 <Tag size={12} />
                 <span>{highlight.category ?? "Highlights"}</span>
               </div>
@@ -223,10 +223,7 @@ export default function HighlightDetailModal({ highlight, onClose, onDelete, onS
 
       {/* Delete confirmation inline */}
       {showDeleteConfirm && (
-        <div
-          className="absolute inset-0 flex items-center justify-center p-6 z-10 bg-black/20 dark:bg-black/50"
-          onClick={(e) => e.stopPropagation()}
-        >
+        <div className="absolute inset-0 flex items-center justify-center p-6 z-10 bg-black/20 dark:bg-black/50" onClick={(e) => e.stopPropagation()}>
           <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-6 w-full max-w-xs text-center border border-gray-100 dark:border-slate-600">
             <div className="w-12 h-12 rounded-full bg-red-50 dark:bg-red-900/30 flex items-center justify-center mx-auto mb-4">
               <Trash2 size={22} className="text-red-500 dark:text-red-400" />

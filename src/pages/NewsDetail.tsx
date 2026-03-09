@@ -30,7 +30,6 @@ import { useTheme } from "../contexts/ThemeContext";
 
 const SIXTH_TONE_WEB = "https://www.sixthtone.com";
 
-// 鑻辫鍗曡瘝璇﹁В API (v2.xxapi.cn) 鍝嶅簲绫诲瀷
 interface DictPhrase {
   p_cn: string;
   p_content: string;
@@ -129,7 +128,7 @@ export default function NewsDetailView() {
   const [highlights, setHighlights] = useState<Highlight[]>([]);
   // activeHighlight is set directly in handleMarkClick (not via an intermediate
   // activeHighlightId) so that the scroll-dismiss handler never holds a reference
-  // to it 鈥?keyboard appearance causes a scroll event that would otherwise clear
+  // to it keyboard appearance causes a scroll event that would otherwise clear
   // the modal while the user is editing.
   const [activeHighlight, setActiveHighlight] = useState<Highlight | null>(null);
   const [showHighlightModal, setShowHighlightModal] = useState(false);
@@ -137,13 +136,13 @@ export default function NewsDetailView() {
   const contentRef = useRef<HTMLDivElement>(null);
   const dictAudioRef = useRef<HTMLAudioElement>(null);
 
-  // Dictionary lookup popup (click word to show definition) 鈥?declared early so useEffects below can reference it
+  // Dictionary lookup popup (click word to show definition) declared early so useEffects below can reference it
   const [dictPopup, setDictPopup] = useState<{ x: number; y: number; word: string } | null>(null);
   const [dictData, setDictData] = useState<DictData | null>(null);
   const [dictLoading, setDictLoading] = useState(false);
   const [dictError, setDictError] = useState<string | null>(null);
 
-  const newscaleClasses = {
+  const newsScaleClasses = {
     small: {
       title: "text-[1.85rem] md:text-[2.35rem] lg:text-[2.95rem]",
       summary: "text-[1rem] md:text-[1.1rem]",
@@ -344,7 +343,7 @@ export default function NewsDetailView() {
       listenerHandle?.remove?.();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navigate]); // 浠?navigate 绋冲畾鍚庨噸缁戝畾锛宯avigate 鏈韩鏄ǔ瀹氬紩鐢?
+  }, [navigate]);
   // pendingHighlightText: stable copy of selected text so the modal isn't destroyed when
   // selectionPopup is cleared (e.g. by the scroll handler when the mobile keyboard appears).
 
@@ -395,13 +394,14 @@ export default function NewsDetailView() {
           title: news.name,
           text: news.name,
           url,
-          dialogTitle: "鍒嗕韩鏂伴椈",
+          dialogTitle: "Share news",
         });
       } else {
-        // 闄嶇骇锛氬鍒堕摼鎺ュ埌鍓创鏉?        await navigator.clipboard.writeText(url);
+        // 降级：复制链接到剪贴板
+        await navigator.clipboard.writeText(url);
       }
     } catch {
-      // 鐢ㄦ埛鍙栨秷鎴栧嚭閿欙紝闈欓粯蹇界暐
+      // 用户取消或出错，静默忽略
     }
   }, [news]);
 
@@ -603,11 +603,11 @@ export default function NewsDetailView() {
         </div>
       </div>
 
-      <News className="max-w-3xl mx-auto px-4 py-6 md:py-10 select-text relative overflow-x-hidden">
-        {/* Header锛氭爣棰樺拰 summary 鏀寔鐐瑰嚮鏌ヨ瘝 */}
+      <article className="max-w-3xl mx-auto px-4 py-6 md:py-10 select-text relative">
+        {/* Header：标题和 summary 支持点击查词 */}
         <header className="mb-8">
           <h1
-            className={`${newscaleClasses[fontScale].title} font-serif font-bold text-gray-900 dark:text-gray-100 leading-tight mb-6 cursor-text`}
+            className={`${newsScaleClasses[fontScale].title} font-serif font-bold text-gray-900 dark:text-gray-100 leading-tight mb-6 cursor-text`}
             onDoubleClick={(e) => {
               if (!(e.target as HTMLElement).closest("a")) handleContentDblClick(e);
             }}
@@ -616,7 +616,7 @@ export default function NewsDetailView() {
           </h1>
 
           <p
-            className={`${newscaleClasses[fontScale].summary} text-gray-600 dark:text-gray-500 font-serif italic mb-8 leading-relaxed cursor-text`}
+            className={`${newsScaleClasses[fontScale].summary} text-gray-600 dark:text-gray-500 font-serif italic mb-8 leading-relaxed cursor-text`}
             onDoubleClick={(e) => {
               if (!(e.target as HTMLElement).closest("a")) handleContentDblClick(e);
             }}
@@ -638,7 +638,7 @@ export default function NewsDetailView() {
                 <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                   {news.authorList?.map((a) => a.name).join(", ") || "Seventh Tone"}
                 </p>
-                <div className="flex items-center text-s text-gray-500 dark:text-gray-400 mt-0.5">
+                <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                   <Clock size={12} className="mr-1" />
                   <time dateTime={news.pubTime}>{news.pubTime}</time>
                 </div>
@@ -662,7 +662,7 @@ export default function NewsDetailView() {
         {/* Content */}
         <div
           ref={contentRef}
-          className={`prose ${newscaleClasses[fontScale].prose} prose-emerald max-w-none overflow-x-hidden break-words prose-p:font-serif prose-p:leading-relaxed prose-p:text-gray-800 dark:prose-p:text-gray-200 prose-a:text-emerald-600 dark:prose-a:text-emerald-400 prose-img:rounded-xl prose-img:max-w-full prose-img:h-auto prose-pre:max-w-full prose-pre:overflow-x-auto prose-table:block prose-table:max-w-full prose-table:overflow-x-auto [&_iframe]:max-w-full [&_video]:max-w-full [&_svg]:max-w-full [&_*]:break-words select-text`}
+          className={`prose ${newsScaleClasses[fontScale].prose} prose-emerald max-w-none overflow-x-hidden break-words prose-p:font-serif prose-p:leading-relaxed prose-p:text-gray-800 dark:prose-p:text-gray-200 prose-a:text-emerald-600 dark:prose-a:text-emerald-400 prose-img:rounded-xl prose-img:max-w-full prose-img:h-auto prose-pre:max-w-full prose-pre:overflow-x-auto prose-table:block prose-table:max-w-full prose-table:overflow-x-auto [&_iframe]:max-w-full [&_video]:max-w-full [&_svg]:max-w-full [&_*]:break-words select-text`}
           dangerouslySetInnerHTML={{ __html: highlightedContent }}
           onClick={handleMarkClick}
           onDoubleClick={handleContentDblClick}
@@ -706,8 +706,8 @@ export default function NewsDetailView() {
             </div>
           </button>
         </div>
-      </News>
-      
+      </article>
+
       {dictPopup && (
         <button
           type="button"
@@ -812,7 +812,7 @@ export default function NewsDetailView() {
                 {/* Definitions */}
                 {dictData.translations && dictData.translations.length > 0 && (
                   <section>
-                    <h4 className="text-s font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-2">Definitions</h4>
+                    <h4 className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-2">Definitions</h4>
                     <ul className="space-y-1 list-none pl-0">
                       {dictData.translations.map((t, i) => (
                         <li key={i} className="text-gray-800 dark:text-gray-200">
@@ -825,7 +825,7 @@ export default function NewsDetailView() {
                 {/* Phrases */}
                 {dictData.phrases && dictData.phrases.length > 0 && (
                   <section>
-                    <h4 className="text-s font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-2">Phrases</h4>
+                    <h4 className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-2">Phrases</h4>
                     <ul className="space-y-1.5 list-none pl-0">
                       {dictData.phrases.slice(0, 12).map((p, i) => (
                         <li key={i} className="text-gray-800 dark:text-gray-200">
@@ -834,7 +834,7 @@ export default function NewsDetailView() {
                         </li>
                       ))}
                       {dictData.phrases.length > 12 && (
-                        <li className="text-gray-400 dark:text-gray-500 text-s">Total {dictData.phrases.length} phrases</li>
+                        <li className="text-gray-400 dark:text-gray-500 text-xs">Total {dictData.phrases.length} phrases</li>
                       )}
                     </ul>
                   </section>
@@ -842,7 +842,7 @@ export default function NewsDetailView() {
                 {/* Related words */}
                 {dictData.relWords && dictData.relWords.length > 0 && (
                   <section>
-                    <h4 className="text-s font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-2">Related words</h4>
+                    <h4 className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-2">Related words</h4>
                     <div className="space-y-2">
                       {dictData.relWords.map((g, i) => (
                         <div key={i}>
@@ -862,7 +862,7 @@ export default function NewsDetailView() {
                 {/* Synonyms */}
                 {dictData.synonyms && dictData.synonyms.length > 0 && (
                   <section>
-                    <h4 className="text-s font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-2">Synonyms</h4>
+                    <h4 className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-2">Synonyms</h4>
                     <ul className="space-y-1 list-none pl-0">
                       {dictData.synonyms.map((s, i) => (
                         <li key={i} className="text-gray-800 dark:text-gray-200">
@@ -877,7 +877,7 @@ export default function NewsDetailView() {
                 {/* Example sentences */}
                 {dictData.sentences && dictData.sentences.length > 0 && (
                   <section>
-                    <h4 className="text-s font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-2">Example sentences</h4>
+                    <h4 className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-2">Example sentences</h4>
                     <ul className="space-y-2 list-none pl-0">
                       {dictData.sentences.slice(0, 5).map((s, i) => (
                         <li key={i} className="text-gray-800 dark:text-gray-200">

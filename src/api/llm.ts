@@ -15,7 +15,7 @@ export const LLM_MODELS = {
 type LLMModelKey = keyof typeof LLM_MODELS;
 
 /** ← Change this single line to switch models */
-const ACTIVE_MODEL: LLMModelKey = "DeepSeek-R1-Distill-Qwen-14B";
+const ACTIVE_MODEL: LLMModelKey = "Qwen2.5-7B";
 
 export const LLM_CONFIG = {
   baseURL: "https://api.siliconflow.cn/v1",

@@ -25,12 +25,18 @@ export default function CategoryList() {
       toastEl = document.createElement("div");
       toastEl.textContent = "再按一次退出程序";
       Object.assign(toastEl.style, {
-        position: "fixed", bottom: "96px", left: "50%",
+        position: "fixed",
+        bottom: "96px",
+        left: "50%",
         transform: "translateX(-50%)",
-        background: "rgba(0,0,0,0.75)", color: "white",
-        padding: "10px 22px", borderRadius: "24px",
-        fontSize: "14px", zIndex: "9999",
-        pointerEvents: "none", whiteSpace: "nowrap",
+        background: "rgba(0,0,0,0.75)",
+        color: "white",
+        padding: "10px 22px",
+        borderRadius: "24px",
+        fontSize: "14px",
+        zIndex: "9999",
+        pointerEvents: "none",
+        whiteSpace: "nowrap",
       });
       document.body.appendChild(toastEl);
       toastTimer = setTimeout(() => {
@@ -47,7 +53,9 @@ export default function CategoryList() {
         lastBackAt = now;
         showExitToast();
       }
-    }).then((h) => { handle = h; });
+    }).then((h) => {
+      handle = h;
+    });
 
     return () => {
       handle?.remove?.();
@@ -67,7 +75,7 @@ export default function CategoryList() {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8 pb-32 flex flex-col items-center justify-center min-h-[40vh]">
         <Loader2 className="w-10 h-10 text-brand animate-spin mb-4" />
-        <p className="text-gray-500 dark:text-gray-400 text-sm">Loading sections...</p>
+        <p className="text-gray-500 dark:text-gray-400 text-sm">Loading...</p>
       </div>
     );
   }
@@ -98,7 +106,7 @@ export default function CategoryList() {
       <header className="mb-12">
         <div className="flex items-center space-x-2 mb-2">
           <span className="h-px w-8 bg-brand dark:bg-emerald-400"></span>
-          <span className="text-s font-extrabold tracking-[0.2em] text-brand dark:text-emerald-400 uppercase">Explore</span>
+          <span className="text-xs font-extrabold tracking-[0.2em] text-brand dark:text-emerald-400 uppercase">Explore</span>
         </div>
         <h1 className="text-4xl md:text-5xl font-serif font-bold text-gray-900 dark:text-gray-100 tracking-tight">Sections</h1>
       </header>
@@ -122,13 +130,19 @@ export default function CategoryList() {
               </div>
 
               <div className="relative z-10">
-                <span className={`inline-block text-[10px] font-bold tracking-[0.2em] uppercase mb-4 transition-colors ${category.tonePic ? "text-white/80 group-hover:text-white" : "text-gray-400 group-hover:text-brand"}`}>
+                <span
+                  className={`inline-block text-[10px] font-bold tracking-[0.2em] uppercase mb-4 transition-colors ${category.tonePic ? "text-white/80 group-hover:text-white" : "text-gray-400 group-hover:text-brand"}`}
+                >
                   {index + 1 < 10 ? `0${index + 1}` : index + 1}
                 </span>
-                <h2 className={`text-2xl font-bold mb-4 tracking-tight group-hover:translate-x-1 transition-transform duration-300 ${category.tonePic ? "text-white drop-shadow-sm" : "text-emerald-600 dark:text-emerald-400"}`}>
+                <h2
+                  className={`text-2xl font-bold mb-4 tracking-tight group-hover:translate-x-1 transition-transform duration-300 ${category.tonePic ? "text-white drop-shadow-sm" : "text-emerald-600 dark:text-emerald-400"}`}
+                >
                   {category.title}
                 </h2>
-                <p className={`leading-relaxed text-sm md:text-base line-clamp-3 transition-colors ${category.tonePic ? "text-white/90 group-hover:text-white drop-shadow-sm" : "text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-500"}`}>
+                <p
+                  className={`leading-relaxed text-sm md:text-base line-clamp-3 transition-colors ${category.tonePic ? "text-white/90 group-hover:text-white drop-shadow-sm" : "text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-500"}`}
+                >
                   {category.description}
                 </p>
               </div>

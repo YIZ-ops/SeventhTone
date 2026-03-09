@@ -1,17 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Loader2,
-  CheckCircle2,
-  XCircle,
-  Brain,
-  RotateCcw,
-  LayoutGrid,
-  X,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, CheckCircle2, XCircle, Brain, RotateCcw, LayoutGrid, X } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { App as CapacitorApp } from "@capacitor/app";
 import {
@@ -36,10 +26,7 @@ type AnswerStatus = "unanswered" | "correct" | "wrong" | "answered";
 
 const LABELS = ["A", "B", "C", "D"];
 
-const SECTION_META: Record<
-  QEntry["type"],
-  { label: string; short: string; accent: string; ring: string; bg: string }
-> = {
+const SECTION_META: Record<QEntry["type"], { label: string; short: string; accent: string; ring: string; bg: string }> = {
   vocab: {
     label: "Vocabulary",
     short: "Vocab",
@@ -78,31 +65,18 @@ const SECTION_META: Record<
 };
 
 // ─── Option button helpers ────────────────────────────────────────────────────
-function optionCls(
-  answered: boolean,
-  isSelected: boolean,
-  isCorrect: boolean,
-): string {
-  const base =
-    "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 transition-all text-left select-none";
+function optionCls(answered: boolean, isSelected: boolean, isCorrect: boolean): string {
+  const base = "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 transition-all text-left select-none";
   if (!answered)
     return `${base} border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 active:scale-[0.985] hover:border-gray-300 dark:hover:border-slate-500`;
-  if (isSelected && isCorrect)
-    return `${base} border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30`;
-  if (isSelected && !isCorrect)
-    return `${base} border-red-400 bg-red-50 dark:bg-red-900/20`;
-  if (!isSelected && isCorrect)
-    return `${base} border-emerald-400 border-dashed bg-emerald-50/40 dark:bg-emerald-900/10`;
+  if (isSelected && isCorrect) return `${base} border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30`;
+  if (isSelected && !isCorrect) return `${base} border-red-400 bg-red-50 dark:bg-red-900/20`;
+  if (!isSelected && isCorrect) return `${base} border-emerald-400 border-dashed bg-emerald-50/40 dark:bg-emerald-900/10`;
   return `${base} border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50 opacity-40`;
 }
 
-function badgeCls(
-  answered: boolean,
-  isSelected: boolean,
-  isCorrect: boolean,
-): string {
-  const base =
-    "shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-s font-bold";
+function badgeCls(answered: boolean, isSelected: boolean, isCorrect: boolean): string {
+  const base = "shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold";
   if (!answered) return `${base} bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300`;
   if (isCorrect) return `${base} bg-emerald-500 text-white`;
   if (isSelected) return `${base} bg-red-500 text-white`;
@@ -276,10 +250,7 @@ export default function NewsPractice() {
     if (!summaryText.trim() || summaryEvalLoading) return;
     setSummaryEvalLoading(true);
     try {
-      const result = await evaluateSummary(
-        prepareNewsText(contentHtml),
-        summaryText,
-      );
+      const result = await evaluateSummary(prepareNewsText(contentHtml), summaryText);
       setSummaryEval(result);
     } catch {
       // silently fail
@@ -314,22 +285,23 @@ export default function NewsPractice() {
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
     const listener = CapacitorApp.addListener("backButton", () => {
-      if (showSheet) { setShowSheet(false); return; }
+      if (showSheet) {
+        setShowSheet(false);
+        return;
+      }
       navigate(-1);
     });
-    return () => { listener.then((h) => h.remove()); };
+    return () => {
+      listener.then((h) => h.remove());
+    };
   }, [navigate, showSheet]);
 
   // ── Progress ──────────────────────────────────────────────────────────────
   const progress = questions.length > 0 ? Math.round(((currentIdx + 1) / questions.length) * 100) : 0;
 
   // ── Scores ────────────────────────────────────────────────────────────────
-  const vocabCorrect = exercises
-    ? exercises.vocabulary.filter((q) => vocabAnswers[q.id] === q.answer).length
-    : 0;
-  const compCorrect = exercises
-    ? exercises.comprehension.filter((q) => compAnswers[q.id] === q.answer).length
-    : 0;
+  const vocabCorrect = exercises ? exercises.vocabulary.filter((q) => vocabAnswers[q.id] === q.answer).length : 0;
+  const compCorrect = exercises ? exercises.comprehension.filter((q) => compAnswers[q.id] === q.answer).length : 0;
 
   // ═══════════════════════════════════════════════════════════════════════════
   //  PHASE: LOADING
@@ -385,10 +357,7 @@ export default function NewsPractice() {
             </p>
           </div>
           <div className="w-full h-1 bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-emerald-500 rounded-full transition-all duration-400"
-              style={{ width: `${progress}%` }}
-            />
+            <div className="h-full bg-emerald-500 rounded-full transition-all duration-400" style={{ width: `${progress}%` }} />
           </div>
         </div>
         <button
@@ -436,10 +405,7 @@ export default function NewsPractice() {
             </div>
             <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 dark:border-slate-700">
               <h3 className="font-bold text-gray-900 dark:text-gray-100 text-sm">答题卡 · Answer Sheet</h3>
-              <button
-                onClick={() => setShowSheet(false)}
-                className="p-1.5 rounded-full text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700"
-              >
+              <button onClick={() => setShowSheet(false)} className="p-1.5 rounded-full text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700">
                 <X size={18} />
               </button>
             </div>
@@ -448,9 +414,7 @@ export default function NewsPractice() {
                 const meta = SECTION_META[section.type];
                 return (
                   <div key={section.type}>
-                    <p className={`text-[10px] font-bold uppercase tracking-widest mb-2 ${meta.accent}`}>
-                      {meta.label}
-                    </p>
+                    <p className={`text-[10px] font-bold uppercase tracking-widest mb-2 ${meta.accent}`}>{meta.label}</p>
                     <div className="flex flex-wrap gap-2">
                       {section.entries.map(({ entry, globalIdx }, i) => {
                         const status = getStatus(entry);
@@ -459,7 +423,7 @@ export default function NewsPractice() {
                           <button
                             key={i}
                             onClick={() => jumpTo(globalIdx)}
-                            className={`w-9 h-9 rounded-xl text-s font-bold transition-all ${statusDotCls(status)} ${isCurrent ? `ring-2 ring-offset-2 ${meta.ring}` : ""}`}
+                            className={`w-9 h-9 rounded-xl text-xs font-bold transition-all ${statusDotCls(status)} ${isCurrent ? `ring-2 ring-offset-2 ${meta.ring}` : ""}`}
                           >
                             {section.type === "summary" ? "S" : i + 1}
                           </button>
@@ -508,7 +472,7 @@ export default function NewsPractice() {
 
         {/* Section indicator */}
         <div className="flex-1 flex justify-center">
-          <span className={`text-s font-bold uppercase tracking-wider ${SECTION_META[currentEntry.type].accent}`}>
+          <span className={`text-xs font-bold uppercase tracking-wider ${SECTION_META[currentEntry.type].accent}`}>
             {SECTION_META[currentEntry.type].short}
           </span>
         </div>
@@ -538,11 +502,7 @@ export default function NewsPractice() {
   //  PHASE: QUESTIONS
   // ═══════════════════════════════════════════════════════════════════════════
   // ─── Shared: AI score card ────────────────────────────────────────────────
-  const renderEvalCard = (
-    score: number,
-    feedbacks: { label?: string; text: string }[],
-    improved?: string,
-  ) => (
+  const renderEvalCard = (score: number, feedbacks: { label?: string; text: string }[], improved?: string) => (
     <motion.div
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
@@ -552,17 +512,13 @@ export default function NewsPractice() {
       <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-slate-700">
         <div
           className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 ${
-            score >= 80
-              ? "bg-emerald-500 text-white"
-              : score >= 50
-                ? "bg-amber-400 text-white"
-                : "bg-red-400 text-white"
+            score >= 80 ? "bg-emerald-500 text-white" : score >= 50 ? "bg-amber-400 text-white" : "bg-red-400 text-white"
           }`}
         >
           {score}
         </div>
         <div>
-          <p className="text-s font-bold text-gray-700 dark:text-gray-300">AI 评分</p>
+          <p className="text-xs font-bold text-gray-700 dark:text-gray-300">AI 评分</p>
           <p className="text-[10px] text-gray-400 dark:text-gray-500">满分 100</p>
         </div>
       </div>
@@ -570,19 +526,13 @@ export default function NewsPractice() {
       <div className="px-4 py-3 space-y-2">
         {feedbacks.map(({ label, text }, i) => (
           <div key={i}>
-            {label && (
-              <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400 mb-0.5">
-                {label}
-              </p>
-            )}
+            {label && <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400 mb-0.5">{label}</p>}
             <p className="text-sm text-gray-700 dark:text-gray-300">{text}</p>
           </div>
         ))}
         {improved && (
           <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-3 border border-emerald-100 dark:border-emerald-800 mt-1">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-600 dark:text-emerald-400 mb-1">
-              建议版本
-            </p>
+            <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-600 dark:text-emerald-400 mb-1">建议版本</p>
             <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">{improved}</p>
           </div>
         )}
@@ -592,22 +542,22 @@ export default function NewsPractice() {
 
   const renderSectionBadge = (entry: QEntry) => {
     const meta = SECTION_META[entry.type];
-    const num = entry.type !== "summary"
-      ? `${(entry as { idx: number }).idx + 1}/${
-          entry.type === "vocab" ? exercises.vocabulary.length
-          : entry.type === "comp" ? exercises.comprehension.length
-          : entry.type === "en2cn" ? exercises.en2cn.length
-          : exercises.cn2en.length
-        }`
-      : null;
+    const num =
+      entry.type !== "summary"
+        ? `${(entry as { idx: number }).idx + 1}/${
+            entry.type === "vocab"
+              ? exercises.vocabulary.length
+              : entry.type === "comp"
+                ? exercises.comprehension.length
+                : entry.type === "en2cn"
+                  ? exercises.en2cn.length
+                  : exercises.cn2en.length
+          }`
+        : null;
     return (
       <div className="flex items-center justify-between mb-5">
-        <span className={`text-s font-bold uppercase tracking-widest ${meta.accent}`}>
-          {meta.label}
-        </span>
-        {num && (
-          <span className="text-s text-gray-400 dark:text-gray-500">{num}</span>
-        )}
+        <span className={`text-xs font-bold uppercase tracking-widest ${meta.accent}`}>{meta.label}</span>
+        {num && <span className="text-xs text-gray-400 dark:text-gray-500">{num}</span>}
       </div>
     );
   };
@@ -625,9 +575,7 @@ export default function NewsPractice() {
 
         {/* Sentence card */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-slate-700">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400 mb-3">
-            Fill in the blank
-          </p>
+          <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400 mb-3">Fill in the blank</p>
           <p className="text-base text-gray-900 dark:text-gray-100 leading-relaxed font-serif">
             {q.sentence.split("___").map((part, i, arr) => (
               <span key={i}>
@@ -695,9 +643,7 @@ export default function NewsPractice() {
               }`}
             >
               <p
-                className={`text-sm font-semibold mb-1 ${
-                  correct ? "text-emerald-700 dark:text-emerald-400" : "text-amber-700 dark:text-amber-400"
-                }`}
+                className={`text-sm font-semibold mb-1 ${correct ? "text-emerald-700 dark:text-emerald-400" : "text-amber-700 dark:text-amber-400"}`}
               >
                 {correct ? "✓ Correct!" : `✗ The answer is "${q.answer}"`}
               </p>
@@ -768,9 +714,7 @@ export default function NewsPractice() {
               }`}
             >
               <p
-                className={`text-sm font-semibold mb-1 ${
-                  correct ? "text-emerald-700 dark:text-emerald-400" : "text-amber-700 dark:text-amber-400"
-                }`}
+                className={`text-sm font-semibold mb-1 ${correct ? "text-emerald-700 dark:text-emerald-400" : "text-amber-700 dark:text-amber-400"}`}
               >
                 {correct ? "✓ Correct!" : `✗ The answer is "${q.options[q.answer]}"`}
               </p>
@@ -783,13 +727,8 @@ export default function NewsPractice() {
   };
 
   // ─── Translation question ─────────────────────────────────────────────────
-  const renderTranslation = (
-    entry: Extract<QEntry, { type: "en2cn" | "cn2en" }>,
-  ) => {
-    const q =
-      entry.type === "en2cn"
-        ? exercises.en2cn[entry.idx]
-        : exercises.cn2en[entry.idx];
+  const renderTranslation = (entry: Extract<QEntry, { type: "en2cn" | "cn2en" }>) => {
+    const q = entry.type === "en2cn" ? exercises.en2cn[entry.idx] : exercises.cn2en[entry.idx];
     const userText = translTexts[q.id] ?? "";
     const revealed = translRevealed.has(q.id);
     const isEn2Cn = entry.type === "en2cn";
@@ -802,19 +741,37 @@ export default function NewsPractice() {
       setTranslRevealed((prev) => new Set([...prev, q.id]));
       setTranslEvalLoading((prev) => new Set([...prev, q.id]));
       try {
-        const results = await evaluateTranslations([{
-          id: q.id, direction: entry.type,
-          source: q.sourceText, userAnswer: userText.trim(), modelAnswer: q.modelAnswer,
-        }]);
+        const results = await evaluateTranslations([
+          {
+            id: q.id,
+            direction: entry.type,
+            source: q.sourceText,
+            userAnswer: userText.trim(),
+            modelAnswer: q.modelAnswer,
+          },
+        ]);
         if (results[0]) setTranslEvals((prev) => ({ ...prev, [q.id]: results[0] }));
-      } catch { /* silently fail */ } finally {
-        setTranslEvalLoading((prev) => { const n = new Set(prev); n.delete(q.id); return n; });
+      } catch {
+        /* silently fail */
+      } finally {
+        setTranslEvalLoading((prev) => {
+          const n = new Set(prev);
+          n.delete(q.id);
+          return n;
+        });
       }
     };
 
     const handleReScore = () => {
-      setTranslRevealed((prev) => { const n = new Set(prev); n.delete(q.id); return n; });
-      setTranslEvals((prev) => { const { [q.id]: _, ...rest } = prev; return rest; });
+      setTranslRevealed((prev) => {
+        const n = new Set(prev);
+        n.delete(q.id);
+        return n;
+      });
+      setTranslEvals((prev) => {
+        const { [q.id]: _, ...rest } = prev;
+        return rest;
+      });
       setTranslTexts((prev) => ({ ...prev, [q.id]: "" }));
     };
 
@@ -827,14 +784,16 @@ export default function NewsPractice() {
           <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400 mb-3">
             {isEn2Cn ? "Translate to Chinese" : "Translate to English"}
           </p>
-          <p className={`text-base leading-relaxed ${isEn2Cn ? "font-serif italic text-gray-800 dark:text-gray-100" : "text-gray-800 dark:text-gray-100"}`}>
+          <p
+            className={`text-base leading-relaxed ${isEn2Cn ? "font-serif italic text-gray-800 dark:text-gray-100" : "text-gray-800 dark:text-gray-100"}`}
+          >
             {q.sourceText}
           </p>
         </div>
 
         {/* Input */}
         <div>
-          <p className="text-s font-semibold text-gray-500 dark:text-gray-400 mb-2">Your translation</p>
+          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">Your translation</p>
           <textarea
             value={userText}
             onChange={(e) => setTranslTexts((prev) => ({ ...prev, [q.id]: e.target.value }))}
@@ -853,9 +812,15 @@ export default function NewsPractice() {
             disabled={!hasText || isEvalLoading}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-brand/10 dark:bg-emerald-900/30 text-brand dark:text-emerald-400 hover:bg-brand/20 dark:hover:bg-emerald-900/50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
-            {isEvalLoading
-              ? <><Loader2 size={14} className="animate-spin" /> 评分中…</>
-              : <><Brain size={14} /> 获取 AI 评分</>}
+            {isEvalLoading ? (
+              <>
+                <Loader2 size={14} className="animate-spin" /> 评分中…
+              </>
+            ) : (
+              <>
+                <Brain size={14} /> 获取 AI 评分
+              </>
+            )}
           </button>
         )}
 
@@ -868,7 +833,8 @@ export default function NewsPractice() {
             </div>
             {isEvalLoading && (
               <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500 py-1">
-                <Loader2 size={14} className="animate-spin" /><span>AI 评分中…</span>
+                <Loader2 size={14} className="animate-spin" />
+                <span>AI 评分中…</span>
               </div>
             )}
             {evalResult && !isEvalLoading && renderEvalCard(evalResult.score, [{ text: evalResult.feedback }], evalResult.improved)}
@@ -903,12 +869,8 @@ export default function NewsPractice() {
         {renderSectionBadge({ type: "summary" })}
 
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-slate-700">
-          <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">
-            Write an English summary of this news (3–5 sentences).
-          </p>
-          <p className="text-s text-gray-400 dark:text-gray-500">
-            Cover the main point, key facts, and any significant implication.
-          </p>
+          <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">Write an English summary of this news (3–5 sentences).</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500">Cover the main point, key facts, and any significant implication.</p>
         </div>
 
         <div>
@@ -920,7 +882,7 @@ export default function NewsPractice() {
             rows={6}
             className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 disabled:bg-gray-50 disabled:dark:bg-slate-800/50 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand dark:focus:ring-emerald-500 resize-none transition-colors"
           />
-          <p className="text-s text-gray-400 dark:text-gray-500 mt-1 text-right">
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 text-right">
             {wordCount} {wordCount === 1 ? "word" : "words"}
           </p>
         </div>
@@ -933,9 +895,15 @@ export default function NewsPractice() {
             disabled={!hasText || summaryEvalLoading}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-brand/10 dark:bg-emerald-900/30 text-brand dark:text-emerald-400 hover:bg-brand/20 dark:hover:bg-emerald-900/50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
-            {summaryEvalLoading
-              ? <><Loader2 size={14} className="animate-spin" /> 评分中…</>
-              : <><Brain size={14} /> 获取 AI 评分</>}
+            {summaryEvalLoading ? (
+              <>
+                <Loader2 size={14} className="animate-spin" /> 评分中…
+              </>
+            ) : (
+              <>
+                <Brain size={14} /> 获取 AI 评分
+              </>
+            )}
           </button>
         )}
 
@@ -1012,8 +980,7 @@ export default function NewsPractice() {
           >
             {currentEntry.type === "vocab" && renderVocab(currentEntry)}
             {currentEntry.type === "comp" && renderComp(currentEntry)}
-            {(currentEntry.type === "en2cn" || currentEntry.type === "cn2en") &&
-              renderTranslation(currentEntry)}
+            {(currentEntry.type === "en2cn" || currentEntry.type === "cn2en") && renderTranslation(currentEntry)}
             {currentEntry.type === "summary" && renderSummary()}
           </motion.div>
         </AnimatePresence>

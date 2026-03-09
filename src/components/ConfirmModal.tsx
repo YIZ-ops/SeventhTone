@@ -12,15 +12,7 @@ interface ConfirmModalProps {
   variant?: "danger" | "default";
 }
 
-export default function ConfirmModal({
-  open,
-  onClose,
-  onConfirm,
-  title,
-  message,
-  confirmLabel = "Confirm",
-  variant = "danger",
-}: ConfirmModalProps) {
+export default function ConfirmModal({ open, onClose, onConfirm, title, message, confirmLabel = "Confirm", variant = "danger" }: ConfirmModalProps) {
   // On mobile, the same tap that opens the modal can fire a delayed synthetic click
   // that lands on the newly rendered backdrop and immediately closes it.
   // Guard against that by ignoring backdrop clicks for 350ms after opening.
@@ -28,7 +20,9 @@ export default function ConfirmModal({
   useEffect(() => {
     if (open) {
       justOpenedRef.current = true;
-      const t = setTimeout(() => { justOpenedRef.current = false; }, 350);
+      const t = setTimeout(() => {
+        justOpenedRef.current = false;
+      }, 350);
       return () => clearTimeout(t);
     }
   }, [open]);
@@ -47,7 +41,9 @@ export default function ConfirmModal({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm"
-            onClick={() => { if (!justOpenedRef.current) onClose(); }}
+            onClick={() => {
+              if (!justOpenedRef.current) onClose();
+            }}
           />
           <motion.div
             initial={{ opacity: 0, scale: 0.96, y: 8 }}

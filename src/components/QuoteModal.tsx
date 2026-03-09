@@ -37,9 +37,7 @@ export default function QuoteModal({ text, newsTitle, author, onClose }: QuoteMo
   };
 
   const saveViaWeb = async (canvas: HTMLCanvasElement, fileName: string) => {
-    const blob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob((b) => resolve(b), "image/png"),
-    );
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob((b) => resolve(b), "image/png"));
     if (!blob) throw new Error("Failed to create blob");
 
     const file = new File([blob], fileName, { type: "image/png" });
@@ -123,7 +121,7 @@ export default function QuoteModal({ text, newsTitle, author, onClose }: QuoteMo
 
             <div className="mt-auto pt-6 border-t border-gray-100">
               <h4 className="text-sm font-bold text-gray-900 mb-1 line-clamp-2">{newsTitle}</h4>
-              <p className="text-s text-gray-500 uppercase tracking-widest font-bold">{author}</p>
+              <p className="text-xs text-gray-500 uppercase tracking-widest font-bold">{author}</p>
             </div>
           </div>
         </div>
@@ -140,18 +138,10 @@ export default function QuoteModal({ text, newsTitle, author, onClose }: QuoteMo
             onClick={handleDownload}
             disabled={isGenerating}
             className={`flex items-center gap-2 px-6 py-3 rounded-full shadow-lg transition-colors disabled:opacity-70 ${
-              saved
-                ? "bg-emerald-600 text-white"
-                : "bg-gray-900 text-white hover:bg-gray-800"
+              saved ? "bg-emerald-600 text-white" : "bg-gray-900 text-white hover:bg-gray-800"
             }`}
           >
-            {isGenerating ? (
-              <Loader2 size={18} className="animate-spin" />
-            ) : saved ? (
-              <Check size={18} />
-            ) : (
-              <Download size={18} />
-            )}
+            {isGenerating ? <Loader2 size={18} className="animate-spin" /> : saved ? <Check size={18} /> : <Download size={18} />}
             {saved && <span className="text-sm font-bold uppercase tracking-widest">Saved</span>}
           </button>
         </div>

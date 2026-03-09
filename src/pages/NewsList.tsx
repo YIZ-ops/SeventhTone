@@ -245,7 +245,7 @@ export default function NewsList() {
           {refreshing ? (
             <Loader2 className="w-6 h-6 text-brand animate-spin" />
           ) : (
-            <span className="text-s text-gray-400">{pullY >= PULL_THRESHOLD ? "Release to refresh" : "Pull to refresh"}</span>
+            <span className="text-xs text-gray-400">{pullY >= PULL_THRESHOLD ? "Release to refresh" : "Pull to refresh"}</span>
           )}
         </div>
 
@@ -285,7 +285,7 @@ export default function NewsList() {
               <span>{error}</span>
               <button
                 onClick={() => fetchNews(page)}
-                className="px-4 py-2 bg-white dark:bg-slate-800 rounded-full shadow-sm text-s font-bold uppercase tracking-wider"
+                className="px-4 py-2 bg-white dark:bg-slate-800 rounded-full shadow-sm text-xs font-bold uppercase tracking-wider"
               >
                 Retry
               </button>

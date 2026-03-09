@@ -347,7 +347,7 @@ export default function Bookmarks() {
               key={t}
               type="button"
               onClick={() => setTab(t)}
-              className={`flex-1 py-2.5 rounded-xl text-s font-semibold transition-all ${
+              className={`flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                 tab === t ? "bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 shadow-sm" : "text-gray-500 dark:text-gray-400"
               }`}
             >
@@ -371,7 +371,7 @@ export default function Bookmarks() {
           <div className="flex-1 min-w-0">
             <h2 className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{currentView}</h2>
           </div>
-          <span className="text-s text-gray-400 dark:text-gray-500 shrink-0">
+          <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0">
             {tab === "bookmarks" ? filteredBookmarks.length : filteredHighlights.length} items
           </span>
         </div>
@@ -393,9 +393,7 @@ export default function Bookmarks() {
             <Highlighter size={32} className="text-gray-200 dark:text-gray-500" />
           </div>
           <h2 className="text-2xl font-serif font-bold text-gray-900 dark:text-gray-100 mb-2">No highlights</h2>
-          <p className="text-gray-400 dark:text-gray-500 text-sm max-w-xs mx-auto">
-            Select text in an news and click "Highlight" to save it here.
-          </p>
+          <p className="text-gray-400 dark:text-gray-500 text-sm max-w-xs mx-auto">Select text in an news and click "Highlight" to save it here.</p>
         </div>
       )}
       {isEmpty && tab === "vocabulary" && (
@@ -468,7 +466,7 @@ export default function Bookmarks() {
                       <p className={`text-sm font-bold leading-snug truncate ${cat.cover ? "text-white" : "text-gray-900 dark:text-gray-100"}`}>
                         {cat.name}
                       </p>
-                      <p className={`text-s mt-0.5 ${cat.cover ? "text-white/60" : "text-gray-400 dark:text-gray-500"}`}>
+                      <p className={`text-xs mt-0.5 ${cat.cover ? "text-white/60" : "text-gray-400 dark:text-gray-500"}`}>
                         {cat.count} {cat.count === 1 ? "item" : "items"}
                       </p>
                     </div>
@@ -509,13 +507,13 @@ export default function Bookmarks() {
                       </button>
                     </div>
                     {cat.preview && (
-                      <p className="text-s text-gray-400 dark:text-gray-500 font-serif italic line-clamp-3 flex-1 mb-2 leading-relaxed pr-14">
+                      <p className="text-xs text-gray-400 dark:text-gray-500 font-serif italic line-clamp-3 flex-1 mb-2 leading-relaxed pr-14">
                         &ldquo;{cat.preview}&rdquo;
                       </p>
                     )}
                     <div className="mt-auto">
                       <p className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{cat.name}</p>
-                      <p className="text-s text-brand/60 dark:text-emerald-400/70 mt-0.5">
+                      <p className="text-xs text-brand/60 dark:text-emerald-400/70 mt-0.5">
                         {cat.count} {cat.count === 1 ? "highlight" : "highlights"}
                       </p>
                     </div>
@@ -613,7 +611,7 @@ export default function Bookmarks() {
                                   &ldquo;
                                 </span>
                                 <p className="text-sm text-gray-700 dark:text-gray-200 font-serif leading-relaxed italic line-clamp-3">{h.text}</p>
-                                {h.thought && <p className="text-s text-gray-500 dark:text-gray-400 mt-1.5 line-clamp-2">{h.thought}</p>}
+                                {h.thought && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 line-clamp-2">{h.thought}</p>}
                                 <span className="text-[11px] text-brand dark:text-emerald-400 font-medium mt-2 block truncate">
                                   {h.newsName || "Unknown news"}
                                 </span>
@@ -648,10 +646,10 @@ export default function Bookmarks() {
                         <div className="bg-white dark:bg-slate-800 px-4 py-3 hover:bg-gray-50 dark:hover:bg-slate-700/60 transition-colors">
                           <div className="flex items-baseline gap-2 flex-wrap">
                             <span className="text-base font-bold text-gray-900 dark:text-gray-100">{v.word}</span>
-                            {v.phonetic && <span className="text-s font-mono text-gray-400 dark:text-gray-500">/{v.phonetic}/</span>}
+                            {v.phonetic && <span className="text-xs font-mono text-gray-400 dark:text-gray-500">/{v.phonetic}/</span>}
                           </div>
                           {v.translations.length > 0 && (
-                            <p className="text-s text-gray-500 dark:text-gray-400 mt-1 line-clamp-2 leading-relaxed">{v.translations.join("；")}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2 leading-relaxed">{v.translations.join("；")}</p>
                           )}
                         </div>
                       </SwipeRow>
@@ -722,7 +720,7 @@ export default function Bookmarks() {
             className="relative w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6"
           >
             <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-1">Rename Category</h3>
-            <p className="text-s text-gray-400 dark:text-gray-500 mb-4">Current: {renameCategoryState.category}</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">Current: {renameCategoryState.category}</p>
             <input
               type="text"
               value={renameInput}

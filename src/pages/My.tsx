@@ -206,7 +206,7 @@ export default function My() {
             </div>
           </div>
 
-          <div className="grid grid-cols-7 gap-2 text-center text-s text-gray-400 dark:text-gray-500 mb-3">
+          <div className="grid grid-cols-7 gap-2 text-center text-xs text-gray-400 dark:text-gray-500 mb-3">
             {["S", "M", "T", "W", "T", "F", "S"].map((day, index) => (
               <span key={`${day}-${index}`}>{day}</span>
             ))}
@@ -236,7 +236,7 @@ export default function My() {
             {
               to: "/me/history",
               icon: Clock3,
-              title: "History", 
+              title: "History",
               description: "Review your reading timeline and revisit recent news.",
             },
             {

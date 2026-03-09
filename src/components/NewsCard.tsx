@@ -14,7 +14,7 @@ interface Props {
 export default function NewsCard({ news }: Props) {
   const isOld = news.pubTimeLong && Date.now() - news.pubTimeLong > SEVEN_DAYS_MS;
   const timeDisplay = isOld
-    ? new Date(news.pubTimeLong).toLocaleDateString('en-US', { month: "short", day: "numeric", year: "numeric" })
+    ? new Date(news.pubTimeLong).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
     : news.pubTimeLong
       ? formatDistanceToNow(new Date(news.pubTimeLong), { addSuffix: true })
       : news.pubTime;

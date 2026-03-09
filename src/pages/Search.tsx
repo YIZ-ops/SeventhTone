@@ -24,7 +24,7 @@ function formatNewsTime(pubTime?: string, pubTimeLong?: number): string {
   const ts = pubTimeLong || (pubTime ? new Date(pubTime).getTime() : 0);
   if (!ts || Number.isNaN(ts)) return pubTime ?? "";
   if (Date.now() - ts > SEVEN_DAYS_MS) {
-    return new Date(ts).toLocaleDateString('en-US', { month: "short", day: "numeric", year: "numeric" });
+    return new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   }
   return formatDistanceToNow(new Date(ts), { addSuffix: true });
 }
@@ -77,8 +77,14 @@ export default function Search() {
   useEffect(() => {
     if (Capacitor.getPlatform() !== "android") return;
     let handle: { remove: () => Promise<void> } | null = null;
-    CapacitorApp.addListener("backButton", () => { navigate("/"); }).then((h) => { handle = h; });
-    return () => { handle?.remove?.(); };
+    CapacitorApp.addListener("backButton", () => {
+      navigate("/");
+    }).then((h) => {
+      handle = h;
+    });
+    return () => {
+      handle?.remove?.();
+    };
   }, [navigate]);
 
   const handleSubmit = (e: FormEvent) => {
@@ -95,10 +101,18 @@ export default function Search() {
   const loadingRef = useRef(loading);
   const pageRef = useRef(page);
   const submitWordRef = useRef(submitWord);
-  useEffect(() => { hasMoreRef.current = hasMore; }, [hasMore]);
-  useEffect(() => { loadingRef.current = loading; }, [loading]);
-  useEffect(() => { pageRef.current = page; }, [page]);
-  useEffect(() => { submitWordRef.current = submitWord; }, [submitWord]);
+  useEffect(() => {
+    hasMoreRef.current = hasMore;
+  }, [hasMore]);
+  useEffect(() => {
+    loadingRef.current = loading;
+  }, [loading]);
+  useEffect(() => {
+    pageRef.current = page;
+  }, [page]);
+  useEffect(() => {
+    submitWordRef.current = submitWord;
+  }, [submitWord]);
 
   useEffect(() => {
     const el = sentinelRef.current;
@@ -120,7 +134,7 @@ export default function Search() {
       <header className="mb-8">
         <div className="flex items-center space-x-2 mb-2">
           <span className="h-px w-8 bg-brand dark:bg-emerald-400" />
-          <span className="text-s font-extrabold tracking-[0.2em] text-brand dark:text-emerald-400 uppercase">Search</span>
+          <span className="text-xs font-extrabold tracking-[0.2em] text-brand dark:text-emerald-400 uppercase">Search</span>
         </div>
         <h1 className="text-3xl md:text-4xl font-serif font-bold text-gray-900 dark:text-gray-100 tracking-tight">Search</h1>
       </header>
@@ -147,11 +161,7 @@ export default function Search() {
         </div>
       </form>
 
-      {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-4 rounded-2xl mb-6 text-sm">
-          {error}
-        </div>
-      )}
+      {error && <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-4 rounded-2xl mb-6 text-sm">{error}</div>}
 
       {submitWord && !loading && list.length === 0 && !error && (
         <p className="text-gray-500 dark:text-gray-400 text-center py-12">No results for &quot;{submitWord}&quot;</p>
@@ -177,13 +187,7 @@ export default function Search() {
                 <div className="flex p-4 gap-4">
                   <div className="w-24 sm:w-28 shrink-0 aspect-[4/3] rounded-xl bg-gray-100 dark:bg-slate-700 relative overflow-hidden">
                     {imgSrc ? (
-                      <img
-                        src={imgSrc}
-                        alt=""
-                        className="absolute inset-0 w-full h-full object-cover"
-                        loading="lazy"
-                        referrerPolicy="no-referrer"
-                      />
+                      <img src={imgSrc} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center text-gray-500">
                         <SearchIcon size={22} />
@@ -201,9 +205,7 @@ export default function Search() {
                       dangerouslySetInnerHTML={{ __html: safeTitle }}
                     />
                     {(item.pubTime || item.pubTimeLong) && (
-                      <span className="text-s text-gray-400 dark:text-gray-500 mt-2">
-                        {formatNewsTime(item.pubTime, item.pubTimeLong)}
-                      </span>
+                      <span className="text-xs text-gray-400 dark:text-gray-500 mt-2">{formatNewsTime(item.pubTime, item.pubTimeLong)}</span>
                     )}
                   </div>
                 </div>
@@ -230,9 +232,7 @@ export default function Search() {
 
       {hasMore && list.length > 0 && <div ref={sentinelRef} className="h-1" />}
 
-      {!loading && !hasMore && list.length > 0 && (
-        <p className="text-center text-gray-400 text-sm mt-8">End of results</p>
-      )}
+      {!loading && !hasMore && list.length > 0 && <p className="text-center text-gray-400 text-sm mt-8">End of results</p>}
     </div>
   );
 }
