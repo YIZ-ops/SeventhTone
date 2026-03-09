@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { motion, AnimatePresence, useMotionValue, animate } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -18,7 +18,7 @@ import {
   generateExercises,
   evaluateTranslations,
   evaluateSummary,
-  prepareArticleText,
+  prepareNewsText,
   type ExerciseSet,
   type TranslationEval,
   type SummaryEvaluation,
@@ -102,7 +102,7 @@ function badgeCls(
   isCorrect: boolean,
 ): string {
   const base =
-    "shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold";
+    "shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-s font-bold";
   if (!answered) return `${base} bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300`;
   if (isCorrect) return `${base} bg-emerald-500 text-white`;
   if (isSelected) return `${base} bg-red-500 text-white`;
@@ -110,7 +110,7 @@ function badgeCls(
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
-export default function ArticlePractice() {
+export default function NewsPractice() {
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as { title?: string; contentHtml?: string } | null;
@@ -127,10 +127,9 @@ export default function ArticlePractice() {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [navDir, setNavDir] = useState<1 | -1>(1);
   const [showSheet, setShowSheet] = useState(false);
-  const dragX = useMotionValue(0);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
-  const touchIsH = useRef<boolean | null>(null); // null=unknown, true=horizontal, false=vertical
+  const touchIsH = useRef<boolean | null>(null);
 
   // ── Answers ───────────────────────────────────────────────────────────────
   const [vocabAnswers, setVocabAnswers] = useState<Record<string, string>>({});
@@ -278,7 +277,7 @@ export default function ArticlePractice() {
     setSummaryEvalLoading(true);
     try {
       const result = await evaluateSummary(
-        prepareArticleText(contentHtml),
+        prepareNewsText(contentHtml),
         summaryText,
       );
       setSummaryEval(result);
@@ -292,12 +291,12 @@ export default function ArticlePractice() {
   // ── Load exercises ────────────────────────────────────────────────────────
   const startGeneration = useCallback(() => {
     if (!contentHtml) {
-      setLoadError("No article content. Please go back and try again.");
+      setLoadError("No news content. Please go back and try again.");
       return;
     }
     setLoadError("");
     setPhase("loading");
-    generateExercises(title, prepareArticleText(contentHtml))
+    generateExercises(title, prepareNewsText(contentHtml))
       .then((ex) => {
         setExercises(ex);
         setPhase("questions");
@@ -309,7 +308,6 @@ export default function ArticlePractice() {
 
   useEffect(() => {
     startGeneration();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Back button ───────────────────────────────────────────────────────────
@@ -461,7 +459,7 @@ export default function ArticlePractice() {
                           <button
                             key={i}
                             onClick={() => jumpTo(globalIdx)}
-                            className={`w-9 h-9 rounded-xl text-xs font-bold transition-all ${statusDotCls(status)} ${isCurrent ? `ring-2 ring-offset-2 ${meta.ring}` : ""}`}
+                            className={`w-9 h-9 rounded-xl text-s font-bold transition-all ${statusDotCls(status)} ${isCurrent ? `ring-2 ring-offset-2 ${meta.ring}` : ""}`}
                           >
                             {section.type === "summary" ? "S" : i + 1}
                           </button>
@@ -510,7 +508,7 @@ export default function ArticlePractice() {
 
         {/* Section indicator */}
         <div className="flex-1 flex justify-center">
-          <span className={`text-xs font-bold uppercase tracking-wider ${SECTION_META[currentEntry.type].accent}`}>
+          <span className={`text-s font-bold uppercase tracking-wider ${SECTION_META[currentEntry.type].accent}`}>
             {SECTION_META[currentEntry.type].short}
           </span>
         </div>
@@ -564,7 +562,7 @@ export default function ArticlePractice() {
           {score}
         </div>
         <div>
-          <p className="text-xs font-bold text-gray-700 dark:text-gray-300">AI 评分</p>
+          <p className="text-s font-bold text-gray-700 dark:text-gray-300">AI 评分</p>
           <p className="text-[10px] text-gray-400 dark:text-gray-500">满分 100</p>
         </div>
       </div>
@@ -604,11 +602,11 @@ export default function ArticlePractice() {
       : null;
     return (
       <div className="flex items-center justify-between mb-5">
-        <span className={`text-xs font-bold uppercase tracking-widest ${meta.accent}`}>
+        <span className={`text-s font-bold uppercase tracking-widest ${meta.accent}`}>
           {meta.label}
         </span>
         {num && (
-          <span className="text-xs text-gray-400 dark:text-gray-500">{num}</span>
+          <span className="text-s text-gray-400 dark:text-gray-500">{num}</span>
         )}
       </div>
     );
@@ -836,7 +834,7 @@ export default function ArticlePractice() {
 
         {/* Input */}
         <div>
-          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">Your translation</p>
+          <p className="text-s font-semibold text-gray-500 dark:text-gray-400 mb-2">Your translation</p>
           <textarea
             value={userText}
             onChange={(e) => setTranslTexts((prev) => ({ ...prev, [q.id]: e.target.value }))}
@@ -906,9 +904,9 @@ export default function ArticlePractice() {
 
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-slate-700">
           <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">
-            Write an English summary of this article (3–5 sentences).
+            Write an English summary of this news (3–5 sentences).
           </p>
-          <p className="text-xs text-gray-400 dark:text-gray-500">
+          <p className="text-s text-gray-400 dark:text-gray-500">
             Cover the main point, key facts, and any significant implication.
           </p>
         </div>
@@ -922,7 +920,7 @@ export default function ArticlePractice() {
             rows={6}
             className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 disabled:bg-gray-50 disabled:dark:bg-slate-800/50 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand dark:focus:ring-emerald-500 resize-none transition-colors"
           />
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 text-right">
+          <p className="text-s text-gray-400 dark:text-gray-500 mt-1 text-right">
             {wordCount} {wordCount === 1 ? "word" : "words"}
           </p>
         </div>
@@ -970,55 +968,47 @@ export default function ArticlePractice() {
   //  PHASE: QUESTIONS (main)
   // ═══════════════════════════════════════════════════════════════════════════
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-900">
+    <div
+      className="min-h-screen bg-gray-50 dark:bg-slate-900 touch-pan-y"
+      onTouchStart={(e) => {
+        if (showSheet) return;
+        if ((e.target as HTMLElement).closest("textarea")) return;
+        touchStartX.current = e.touches[0].clientX;
+        touchStartY.current = e.touches[0].clientY;
+        touchIsH.current = null;
+      }}
+      onTouchMove={(e) => {
+        if (touchStartX.current === null || touchStartY.current === null) return;
+        const dx = e.touches[0].clientX - touchStartX.current;
+        const dy = e.touches[0].clientY - touchStartY.current;
+        if (touchIsH.current === null) {
+          if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+          touchIsH.current = Math.abs(dx) > Math.abs(dy);
+        }
+      }}
+      onTouchEnd={(e) => {
+        if (touchStartX.current === null) return;
+        const dx = e.changedTouches[0].clientX - touchStartX.current;
+        const wasH = touchIsH.current;
+        touchStartX.current = null;
+        touchStartY.current = null;
+        touchIsH.current = null;
+        if (!wasH) return;
+        if (dx < -50) goNext();
+        else if (dx > 50) goPrev();
+      }}
+    >
       {topBar}
       {answerSheet}
 
-      {/* Question content — touch events + motion value for smooth swipe */}
-      <motion.div
-        className="max-w-2xl mx-auto px-4 pt-5 pb-24"
-        style={{ x: dragX }}
-        onTouchStart={(e) => {
-          if (showSheet) return;
-          if ((e.target as HTMLElement).closest("textarea")) return;
-          touchStartX.current = e.touches[0].clientX;
-          touchStartY.current = e.touches[0].clientY;
-          touchIsH.current = null;
-          animate(dragX, 0, { duration: 0 }); // cancel any ongoing spring
-        }}
-        onTouchMove={(e) => {
-          if (touchStartX.current === null || touchStartY.current === null) return;
-          const dx = e.touches[0].clientX - touchStartX.current;
-          const dy = e.touches[0].clientY - touchStartY.current;
-          if (touchIsH.current === null) {
-            if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
-            touchIsH.current = Math.abs(dx) > Math.abs(dy);
-          }
-          if (!touchIsH.current) return;
-          e.preventDefault(); // prevent page scroll while swiping horizontally
-          dragX.set(dx * 0.38);
-        }}
-        onTouchEnd={(e) => {
-          if (touchStartX.current === null) return;
-          const dx = e.changedTouches[0].clientX - touchStartX.current;
-          const wasH = touchIsH.current;
-          touchStartX.current = null;
-          touchStartY.current = null;
-          touchIsH.current = null;
-          // Spring back regardless
-          animate(dragX, 0, { type: "spring", stiffness: 400, damping: 35 });
-          if (!wasH) return;
-          if (dx < -55) goNext();
-          else if (dx > 55) goPrev();
-        }}
-      >
+      <div className="max-w-2xl mx-auto px-4 pt-5 pb-24">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentIdx}
-            initial={{ opacity: 0, x: navDir * 28 }}
+            initial={{ opacity: 0, x: navDir * 24 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -navDir * 28 }}
-            transition={{ duration: 0.18, ease: "easeOut" }}
+            exit={{ opacity: 0, x: -navDir * 24 }}
+            transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
           >
             {currentEntry.type === "vocab" && renderVocab(currentEntry)}
             {currentEntry.type === "comp" && renderComp(currentEntry)}
@@ -1027,7 +1017,7 @@ export default function ArticlePractice() {
             {currentEntry.type === "summary" && renderSummary()}
           </motion.div>
         </AnimatePresence>
-      </motion.div>
+      </div>
 
       {bottomNav}
     </div>

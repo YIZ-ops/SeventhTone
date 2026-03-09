@@ -1,25 +1,25 @@
-import { useEffect, useState, useCallback, useRef } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
-import { getArticleList, getCategories } from "../api/api";
-import { ArticleItem, Category } from "../types";
-import ArticleCard from "../components/ArticleCard";
-import { Loader2 } from "lucide-react";
-import { motion } from "motion/react";
-import { getArticleListCache, setArticleListCache } from "../store/articleListCache";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
 import { App as CapacitorApp } from "@capacitor/app";
+import { Loader2 } from "lucide-react";
+import { motion } from "motion/react";
+import { getCategories, getNewsList } from "../api/api";
+import NewsCard from "../components/NewsCard";
+import { getNewsListCache, setNewsListCache } from "../store/newsListCache";
+import { Category, NewsItem } from "../types";
 
 const PULL_THRESHOLD = 70;
 const PULL_MAX = 100;
 const SCROLL_HEADER_THRESHOLD = 80;
 
-export default function ArticleList() {
+export default function NewsList() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
   const [category, setCategory] = useState<Category | null>(null);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
-  const [articles, setArticles] = useState<ArticleItem[]>([]);
+  const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
@@ -27,37 +27,55 @@ export default function ArticleList() {
   const [pullY, setPullY] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [headerVisible, setHeaderVisible] = useState(false);
-  const pullYRef = useRef(0);
 
-  // Android 物理/系统返回键：直接返回上一页（无弹窗需关闭）
+  const pullYRef = useRef(0);
+  const loadingGuardRef = useRef(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const hasMoreRef = useRef(hasMore);
+  const loadingRef = useRef(loading);
+  const pageRef = useRef(page);
+
   useEffect(() => {
     if (Capacitor.getPlatform() !== "android") return;
     let listenerHandle: { remove: () => Promise<void> } | null = null;
     CapacitorApp.addListener("backButton", ({ canGoBack }) => {
-      if (canGoBack) { navigate(-1); } else { CapacitorApp.exitApp(); }
-    }).then((h) => { listenerHandle = h; });
-    return () => { listenerHandle?.remove?.(); };
+      if (canGoBack) {
+        navigate(-1);
+      } else {
+        CapacitorApp.exitApp();
+      }
+    }).then((h) => {
+      listenerHandle = h;
+    });
+    return () => {
+      listenerHandle?.remove?.();
+    };
   }, [navigate]);
 
-  const fetchArticles = useCallback(
-    async (pageNum: number, isLoadMore: boolean = false) => {
-      if (!id || loading) return;
+  const fetchNews = useCallback(
+    async (pageNum: number, isLoadMore = false) => {
+      if (!id || loadingGuardRef.current) return;
+
+      loadingGuardRef.current = true;
       setLoading(true);
       setError(null);
+
       try {
-        const res = await getArticleList(id, pageNum);
-        if (res.code === 200 && res.data?.pageInfo) {
-          const newArticles = res.data.pageInfo.list || [];
-          const nextHasMore = res.data.pageInfo.hasNext;
-          setArticles((prev) => (isLoadMore ? [...prev, ...newArticles] : newArticles));
-          setHasMore(nextHasMore);
-          setPage(pageNum);
-        } else {
-          throw new Error("Failed to fetch articles");
+        const res = await getNewsList(id, pageNum);
+        if (res.code !== 200 || !res.data?.pageInfo) {
+          throw new Error("Failed to fetch news");
         }
+
+        const newNews = res.data.pageInfo.list || [];
+        const nextHasMore = res.data.pageInfo.hasNext;
+
+        setNews((prev) => (isLoadMore ? [...prev, ...newNews] : newNews));
+        setHasMore(nextHasMore);
+        setPage(pageNum);
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred");
       } finally {
+        loadingGuardRef.current = false;
         setLoading(false);
         setRefreshing(false);
       }
@@ -66,10 +84,10 @@ export default function ArticleList() {
   );
 
   useEffect(() => {
-    if (id && articles.length > 0) {
-      setArticleListCache(id, { articles, page, hasMore });
+    if (id && news.length > 0) {
+      setNewsListCache(id, { news, page, hasMore });
     }
-  }, [id, articles, page, hasMore]);
+  }, [hasMore, id, news, page]);
 
   useEffect(() => {
     if (!id) return;
@@ -89,31 +107,54 @@ export default function ArticleList() {
 
   useEffect(() => {
     if (!id) return;
-    const cached = getArticleListCache(id);
-    if (cached && cached.articles.length > 0) {
-      setArticles(cached.articles);
+    const cached = getNewsListCache(id);
+    if (cached && cached.news.length > 0) {
+      setNews(cached.news);
       setPage(cached.page);
       setHasMore(cached.hasMore);
       return;
     }
-    setArticles([]);
+
+    setNews([]);
     setPage(1);
     setHasMore(true);
-    fetchArticles(1);
-  }, [id, fetchArticles]);
+    fetchNews(1);
+  }, [fetchNews, id]);
 
-  const handleLoadMore = () => {
-    if (!loading && hasMore) {
-      fetchArticles(page + 1, true);
-    }
-  };
+  useEffect(() => {
+    hasMoreRef.current = hasMore;
+  }, [hasMore]);
+
+  useEffect(() => {
+    loadingRef.current = loading;
+  }, [loading]);
+
+  useEffect(() => {
+    pageRef.current = page;
+  }, [page]);
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || !hasMore || news.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && hasMoreRef.current && !loadingRef.current) {
+          fetchNews(pageRef.current + 1, true);
+        }
+      },
+      { rootMargin: "300px" },
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [fetchNews, hasMore, news.length]);
 
   const onPullRefresh = useCallback(() => {
-    if (!loading && id) {
-      setRefreshing(true);
-      fetchArticles(1);
-    }
-  }, [loading, id, fetchArticles]);
+    if (!id || loadingGuardRef.current) return;
+    setRefreshing(true);
+    fetchNews(1);
+  }, [fetchNews, id]);
 
   useEffect(() => {
     const startY = { current: 0 };
@@ -179,7 +220,6 @@ export default function ArticleList() {
 
   return (
     <>
-      {/* 下滑后出现的固定顶栏 */}
       <header
         className={`fixed top-0 left-0 right-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-gray-200/50 dark:border-slate-700/50 pt-safe shadow-sm transition-all duration-300 ${
           headerVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-full pointer-events-none"
@@ -198,7 +238,6 @@ export default function ArticleList() {
       </header>
 
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mx-auto pb-32 overflow-x-hidden">
-        {/* 移动端下拉刷新指示器 */}
         <div
           className="max-w-4xl mx-auto flex items-center justify-center transition-all duration-200 pointer-events-none -mt-2 mb-2"
           style={{ height: pullY > 0 || refreshing ? 56 : 0, opacity: pullY > 0 || refreshing ? 1 : 0 }}
@@ -206,85 +245,78 @@ export default function ArticleList() {
           {refreshing ? (
             <Loader2 className="w-6 h-6 text-brand animate-spin" />
           ) : (
-            <span className="text-xs text-gray-400">
-              {pullY >= PULL_THRESHOLD ? "释放刷新" : "下拉刷新"}
-            </span>
+            <span className="text-s text-gray-400">{pullY >= PULL_THRESHOLD ? "Release to refresh" : "Pull to refresh"}</span>
           )}
         </div>
 
-        {/* Banner：全宽铺满视口，图片居中覆盖 */}
         <div
           className={`relative w-[100vw] left-1/2 -translate-x-1/2 min-h-[200px] md:min-h-[240px] flex flex-col justify-end px-4 pt-safe pt-12 pb-8 md:px-10 overflow-hidden ${!category.tonePic ? "bg-gray-100 dark:bg-slate-800" : ""}`}
         >
           {category.tonePic && (
             <>
-              <div
-                className="absolute inset-0 bg-cover bg-center"
-                style={{ backgroundImage: `url(${category.tonePic})` }}
-              />
+              <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${category.tonePic})` }} />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
             </>
           )}
           <div className="relative z-10 max-w-4xl mx-auto w-full">
             <span className={`inline-block h-px w-6 mb-3 ${category.tonePic ? "bg-white/80" : "bg-brand"}`} />
-            <span className={`block text-[10px] font-bold tracking-[0.3em] uppercase mb-2 ${category.tonePic ? "text-white/90" : "text-gray-500 dark:text-gray-400"}`}>Section</span>
-            <h1 className={`text-3xl md:text-5xl font-serif font-bold tracking-tight uppercase ${category.tonePic ? "text-white drop-shadow-md" : "text-gray-900 dark:text-gray-100"}`}>
+            <span
+              className={`block text-[10px] font-bold tracking-[0.3em] uppercase mb-2 ${category.tonePic ? "text-white/90" : "text-gray-500 dark:text-gray-400"}`}
+            >
+              Section
+            </span>
+            <h1
+              className={`text-3xl md:text-5xl font-serif font-bold tracking-tight uppercase ${category.tonePic ? "text-white drop-shadow-md" : "text-gray-900 dark:text-gray-100"}`}
+            >
               {category.title}
             </h1>
           </div>
         </div>
 
-      <div className="max-w-4xl mx-auto px-4 mt-8">
-        {category.description && (
-          <p className="text-gray-500 dark:text-gray-400 leading-relaxed max-w-2xl text-sm md:text-base italic font-serif mb-10">
-            {category.description}
-          </p>
-        )}
+        <div className="max-w-4xl mx-auto px-4 mt-8">
+          {category.description && (
+            <p className="text-gray-500 dark:text-gray-400 leading-relaxed max-w-2xl text-sm md:text-base italic font-serif mb-10">
+              {category.description}
+            </p>
+          )}
 
-        {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-6 rounded-3xl mb-10 text-sm flex items-center justify-between">
-            <span>{error}</span>
-            <button
-              onClick={() => fetchArticles(page)}
-              className="px-4 py-2 bg-white dark:bg-slate-800 rounded-full shadow-sm text-xs font-bold uppercase tracking-wider"
-            >
-              Retry
-            </button>
+          {error && (
+            <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-6 rounded-3xl mb-10 text-sm flex items-center justify-between">
+              <span>{error}</span>
+              <button
+                onClick={() => fetchNews(page)}
+                className="px-4 py-2 bg-white dark:bg-slate-800 rounded-full shadow-sm text-s font-bold uppercase tracking-wider"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 gap-10">
+            {news.map((item, index) => (
+              <motion.div
+                key={`${item.contId}-${index}`}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+              >
+                <NewsCard news={item} />
+              </motion.div>
+            ))}
           </div>
-        )}
 
-        <div className="grid grid-cols-1 gap-10">
-          {articles.map((article, index) => (
-            <motion.div
-              key={`${article.contId}-${index}`}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-            >
-              <ArticleCard article={article} />
-            </motion.div>
-          ))}
+          {loading && !refreshing && (
+            <div className="flex justify-center py-8">
+              <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
+            </div>
+          )}
+
+          {hasMore && news.length > 0 && <div ref={sentinelRef} className="h-1" />}
+
+          {!loading && !hasMore && news.length > 0 && (
+            <p className="text-center text-gray-500 dark:text-gray-400 mt-8 text-sm">You've reached the end.</p>
+          )}
         </div>
-
-        {loading && !refreshing && (
-          <div className="flex justify-center py-8">
-            <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
-          </div>
-        )}
-
-        {!loading && hasMore && articles.length > 0 && (
-          <div className="flex justify-center mt-8">
-            <button
-              onClick={handleLoadMore}
-              className="px-6 py-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 text-gray-700 dark:text-gray-200 font-medium rounded-full hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
-            >
-              Load More
-            </button>
-          </div>
-        )}
-
-        {!loading && !hasMore && articles.length > 0 && <p className="text-center text-gray-500 dark:text-gray-400 mt-8 text-sm">You've reached the end.</p>}
-      </div>
       </motion.div>
     </>
   );

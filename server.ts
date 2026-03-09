@@ -30,8 +30,8 @@ async function startServer() {
     res.json({ status: "ok" });
   });
 
-  // Backend relay for article detail.
-  app.get("/api/article/:id", async (req, res) => {
+  // Backend relay for news detail.
+  app.get("/api/news/:id", async (req, res) => {
     const contId = req.params.id;
     const parseDetail = (payload: any) => payload?.pageProps?.detailData;
     let buildId = "hb8D50A9NRCU31JdhQhE1";
@@ -53,8 +53,8 @@ async function startServer() {
     try {
       let detailData = await fetchByBuildId(buildId);
       if (!detailData) {
-        const articleUrl = `https://www.sixthtone.com/news/${contId}`;
-        const htmlResponse = await axios.get(articleUrl, {
+        const newsUrl = `https://www.sixthtone.com/news/${contId}`;
+        const htmlResponse = await axios.get(newsUrl, {
           headers: {
             "User-Agent":
               "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -73,15 +73,15 @@ async function startServer() {
       }
 
       if (!detailData) {
-        res.status(404).json({ error: "Article data not found in page props" });
+        res.status(404).json({ error: "News data not found in page props" });
         return;
       }
 
       res.json(detailData);
     } catch (error: any) {
-      console.error(`Error fetching article ${contId}:`, error.message);
+      console.error(`Error fetching news ${contId}:`, error.message);
       res.status(error.response?.status || 500).json({ 
-        error: "Failed to fetch article",
+        error: "Failed to fetch news",
         message: error.message 
       });
     }

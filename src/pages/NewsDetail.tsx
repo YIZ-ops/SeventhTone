@@ -1,22 +1,36 @@
-import { useEffect, useState, useMemo, useRef, useCallback, type MouseEvent } from "react";
+﻿import { useEffect, useState, useMemo, useRef, useCallback, type MouseEvent } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getArticleDetail, addHistory, addBookmark, getBookmarks, removeBookmark, getHighlights, addHighlight, removeHighlight, updateHighlight, addVocab, isInVocab } from "../api/api";
-import { ArticleDetail, Highlight } from "../types";
+import {
+  getNewsDetail,
+  addHistory,
+  addBookmark,
+  getBookmarks,
+  removeBookmark,
+  getHighlights,
+  addHighlight,
+  removeHighlight,
+  updateHighlight,
+  addVocab,
+  isInVocab,
+} from "../api/api";
+import { NewsDetail, Highlight } from "../types";
 import DOMPurify from "dompurify";
 import Mark from "mark.js";
-import { ChevronLeft, Loader2, Clock, Bookmark, BookmarkCheck, BookmarkPlus, X, Share2, Volume2, Brain } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, Clock, Bookmark, BookmarkCheck, BookmarkPlus, X, Share2, Volume2, Brain } from "lucide-react";
 import BookmarkModal from "../components/BookmarkModal";
 import HighlightSaveModal from "../components/HighlightSaveModal";
 import HighlightDetailModal from "../components/HighlightDetailModal";
 import { request } from "../utils/request";
+import { addReadingSession } from "../api/localData";
 import { Capacitor } from "@capacitor/core";
 import { App as CapacitorApp } from "@capacitor/app";
 import { Share } from "@capacitor/share";
 import TextSelectionHighlight from "../plugins/textSelectionHighlight";
+import { useTheme } from "../contexts/ThemeContext";
 
 const SIXTH_TONE_WEB = "https://www.sixthtone.com";
 
-// 英语单词详解 API (v2.xxapi.cn) 响应类型
+// 鑻辫鍗曡瘝璇﹁В API (v2.xxapi.cn) 鍝嶅簲绫诲瀷
 interface DictPhrase {
   p_cn: string;
   p_content: string;
@@ -72,7 +86,9 @@ function getWordAtPoint(clientX: number, clientY: number): { word: string; rect:
   if (doc.caretRangeFromPoint) {
     range = doc.caretRangeFromPoint(clientX, clientY);
   } else if (doc.caretPositionFromPoint) {
-    const pos = (doc as Document & { caretPositionFromPoint(x: number, y: number): { offsetNode: Node; offset: number } | null }).caretPositionFromPoint(clientX, clientY);
+    const pos = (
+      doc as Document & { caretPositionFromPoint(x: number, y: number): { offsetNode: Node; offset: number } | null }
+    ).caretPositionFromPoint(clientX, clientY);
     if (!pos) return null;
     range = doc.createRange();
     range.setStart(pos.offsetNode, pos.offset);
@@ -87,17 +103,21 @@ function getWordAtPoint(clientX: number, clientY: number): { word: string; rect:
   const after = text.slice(offset).match(/^([a-zA-Z'-]*)/);
   const start = offset - (before ? before[1].length : 0);
   const end = offset + (after ? after[1].length : 0);
-  const word = text.slice(start, end).replace(/^[-']+|[-']+$/g, "").trim();
+  const word = text
+    .slice(start, end)
+    .replace(/^[-']+|[-']+$/g, "")
+    .trim();
   if (!word || word.length < 2) return null;
   range.setStart(node, start);
   range.setEnd(node, end);
   return { word, rect: range.getBoundingClientRect() };
 }
 
-export default function ArticleDetailView() {
+export default function NewsDetailView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [article, setArticle] = useState<ArticleDetail | null>(null);
+  const { fontScale } = useTheme();
+  const [news, setNews] = useState<NewsDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -109,7 +129,7 @@ export default function ArticleDetailView() {
   const [highlights, setHighlights] = useState<Highlight[]>([]);
   // activeHighlight is set directly in handleMarkClick (not via an intermediate
   // activeHighlightId) so that the scroll-dismiss handler never holds a reference
-  // to it — keyboard appearance causes a scroll event that would otherwise clear
+  // to it 鈥?keyboard appearance causes a scroll event that would otherwise clear
   // the modal while the user is editing.
   const [activeHighlight, setActiveHighlight] = useState<Highlight | null>(null);
   const [showHighlightModal, setShowHighlightModal] = useState(false);
@@ -117,11 +137,29 @@ export default function ArticleDetailView() {
   const contentRef = useRef<HTMLDivElement>(null);
   const dictAudioRef = useRef<HTMLAudioElement>(null);
 
-  // Dictionary lookup popup (click word to show definition) — declared early so useEffects below can reference it
+  // Dictionary lookup popup (click word to show definition) 鈥?declared early so useEffects below can reference it
   const [dictPopup, setDictPopup] = useState<{ x: number; y: number; word: string } | null>(null);
   const [dictData, setDictData] = useState<DictData | null>(null);
   const [dictLoading, setDictLoading] = useState(false);
   const [dictError, setDictError] = useState<string | null>(null);
+
+  const newscaleClasses = {
+    small: {
+      title: "text-[1.85rem] md:text-[2.35rem] lg:text-[2.95rem]",
+      summary: "text-[1rem] md:text-[1.1rem]",
+      prose: "prose-base md:prose-lg",
+    },
+    medium: {
+      title: "text-3xl md:text-4xl lg:text-5xl",
+      summary: "text-lg md:text-xl",
+      prose: "prose-lg md:prose-xl",
+    },
+    large: {
+      title: "text-[2.15rem] md:text-[2.7rem] lg:text-[3.35rem]",
+      summary: "text-[1.15rem] md:text-[1.3rem]",
+      prose: "prose-xl md:prose-2xl",
+    },
+  } as const;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -137,20 +175,20 @@ export default function ArticleDetailView() {
     if (!id) return;
 
     const bookmarks = getBookmarks();
-    setIsBookmarked(bookmarks.some((b) => b.article.contId === Number(id)));
+    setIsBookmarked(bookmarks.some((b) => b.news.contId === Number(id)));
 
     const fetchDetail = async () => {
       setLoading(true);
       setError(null);
       try {
-        const res = await getArticleDetail(id);
+        const res = await getNewsDetail(id);
         let detailData = res?.data;
         if (detailData && detailData.data && detailData.contId === undefined) {
           detailData = detailData.data;
         }
 
         if (detailData) {
-          setArticle(detailData);
+          setNews(detailData);
           addHistory({
             contId: detailData.contId,
             nodeId: detailData.nodeId,
@@ -169,7 +207,7 @@ export default function ArticleDetailView() {
               : undefined,
           });
         } else {
-          throw new Error("Failed to load article details");
+          throw new Error("Failed to load news details");
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "An error occurred");
@@ -182,10 +220,45 @@ export default function ArticleDetailView() {
   }, [id]);
 
   useEffect(() => {
-    if (article) {
-      setHighlights(getHighlights(article.contId));
+    if (news) {
+      setHighlights(getHighlights(news.contId));
     }
-  }, [article]);
+  }, [news]);
+
+  useEffect(() => {
+    if (!news) return;
+
+    let sessionStart = Date.now();
+
+    const pauseSession = () => {
+      if (sessionStart === 0) return;
+      addReadingSession(news.contId, Date.now() - sessionStart);
+      sessionStart = 0;
+    };
+
+    const resumeSession = () => {
+      if (document.visibilityState === "visible" && sessionStart === 0) {
+        sessionStart = Date.now();
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        pauseSession();
+      } else {
+        resumeSession();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("pagehide", pauseSession);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("pagehide", pauseSession);
+      pauseSession();
+    };
+  }, [news]);
 
   // Dismiss dictionary popup on pointerdown outside content area and popups
   useEffect(() => {
@@ -207,7 +280,7 @@ export default function ArticleDetailView() {
     return () => window.removeEventListener("scroll", handler);
   }, [dictPopup]);
 
-  // Android 原生文本选择菜单中的「高亮」：监听插件事件，用选中文本打开高亮弹窗
+  // Android textselect
   useEffect(() => {
     if (Capacitor.getPlatform() !== "android") return;
     let removeListener: (() => Promise<void>) | null = null;
@@ -225,8 +298,8 @@ export default function ArticleDetailView() {
     };
   }, []);
 
-  // 用 ref 持有最新的弹窗状态，供 backButton handler 读取
-  // 这样 listener 只注册一次，不会因状态变化反复重新注册
+  // Keep the latest popup state in a ref so the Android back handler
+  // can read current values without re-registering listeners.
   const backStateRef = useRef({
     dictPopup: null as typeof dictPopup,
     activeHighlight: null as typeof activeHighlight,
@@ -235,57 +308,73 @@ export default function ArticleDetailView() {
   });
   backStateRef.current = { dictPopup, activeHighlight, showHighlightModal, showBookmarkModal };
 
-  // Android 物理/系统返回键：由 Capacitor 原生层触发，不监听任何手势
+  // Handle the native Android back button via Capacitor.
   useEffect(() => {
     if (Capacitor.getPlatform() !== "android") return;
     let listenerHandle: { remove: () => Promise<void> } | null = null;
     CapacitorApp.addListener("backButton", (e: { canGoBack: boolean }) => {
       const s = backStateRef.current;
-      if (s.dictPopup) { setDictPopup(null); return; }
-      if (s.activeHighlight) { setActiveHighlight(null); return; }
+      if (s.dictPopup) {
+        setDictPopup(null);
+        return;
+      }
+      if (s.activeHighlight) {
+        setActiveHighlight(null);
+        return;
+      }
       if (s.showHighlightModal) {
         setShowHighlightModal(false);
         setPendingHighlightText(null);
         window.getSelection()?.removeAllRanges();
         return;
       }
-      if (s.showBookmarkModal) { setShowBookmarkModal(false); return; }
-      if (e.canGoBack) { navigate(-1); } else { CapacitorApp.exitApp(); }
-    }).then((h) => { listenerHandle = h; });
-    return () => { listenerHandle?.remove?.(); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navigate]); // 仅 navigate 稳定后重绑定，navigate 本身是稳定引用
-
+      if (s.showBookmarkModal) {
+        setShowBookmarkModal(false);
+        return;
+      }
+      if (e.canGoBack) {
+        navigate(-1);
+      } else {
+        CapacitorApp.exitApp();
+      }
+    }).then((h) => {
+      listenerHandle = h;
+    });
+    return () => {
+      listenerHandle?.remove?.();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigate]); // 浠?navigate 绋冲畾鍚庨噸缁戝畾锛宯avigate 鏈韩鏄ǔ瀹氬紩鐢?
   // pendingHighlightText: stable copy of selected text so the modal isn't destroyed when
   // selectionPopup is cleared (e.g. by the scroll handler when the mobile keyboard appears).
 
   const handleSaveHighlight = useCallback(
     (category: string, thought?: string) => {
-      if (!pendingHighlightText || !article) return;
-      addHighlight(article.contId, pendingHighlightText, article.name, undefined, undefined, category, thought);
-      setHighlights(getHighlights(article.contId));
+      if (!pendingHighlightText || !news) return;
+      addHighlight(news.contId, pendingHighlightText, news.name, undefined, undefined, category, thought);
+      setHighlights(getHighlights(news.contId));
       window.getSelection()?.removeAllRanges();
       setPendingHighlightText(null);
       setShowHighlightModal(false);
     },
-    [pendingHighlightText, article],
+    [pendingHighlightText, news],
   );
 
   const handleRemoveHighlight = useCallback(
     (highlightId: string) => {
-      if (!article) return;
-      removeHighlight(article.contId, highlightId);
-      setHighlights(getHighlights(article.contId));
+      if (!news) return;
+      removeHighlight(news.contId, highlightId);
+      setHighlights(getHighlights(news.contId));
       setActiveHighlight(null);
     },
-    [article],
+    [news],
   );
 
   const handleUpdateHighlight = useCallback(
     (highlightId: string, updates: { thought?: string; category?: string }) => {
-      if (!article) return;
-      updateHighlight(article.contId, highlightId, updates);
-      setHighlights(getHighlights(article.contId));
+      if (!news) return;
+      updateHighlight(news.contId, highlightId, updates);
+      setHighlights(getHighlights(news.contId));
       // Update the activeHighlight state to reflect the saved changes immediately
       setActiveHighlight((prev) =>
         prev && prev.id === highlightId
@@ -293,33 +382,32 @@ export default function ArticleDetailView() {
           : prev,
       );
     },
-    [article],
+    [news],
   );
 
   const handleShare = useCallback(async () => {
-    if (!article) return;
-    const url = `${SIXTH_TONE_WEB}/news/${article.contId}`;
+    if (!news) return;
+    const url = `${SIXTH_TONE_WEB}/news/${news.contId}`;
     try {
       const { value: canShareValue } = await Share.canShare();
       if (canShareValue) {
         await Share.share({
-          title: article.name,
-          text: article.name,
+          title: news.name,
+          text: news.name,
           url,
-          dialogTitle: "分享文章",
+          dialogTitle: "鍒嗕韩鏂伴椈",
         });
       } else {
-        // 降级：复制链接到剪贴板
-        await navigator.clipboard.writeText(url);
+        // 闄嶇骇锛氬鍒堕摼鎺ュ埌鍓创鏉?        await navigator.clipboard.writeText(url);
       }
     } catch {
-      // 用户取消或出错，静默忽略
+      // 鐢ㄦ埛鍙栨秷鎴栧嚭閿欙紝闈欓粯蹇界暐
     }
-  }, [article]);
+  }, [news]);
 
   const toggleBookmark = () => {
-    if (isBookmarked && article) {
-      removeBookmark(article.contId);
+    if (isBookmarked && news) {
+      removeBookmark(news.contId);
       setIsBookmarked(false);
     } else {
       setShowBookmarkModal(true);
@@ -327,22 +415,22 @@ export default function ArticleDetailView() {
   };
 
   const handleSaveBookmark = (category: string) => {
-    if (article) {
+    if (news) {
       addBookmark(
         {
-          contId: article.contId,
-          nodeId: article.nodeId,
-          name: article.name,
-          summary: article.summary,
-          pubTime: article.pubTime,
-          pubTimeLong: new Date(article.pubTime).getTime(),
-          pic: article.headPic,
-          appHeadPic: article.headPic,
+          contId: news.contId,
+          nodeId: news.nodeId,
+          name: news.name,
+          summary: news.summary,
+          pubTime: news.pubTime,
+          pubTimeLong: new Date(news.pubTime).getTime(),
+          pic: news.headPic,
+          appHeadPic: news.headPic,
           link: "",
-          userInfo: article.authorList?.[0]
+          userInfo: news.authorList?.[0]
             ? {
-                name: article.authorList[0].name,
-                pic: article.authorList[0].pic,
+                name: news.authorList[0].name,
+                pic: news.authorList[0].pic,
               }
             : undefined,
         },
@@ -354,11 +442,11 @@ export default function ArticleDetailView() {
   };
 
   const sanitizedContent = useMemo(() => {
-    if (!article) return "";
-    return DOMPurify.sanitize(article.content, {
+    if (!news) return "";
+    return DOMPurify.sanitize(news.content, {
       ADD_ATTR: ["target"],
     });
-  }, [article]);
+  }, [news]);
 
   const highlightedContent = useMemo(() => {
     if (!sanitizedContent || !highlights.length) return sanitizedContent;
@@ -370,7 +458,7 @@ export default function ArticleDetailView() {
       instance.mark(h.text, {
         separateWordSearch: false,
         acrossElements: true,
-        className: "article-highlight",
+        className: "news-highlight",
         filter: () => {
           if (found) return false;
           found = true;
@@ -418,31 +506,28 @@ export default function ArticleDetailView() {
           setDictError(null);
         } else {
           setDictData(null);
-          setDictError(res?.msg || "未找到释义");
+          setDictError(res?.msg || "No definition found.");
         }
       })
       .catch(() => {
         setDictData(null);
-        setDictError("未找到释义");
+        setDictError("No definition found.");
       })
       .finally(() => setDictLoading(false));
   }, [dictPopup?.word]);
 
-  // 双击触发查词（移动端双击会先选词，不能用 selection 判断，直接查词）
-  const handleContentDblClick = useCallback(
-    (e: MouseEvent<HTMLElement>) => {
-      const target = e.target as HTMLElement;
-      if (target.closest("a") || target.closest("mark[data-highlight-id]")) return;
-      const hit = getWordAtPoint(e.clientX, e.clientY);
-      if (!hit) return;
-      // 清除双击产生的文本选中，再显示弹窗
-      window.getSelection()?.removeAllRanges();
-      setDictPopup({ x: hit.rect.left + hit.rect.width / 2, y: hit.rect.bottom, word: hit.word });
-    },
-    [],
-  );
+  // Double-click a word to open the dictionary popup.
+  const handleContentDblClick = useCallback((e: MouseEvent<HTMLElement>) => {
+    const target = e.target as HTMLElement;
+    if (target.closest("a") || target.closest("mark[data-highlight-id]")) return;
+    const hit = getWordAtPoint(e.clientX, e.clientY);
+    if (!hit) return;
+    // Clear the browser selection before opening the popup.
+    window.getSelection()?.removeAllRanges();
+    setDictPopup({ x: hit.rect.left + hit.rect.width / 2, y: hit.rect.bottom, word: hit.word });
+  }, []);
 
-  // 生词本：当前弹窗单词是否已收录
+  // Whether the current popup word is already saved in vocabulary.
   const [wordInVocab, setWordInVocab] = useState(false);
   useEffect(() => {
     setWordInVocab(dictPopup?.word ? isInVocab(dictPopup.word) : false);
@@ -463,11 +548,11 @@ export default function ArticleDetailView() {
     );
   }
 
-  if (error || !article) {
+  if (error || !news) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-slate-900 p-4">
-        <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm text-center max-w-md w-full">
-          <p className="text-red-600 dark:text-red-400 font-medium mb-4">{error || "Article not found"}</p>
+        <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl text-center max-w-md w-full">
+          <p className="text-red-600 dark:text-red-400 font-medium mb-4">{error || "News not found"}</p>
           <button
             onClick={() => navigate(-1)}
             className="px-6 py-2 bg-emerald-600 text-white rounded-full font-medium hover:bg-emerald-700 transition-colors"
@@ -480,7 +565,7 @@ export default function ArticleDetailView() {
   }
 
   return (
-    <div className="bg-white dark:bg-slate-900 min-h-screen pb-32">
+    <div className="bg-white dark:bg-slate-900 min-h-screen pb-32 overflow-x-hidden">
       {/* Progress Bar */}
       <div className="fixed top-0 left-0 w-full h-1 z-[60] pointer-events-none">
         <div className="h-full bg-brand transition-all duration-300" style={{ width: `${scrollProgress}%` }} />
@@ -489,23 +574,28 @@ export default function ArticleDetailView() {
       {/* Top Navigation */}
       <div className="sticky top-0 z-50 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-gray-100 dark:border-slate-700 pt-safe">
         <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
-          <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-gray-500 dark:text-gray-400 hover:text-brand dark:hover:text-emerald-400 transition-colors">
+          <button
+            onClick={() => navigate(-1)}
+            className="p-2 -ml-2 text-gray-500 dark:text-gray-400 hover:text-brand dark:hover:text-emerald-400 transition-colors"
+          >
             <ChevronLeft size={24} />
           </button>
           <div className="flex items-center space-x-1">
             <button
               onClick={handleShare}
               className="p-2 transition-colors rounded-full text-gray-600 dark:text-gray-400 hover:text-brand dark:hover:text-emerald-400 hover:bg-brand/5 dark:hover:bg-emerald-500/10"
-              aria-label="分享文章"
+              aria-label="Share news"
             >
               <Share2 size={20} />
             </button>
             <button
               onClick={toggleBookmark}
               className={`p-2 transition-colors rounded-full ${
-                isBookmarked ? "text-brand dark:text-emerald-400 bg-brand/10 dark:bg-emerald-500/20 hover:bg-brand/20" : "text-gray-600 dark:text-gray-400 hover:text-brand dark:hover:text-emerald-400 hover:bg-brand/5 dark:hover:bg-emerald-500/10"
+                isBookmarked
+                  ? "text-brand dark:text-emerald-400 bg-brand/10 dark:bg-emerald-500/20 hover:bg-brand/20"
+                  : "text-gray-600 dark:text-gray-400 hover:text-brand dark:hover:text-emerald-400 hover:bg-brand/5 dark:hover:bg-emerald-500/10"
               }`}
-              aria-label={isBookmarked ? "取消收藏" : "收藏文章"}
+              aria-label={isBookmarked ? "Unbookmark news" : "Bookmark news"}
             >
               {isBookmarked ? <BookmarkCheck size={20} /> : <Bookmark size={20} />}
             </button>
@@ -513,42 +603,44 @@ export default function ArticleDetailView() {
         </div>
       </div>
 
-      <article className="max-w-3xl mx-auto px-4 py-6 md:py-10 select-text relative">
-        {/* Header：标题和 summary 支持点击查词 */}
+      <News className="max-w-3xl mx-auto px-4 py-6 md:py-10 select-text relative overflow-x-hidden">
+        {/* Header锛氭爣棰樺拰 summary 鏀寔鐐瑰嚮鏌ヨ瘝 */}
         <header className="mb-8">
           <h1
-            className="text-3xl md:text-4xl lg:text-5xl font-serif font-bold text-gray-900 dark:text-gray-100 leading-tight mb-6 cursor-text"
+            className={`${newscaleClasses[fontScale].title} font-serif font-bold text-gray-900 dark:text-gray-100 leading-tight mb-6 cursor-text`}
             onDoubleClick={(e) => {
               if (!(e.target as HTMLElement).closest("a")) handleContentDblClick(e);
             }}
           >
-            {article.name}
+            {news.name}
           </h1>
 
           <p
-            className="text-lg md:text-xl text-gray-600 dark:text-gray-500 font-serif italic mb-8 leading-relaxed cursor-text"
+            className={`${newscaleClasses[fontScale].summary} text-gray-600 dark:text-gray-500 font-serif italic mb-8 leading-relaxed cursor-text`}
             onDoubleClick={(e) => {
               if (!(e.target as HTMLElement).closest("a")) handleContentDblClick(e);
             }}
           >
-            {article.summary}
+            {news.summary}
           </p>
 
           <div className="flex items-center justify-between py-4 border-y border-gray-100 dark:border-slate-700">
             <div className="flex items-center space-x-3">
-              {article.authorList?.[0]?.pic && (
+              {news.authorList?.[0]?.pic && (
                 <img
-                  src={article.authorList[0].pic}
-                  alt={article.authorList[0].name}
+                  src={news.authorList[0].pic}
+                  alt={news.authorList[0].name}
                   className="w-10 h-10 rounded-full object-cover"
                   referrerPolicy="no-referrer"
                 />
               )}
               <div>
-                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{article.authorList?.map((a) => a.name).join(", ") || "Seventh Tone"}</p>
-                <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                  {news.authorList?.map((a) => a.name).join(", ") || "Seventh Tone"}
+                </p>
+                <div className="flex items-center text-s text-gray-500 dark:text-gray-400 mt-0.5">
                   <Clock size={12} className="mr-1" />
-                  <time dateTime={article.pubTime}>{article.pubTime}</time>
+                  <time dateTime={news.pubTime}>{news.pubTime}</time>
                 </div>
               </div>
             </div>
@@ -556,11 +648,11 @@ export default function ArticleDetailView() {
         </header>
 
         {/* Hero Image */}
-        {article.headPic && (
+        {news.headPic && (
           <figure className="mb-10 -mx-4 sm:mx-0">
             <img
-              src={article.headPic}
-              alt={article.name}
+              src={news.headPic}
+              alt={news.name}
               className="w-full h-auto sm:rounded-xl object-cover bg-gray-100 dark:bg-slate-800"
               referrerPolicy="no-referrer"
             />
@@ -570,60 +662,66 @@ export default function ArticleDetailView() {
         {/* Content */}
         <div
           ref={contentRef}
-          className="prose prose-lg md:prose-xl prose-emerald max-w-none prose-p:font-serif prose-p:leading-relaxed prose-p:text-gray-800 dark:prose-p:text-gray-200 prose-a:text-emerald-600 dark:prose-a:text-emerald-400 prose-img:rounded-xl select-text"
+          className={`prose ${newscaleClasses[fontScale].prose} prose-emerald max-w-none overflow-x-hidden break-words prose-p:font-serif prose-p:leading-relaxed prose-p:text-gray-800 dark:prose-p:text-gray-200 prose-a:text-emerald-600 dark:prose-a:text-emerald-400 prose-img:rounded-xl prose-img:max-w-full prose-img:h-auto prose-pre:max-w-full prose-pre:overflow-x-auto prose-table:block prose-table:max-w-full prose-table:overflow-x-auto [&_iframe]:max-w-full [&_video]:max-w-full [&_svg]:max-w-full [&_*]:break-words select-text`}
           dangerouslySetInnerHTML={{ __html: highlightedContent }}
           onClick={handleMarkClick}
           onDoubleClick={handleContentDblClick}
         />
 
-        {/* AI Practice CTA */}
-        <div className="mt-14 pt-8 border-t border-gray-100 dark:border-slate-700/60">
-          <div className="rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border border-emerald-100 dark:border-emerald-800/40 p-6 text-center">
-            <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/40 rounded-2xl flex items-center justify-center mx-auto mb-3">
-              <Brain className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+        {/* AI Practice CTA*/}
+        <div className="mt-14 pt-8 border-t border-gray-100 dark:border-slate-800/60">
+          <button
+            type="button"
+            onClick={() =>
+              navigate(`/practice/${news.contId}`, {
+                state: {
+                  title: news.name,
+                  contentHtml: news.content,
+                },
+              })
+            }
+            className="group relative w-full flex items-center gap-4 p-4 rounded-xl 
+                      bg-transparent hover:bg-gray-50/80 dark:hover:bg-slate-800/40 
+                      border border-gray-100 dark:border-slate-800 
+                      hover:border-emerald-200 dark:hover:border-emerald-500/30
+                      transition-all duration-200 ease-in-out"
+          >
+            {/* 1. Icon: No background, purely icon-focused */}
+            <div className="flex items-center justify-center shrink-0">
+              <Brain className="w-6 h-6 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform duration-300" />
             </div>
-            <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-1">
-              Test Your Understanding
-            </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-              5 minute AI exercises based on this article
-            </p>
-            <button
-              type="button"
-              onClick={() =>
-                navigate(`/practice/${article.contId}`, {
-                  state: {
-                    title: article.name,
-                    contentHtml: article.content,
-                  },
-                })
-              }
-              className="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-semibold text-sm rounded-full transition-colors"
-            >
-              <Brain size={16} />
-              Start Practice
-            </button>
-          </div>
-        </div>
-      </article>
 
-      {/* 单词弹窗遮罩：背景模糊、不可操作，点击关闭。
-          必须加 data-popup 让 pointerdown-dismiss handler 忽略此元素，
-          否则 pointerdown 会先于 onClick 把 popup 关掉，导致点击穿透。 */}
+            {/* 2. Text Content: Balanced spacing and hierarchy */}
+            <div className="flex-1 text-left min-w-0">
+              <h4 className="text-[16px] font-semibold text-gray-900 dark:text-gray-100 leading-none">Test Your Understanding</h4>
+              <div className="flex items-center gap-2 mt-2">
+                <span className="text-[13px] text-gray-500 dark:text-gray-400">AI exercises</span>
+              </div>
+            </div>
+
+            {/* 3. Action: Clean button pill */}
+            <div className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 group-hover:bg-emerald-600 transition-colors duration-200">
+              <span className="text-[12px] font-bold text-emerald-700 dark:text-emerald-400 group-hover:text-white tracking-wide">START</span>
+              <ChevronRight className="w-4 h-4 text-emerald-600 dark:text-emerald-400 group-hover:text-white group-hover:translate-x-0.5 transition-all" />
+            </div>
+          </button>
+        </div>
+      </News>
+      
       {dictPopup && (
         <button
           type="button"
           data-popup
-          aria-label="关闭单词释义"
+          aria-label="Close dictionary"
           className="fixed inset-0 z-[99] bg-black/30 backdrop-blur-sm cursor-default"
           onClick={() => setDictPopup(null)}
         />
       )}
-      {/* Dictionary popup: 移动端占满下半屏 */}
+      {/* Dictionary popup */}
       {dictPopup && (
         <div
           data-popup
-          className="fixed inset-x-0 bottom-0 z-[100] h-[55vh] min-h-[280px] max-h-[85vh] flex flex-col rounded-t-2xl bg-white dark:bg-slate-800 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.3)] border border-gray-100 dark:border-slate-600 border-b-0 md:left-1/2 md:right-auto md:top-auto md:w-[min(96vw,420px)] md:max-h-[70vh] md:min-h-0 md:rounded-b-2xl md:border-b md:-translate-x-1/2 md:bottom-6"
+          className="fixed inset-x-0 bottom-0 z-[100] h-[55vh] min-h-[280px] max-h-[85vh] flex flex-col rounded-t-2xl bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-600 border-b-0 md:left-1/2 md:right-auto md:top-auto md:w-[min(96vw,420px)] md:max-h-[70vh] md:min-h-0 md:rounded-b-2xl md:border-b md:-translate-x-1/2 md:bottom-6"
         >
           <audio ref={dictAudioRef} className="hidden" />
           <div className="flex-shrink-0 flex items-center justify-between gap-2 px-4 py-3 border-b border-gray-100 dark:border-slate-600 bg-gray-50/90 dark:bg-slate-700/50">
@@ -638,8 +736,8 @@ export default function ArticleDetailView() {
                     ? "text-emerald-500 dark:text-emerald-400"
                     : "text-gray-400 dark:text-gray-500 hover:text-brand dark:hover:text-emerald-400 hover:bg-gray-100 dark:hover:bg-slate-600"
                 }`}
-                aria-label={wordInVocab ? "已加入生词本" : "加入生词本"}
-                title={wordInVocab ? "已加入生词本" : "加入生词本"}
+                aria-label={wordInVocab ? "Already in vocabulary" : "Add to vocabulary"}
+                title={wordInVocab ? "Already in vocabulary" : "Add to vocabulary"}
               >
                 {wordInVocab ? <BookmarkCheck size={18} /> : <BookmarkPlus size={18} />}
               </button>
@@ -647,7 +745,7 @@ export default function ArticleDetailView() {
                 type="button"
                 onClick={() => setDictPopup(null)}
                 className="p-1.5 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-600 hover:text-gray-700 dark:hover:text-gray-100 transition-colors"
-                aria-label="关闭"
+                aria-label="Close"
               >
                 <X size={18} />
               </button>
@@ -659,27 +757,28 @@ export default function ArticleDetailView() {
                 <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
               </div>
             )}
-            {dictError && !dictLoading && (
-              <p className="text-gray-500 dark:text-gray-400 text-sm py-6">{dictError}</p>
-            )}
+            {dictError && !dictLoading && <p className="text-gray-500 dark:text-gray-400 text-sm py-6">{dictError}</p>}
             {dictData && !dictLoading && (
               <div className="space-y-5 text-sm dark:text-gray-200">
-                {/* 音标 + 发音图标 */}
+                {/* Pronunciation */}
                 {(dictData.ukphone || dictData.usphone) && (
                   <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
                     {dictData.ukphone && (
                       <div className="flex items-center gap-1.5">
-                        <span className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">英</span>
+                        <span className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">UK</span>
                         <span className="text-sm text-gray-600 dark:text-gray-500 font-mono">/{dictData.ukphone}/</span>
                         {dictData.ukspeech && (
                           <button
                             type="button"
                             onClick={() => {
                               const el = dictAudioRef.current;
-                              if (el) { el.src = dictData.ukspeech!; el.play().catch(() => {}); }
+                              if (el) {
+                                el.src = dictData.ukspeech!;
+                                el.play().catch(() => {});
+                              }
                             }}
                             className="p-1 rounded-full text-emerald-500 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors"
-                            aria-label="播放英音"
+                            aria-label="Play UK pronunciation"
                           >
                             <Volume2 size={14} />
                           </button>
@@ -688,17 +787,20 @@ export default function ArticleDetailView() {
                     )}
                     {dictData.usphone && (
                       <div className="flex items-center gap-1.5">
-                        <span className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">美</span>
+                        <span className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">US</span>
                         <span className="text-sm text-gray-600 dark:text-gray-500 font-mono">/{dictData.usphone}/</span>
                         {dictData.usspeech && (
                           <button
                             type="button"
                             onClick={() => {
                               const el = dictAudioRef.current;
-                              if (el) { el.src = dictData.usspeech!; el.play().catch(() => {}); }
+                              if (el) {
+                                el.src = dictData.usspeech!;
+                                el.play().catch(() => {});
+                              }
                             }}
                             className="p-1 rounded-full text-emerald-500 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors"
-                            aria-label="播放美音"
+                            aria-label="Play US pronunciation"
                           >
                             <Volume2 size={14} />
                           </button>
@@ -707,10 +809,10 @@ export default function ArticleDetailView() {
                     )}
                   </div>
                 )}
-                {/* 翻译 */}
+                {/* Definitions */}
                 {dictData.translations && dictData.translations.length > 0 && (
                   <section>
-                    <h4 className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-2">释义</h4>
+                    <h4 className="text-s font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-2">Definitions</h4>
                     <ul className="space-y-1 list-none pl-0">
                       {dictData.translations.map((t, i) => (
                         <li key={i} className="text-gray-800 dark:text-gray-200">
@@ -720,37 +822,36 @@ export default function ArticleDetailView() {
                     </ul>
                   </section>
                 )}
-                {/* 短语 */}
+                {/* Phrases */}
                 {dictData.phrases && dictData.phrases.length > 0 && (
                   <section>
-                    <h4 className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-2">短语</h4>
+                    <h4 className="text-s font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-2">Phrases</h4>
                     <ul className="space-y-1.5 list-none pl-0">
                       {dictData.phrases.slice(0, 12).map((p, i) => (
                         <li key={i} className="text-gray-800 dark:text-gray-200">
                           <span className="font-medium text-gray-900 dark:text-gray-100">{p.p_content}</span>
-                          <span className="text-gray-500 dark:text-gray-400"> — {p.p_cn}</span>
+                          <span className="text-gray-500 dark:text-gray-400"> - {p.p_cn}</span>
                         </li>
                       ))}
                       {dictData.phrases.length > 12 && (
-                        <li className="text-gray-400 dark:text-gray-500 text-xs">共 {dictData.phrases.length} 条</li>
+                        <li className="text-gray-400 dark:text-gray-500 text-s">Total {dictData.phrases.length} phrases</li>
                       )}
                     </ul>
                   </section>
                 )}
-                {/* 同根词 */}
+                {/* Related words */}
                 {dictData.relWords && dictData.relWords.length > 0 && (
                   <section>
-                    <h4 className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-2">同根词</h4>
+                    <h4 className="text-s font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-2">Related words</h4>
                     <div className="space-y-2">
                       {dictData.relWords.map((g, i) => (
                         <div key={i}>
-                          <span className="text-gray-500 dark:text-gray-400">{g.Pos}</span>
-                          {" "}
+                          <span className="text-gray-500 dark:text-gray-400">{g.Pos}</span>{" "}
                           {g.Hwds.map((h, j) => (
                             <span key={j} className="text-gray-800 dark:text-gray-200">
                               {h.hwd}
                               <span className="text-gray-500 dark:text-gray-400"> {h.tran}</span>
-                              {j < g.Hwds.length - 1 ? "；" : ""}
+                              {j < g.Hwds.length - 1 ? "; " : ""}
                             </span>
                           ))}
                         </div>
@@ -758,25 +859,25 @@ export default function ArticleDetailView() {
                     </div>
                   </section>
                 )}
-                {/* 近义词 */}
+                {/* Synonyms */}
                 {dictData.synonyms && dictData.synonyms.length > 0 && (
                   <section>
-                    <h4 className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-2">近义词</h4>
+                    <h4 className="text-s font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-2">Synonyms</h4>
                     <ul className="space-y-1 list-none pl-0">
                       {dictData.synonyms.map((s, i) => (
                         <li key={i} className="text-gray-800 dark:text-gray-200">
                           <span className="text-gray-500 dark:text-gray-400">{s.pos}</span> {s.tran}
-                          {" — "}
+                          {" - "}
                           {s.Hwds.map((h) => h.word).join(", ")}
                         </li>
                       ))}
                     </ul>
                   </section>
                 )}
-                {/* 例句 */}
+                {/* Example sentences */}
                 {dictData.sentences && dictData.sentences.length > 0 && (
                   <section>
-                    <h4 className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-2">例句</h4>
+                    <h4 className="text-s font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-2">Example sentences</h4>
                     <ul className="space-y-2 list-none pl-0">
                       {dictData.sentences.slice(0, 5).map((s, i) => (
                         <li key={i} className="text-gray-800 dark:text-gray-200">
@@ -807,7 +908,11 @@ export default function ArticleDetailView() {
       {showHighlightModal && pendingHighlightText && (
         <HighlightSaveModal
           selectedText={pendingHighlightText}
-          onClose={() => { setShowHighlightModal(false); setPendingHighlightText(null); window.getSelection()?.removeAllRanges(); }}
+          onClose={() => {
+            setShowHighlightModal(false);
+            setPendingHighlightText(null);
+            window.getSelection()?.removeAllRanges();
+          }}
           onSave={handleSaveHighlight}
         />
       )}

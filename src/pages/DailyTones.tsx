@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type TouchEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
 import { App as CapacitorApp } from "@capacitor/app";
 import { ChevronLeft, ChevronRight, ImageOff, Loader2, Calendar as CalendarIcon, X } from "lucide-react";
 import { getDailyTonesByDate, getDailyTonesCalendar } from "../api/api";
-import { ArticleItem } from "../types";
+import { NewsItem } from "../types";
 import { motion, AnimatePresence } from "motion/react";
 
 const toInputDate = (d: Date) => {
@@ -17,7 +17,7 @@ const toInputDate = (d: Date) => {
 const formatDisplayDate = (dateText: string) => {
   const d = new Date(dateText);
   if (Number.isNaN(d.getTime())) return dateText;
-  return d.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+  return d.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
 };
 
 const toYearMonth = (d: Date) => {
@@ -27,7 +27,7 @@ const toYearMonth = (d: Date) => {
 };
 
 const toYearMonthLabel = (d: Date) => {
-  return d.toLocaleDateString(undefined, { year: "numeric", month: "long" });
+  return d.toLocaleDateString("en-US", { year: "numeric", month: "long" });
 };
 
 const addMonth = (date: Date, delta: number) => {
@@ -46,18 +46,27 @@ export default function DailyTones() {
   const [selectedDate, setSelectedDate] = useState(toInputDate(today));
   const [monthCursor, setMonthCursor] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
   const [daysInMonth, setDaysInMonth] = useState<string[]>([]);
-  const [items, setItems] = useState<ArticleItem[]>([]);
+  const [items, setItems] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeSlide, setActiveSlide] = useState(0);
   const [showCalendar, setShowCalendar] = useState(false);
   const sliderRef = useRef<HTMLDivElement>(null);
+  const swipeStartX = useRef<number | null>(null);
+  const swipeStartY = useRef<number | null>(null);
+  const swipeIsH = useRef<boolean | null>(null);
 
   useEffect(() => {
     if (Capacitor.getPlatform() !== "android") return;
     let handle: { remove: () => Promise<void> } | null = null;
-    CapacitorApp.addListener("backButton", () => { navigate("/"); }).then((h) => { handle = h; });
-    return () => { handle?.remove?.(); };
+    CapacitorApp.addListener("backButton", () => {
+      navigate("/");
+    }).then((h) => {
+      handle = h;
+    });
+    return () => {
+      handle?.remove?.();
+    };
   }, [navigate]);
 
   useEffect(() => {
@@ -93,7 +102,7 @@ export default function DailyTones() {
       try {
         const res = await getDailyTonesByDate(selectedDate);
         if (!cancelled) {
-          setItems((res?.data?.contList || []) as ArticleItem[]);
+          setItems((res?.data?.contList || []) as NewsItem[]);
           setActiveSlide(0);
           if (sliderRef.current) {
             sliderRef.current.scrollTo({ left: 0, behavior: "instant" as ScrollBehavior });
@@ -210,8 +219,39 @@ export default function DailyTones() {
     );
   };
 
+  const handleSwipeStart = (e: TouchEvent) => {
+    swipeStartX.current = e.touches[0].clientX;
+    swipeStartY.current = e.touches[0].clientY;
+    swipeIsH.current = null;
+  };
+  const handleSwipeMove = (e: TouchEvent) => {
+    if (swipeStartX.current === null || swipeStartY.current === null) return;
+    const dx = e.touches[0].clientX - swipeStartX.current;
+    const dy = e.touches[0].clientY - swipeStartY.current;
+    if (swipeIsH.current === null) {
+      if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+      swipeIsH.current = Math.abs(dx) > Math.abs(dy);
+    }
+  };
+  const handleSwipeEnd = (e: TouchEvent) => {
+    if (swipeStartX.current === null) return;
+    const dx = e.changedTouches[0].clientX - swipeStartX.current;
+    const wasH = swipeIsH.current;
+    swipeStartX.current = null;
+    swipeStartY.current = null;
+    swipeIsH.current = null;
+    if (!wasH) return;
+    if (dx < -50) goToSlide(activeSlide + 1);
+    else if (dx > 50) goToSlide(activeSlide - 1);
+  };
+
   return (
-    <div className="fixed inset-0 bg-black text-white overflow-hidden">
+    <div
+      className="fixed inset-0 bg-black text-white overflow-hidden"
+      onTouchStart={handleSwipeStart}
+      onTouchMove={handleSwipeMove}
+      onTouchEnd={handleSwipeEnd}
+    >
       {/* Background Image Slider */}
       <div className="absolute inset-0 z-0">
         {!loading && !error && items.length > 0 ? (
@@ -290,14 +330,12 @@ export default function DailyTones() {
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.4, ease: "easeOut" }}
               >
-                <Link to={`/article/${items[activeSlide]?.contId}`}>
+                <Link to={`/news/${items[activeSlide]?.contId}`}>
                   <h2 className="text-3xl md:text-5xl font-serif font-bold leading-tight mb-4 text-white hover:text-emerald-300 transition-colors">
                     {items[activeSlide]?.name}
                   </h2>
                   {items[activeSlide]?.summary && (
-                    <p className="text-white/70 text-sm md:text-base leading-relaxed font-serif italic">
-                      {items[activeSlide].summary}
-                    </p>
+                    <p className="text-white/70 text-sm md:text-base leading-relaxed font-serif italic">{items[activeSlide].summary}</p>
                   )}
                 </Link>
               </motion.div>

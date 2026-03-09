@@ -1,11 +1,12 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
 import { App as CapacitorApp } from "@capacitor/app";
 import DOMPurify from "dompurify";
 import { searchNews } from "../api/api";
 import type { SearchResultItem } from "../types";
-import { Search as SearchIcon, Loader2, ArrowRight } from "lucide-react";
+import { Search as SearchIcon, Loader2 } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 import { motion } from "motion/react";
 
 const PAGE_SIZE = 10;
@@ -16,6 +17,17 @@ const SANITIZE_OPTIONS = {
 };
 
 const HIGHLIGHT_COLOR = "#065f46"; // 品牌绿，与 brand 一致
+
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+
+function formatNewsTime(pubTime?: string, pubTimeLong?: number): string {
+  const ts = pubTimeLong || (pubTime ? new Date(pubTime).getTime() : 0);
+  if (!ts || Number.isNaN(ts)) return pubTime ?? "";
+  if (Date.now() - ts > SEVEN_DAYS_MS) {
+    return new Date(ts).toLocaleDateString('en-US', { month: "short", day: "numeric", year: "numeric" });
+  }
+  return formatDistanceToNow(new Date(ts), { addSuffix: true });
+}
 
 function sanitizeHighlightHtml(html: string | undefined): string {
   if (!html || typeof html !== "string") return "";
@@ -69,7 +81,7 @@ export default function Search() {
     return () => { handle?.remove?.(); };
   }, [navigate]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     const w = word.trim();
     if (!w) return;
@@ -78,18 +90,37 @@ export default function Search() {
     doSearch(w, 1, false);
   };
 
-  const handleLoadMore = () => {
-    if (!loading && hasMore && submitWord) {
-      doSearch(submitWord, page + 1, true);
-    }
-  };
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const hasMoreRef = useRef(hasMore);
+  const loadingRef = useRef(loading);
+  const pageRef = useRef(page);
+  const submitWordRef = useRef(submitWord);
+  useEffect(() => { hasMoreRef.current = hasMore; }, [hasMore]);
+  useEffect(() => { loadingRef.current = loading; }, [loading]);
+  useEffect(() => { pageRef.current = page; }, [page]);
+  useEffect(() => { submitWordRef.current = submitWord; }, [submitWord]);
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && hasMoreRef.current && !loadingRef.current && submitWordRef.current) {
+          doSearch(submitWordRef.current, pageRef.current + 1, true);
+        }
+      },
+      { rootMargin: "300px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [doSearch]);
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 pb-32">
       <header className="mb-8">
         <div className="flex items-center space-x-2 mb-2">
           <span className="h-px w-8 bg-brand dark:bg-emerald-400" />
-          <span className="text-xs font-extrabold tracking-[0.2em] text-brand dark:text-emerald-400 uppercase">Search</span>
+          <span className="text-s font-extrabold tracking-[0.2em] text-brand dark:text-emerald-400 uppercase">Search</span>
         </div>
         <h1 className="text-3xl md:text-4xl font-serif font-bold text-gray-900 dark:text-gray-100 tracking-tight">Search</h1>
       </header>
@@ -101,7 +132,7 @@ export default function Search() {
             type="search"
             value={word}
             onChange={(e) => setWord(e.target.value)}
-            placeholder="Search articles..."
+            placeholder="Search news..."
             className="w-full pl-12 pr-5 py-4 rounded-2xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand transition-all"
             autoFocus
             autoComplete="off"
@@ -139,7 +170,7 @@ export default function Search() {
               transition={{ delay: index * 0.03 }}
             >
               <Link
-                to={`/article/${item.contId}`}
+                to={`/news/${item.contId}`}
                 className="group block bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-600 overflow-hidden hover:shadow-[0_12px_30px_-12px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_12px_30px_-12px_rgba(0,0,0,0.3)] transition-all active:scale-[0.99]"
               >
                 {/* 左右布局：图片左侧，标题+时间右侧 */}
@@ -161,7 +192,7 @@ export default function Search() {
                   </div>
                   <div className="flex-1 min-w-0 flex flex-col justify-center">
                     {item.nodeInfo?.name && (
-                      <span className="inline-block text-[10px] font-bold tracking-wider text-brand uppercase mb-1">
+                      <span className="inline-block text-[10px] font-bold tracking-wider text-brand dark:text-emerald-400 uppercase mb-1">
                         {item.nodeInfo.name}
                       </span>
                     )}
@@ -169,21 +200,18 @@ export default function Search() {
                       className="text-base font-serif font-bold text-gray-900 dark:text-gray-100 leading-snug group-hover:text-brand dark:group-hover:text-emerald-400 transition-colors [&_font]:text-brand"
                       dangerouslySetInnerHTML={{ __html: safeTitle }}
                     />
-                    <div className="flex items-center justify-between mt-2">
-                      {item.pubTime && (
-                        <span className="text-xs text-gray-400">{item.pubTime}</span>
-                      )}
-                      <div className="w-8 h-8 rounded-full border border-gray-100 flex items-center justify-center shrink-0 group-hover:bg-brand group-hover:border-brand transition-all">
-                        <ArrowRight size={14} className="text-gray-500 group-hover:text-white transition-colors" />
-                      </div>
-                    </div>
+                    {(item.pubTime || item.pubTimeLong) && (
+                      <span className="text-s text-gray-400 dark:text-gray-500 mt-2">
+                        {formatNewsTime(item.pubTime, item.pubTimeLong)}
+                      </span>
+                    )}
                   </div>
                 </div>
                 {/* summary 下方整行 */}
                 {safeSummary && (
                   <div className="px-4 pb-4 pt-0">
                     <p
-                      className="text-sm text-gray-500 leading-relaxed line-clamp-2 [&_font]:text-brand"
+                      className="text-gray-500 dark:text-gray-400 leading-relaxed line-clamp-2 [&_font]:text-brand dark:[&_font]:text-emerald-400 text-sm md:text-base italic font-serif"
                       dangerouslySetInnerHTML={{ __html: safeSummary }}
                     />
                   </div>
@@ -200,16 +228,7 @@ export default function Search() {
         </div>
       )}
 
-      {!loading && hasMore && list.length > 0 && (
-        <div className="flex justify-center mt-8">
-          <button
-            onClick={handleLoadMore}
-            className="px-6 py-3 bg-white border border-gray-200 text-gray-700 font-medium rounded-full hover:bg-gray-50 transition-colors shadow-sm"
-          >
-            Load more
-          </button>
-        </div>
-      )}
+      {hasMore && list.length > 0 && <div ref={sentinelRef} className="h-1" />}
 
       {!loading && !hasMore && list.length > 0 && (
         <p className="text-center text-gray-400 text-sm mt-8">End of results</p>

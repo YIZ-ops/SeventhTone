@@ -54,12 +54,12 @@ export default function HighlightSaveModal({ selectedText, onClose, onSave }: Pr
 
         <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
           <div>
-            <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1.5">Quote</label>
+            <label className="block text-s font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1.5">Quote</label>
             <p className="text-sm text-gray-700 dark:text-gray-200 font-serif italic line-clamp-3 bg-gray-50 dark:bg-slate-700/50 rounded-xl p-3">&ldquo;{selectedText}&rdquo;</p>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1.5">Your thought (optional)</label>
+            <label className="block text-s font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1.5">Your thought (optional)</label>
             <textarea
               value={thought}
               onChange={(e) => setThought(e.target.value)}
@@ -70,7 +70,7 @@ export default function HighlightSaveModal({ selectedText, onClose, onSave }: Pr
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1.5">Category</label>
+            <label className="block text-s font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1.5">Category</label>
             {isNewCategory ? (
               <div className="space-y-2">
                 <input
@@ -84,7 +84,7 @@ export default function HighlightSaveModal({ selectedText, onClose, onSave }: Pr
                 <button
                   type="button"
                   onClick={() => { setIsNewCategory(false); setNewCategoryName(""); }}
-                  className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-500"
+                  className="text-s text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-500"
                 >
                   Cancel
                 </button>
@@ -96,7 +96,7 @@ export default function HighlightSaveModal({ selectedText, onClose, onSave }: Pr
                     key={cat}
                     type="button"
                     onClick={() => setSelectedCategory(cat)}
-                    className={`px-4 py-2 rounded-full text-xs font-semibold transition-all ${
+                    className={`px-4 py-2 rounded-full text-s font-semibold transition-all ${
                       selectedCategory === cat ? "bg-gray-900 dark:bg-emerald-600 text-white" : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-500 hover:bg-gray-200 dark:hover:bg-slate-600"
                     }`}
                   >
@@ -106,7 +106,7 @@ export default function HighlightSaveModal({ selectedText, onClose, onSave }: Pr
                 <button
                   type="button"
                   onClick={() => setIsNewCategory(true)}
-                  className="px-4 py-2 rounded-full text-xs font-semibold border border-dashed border-gray-300 dark:border-slate-500 text-gray-400 dark:text-gray-500 hover:border-brand dark:hover:border-emerald-500 hover:text-brand dark:hover:text-emerald-400 transition-all flex items-center gap-1"
+                  className="px-4 py-2 rounded-full text-s font-semibold border border-dashed border-gray-300 dark:border-slate-500 text-gray-400 dark:text-gray-500 hover:border-brand dark:hover:border-emerald-500 hover:text-brand dark:hover:text-emerald-400 transition-all flex items-center gap-1"
                 >
                   <Plus size={12} />
                   New

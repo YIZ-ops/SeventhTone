@@ -1,4 +1,4 @@
-export interface ArticleItem {
+export interface NewsItem {
   contId: number;
   nodeId: number;
   name: string;
@@ -17,11 +17,11 @@ export interface ArticleItem {
   };
 }
 
-export interface ArticleListResponse {
+export interface NewsListResponse {
   code: number;
   data: {
     pageInfo: {
-      list: ArticleItem[];
+      list: NewsItem[];
       pageNum: number;
       hasNext: boolean;
       total: number;
@@ -29,7 +29,7 @@ export interface ArticleListResponse {
   };
 }
 
-export interface ArticleDetail {
+export interface NewsDetail {
   contId: number;
   nodeId: number;
   name: string;
@@ -44,7 +44,7 @@ export interface ArticleDetail {
 }
 
 export interface Bookmark {
-  article: ArticleItem;
+  news: NewsItem;
   category: string;
   CollectedAt: number;
 }
@@ -53,7 +53,7 @@ export interface Highlight {
   id: string;
   contId: number;
   text: string;
-  articleName?: string;
+  newsName?: string;
   category?: string;
   thought?: string;
   start?: number;
@@ -61,12 +61,12 @@ export interface Highlight {
   createdAt: number;
 }
 
-export interface ArticleDetailResponse {
+export interface NewsDetailResponse {
   pageProps: {
     contId: string;
     detailData: {
       code: number;
-      data: ArticleDetail;
+      data: NewsDetail;
     };
   };
 }

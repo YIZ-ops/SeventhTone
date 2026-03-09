@@ -7,12 +7,12 @@ import { motion } from "motion/react";
 
 interface QuoteModalProps {
   text: string;
-  articleTitle: string;
+  newsTitle: string;
   author: string;
   onClose: () => void;
 }
 
-export default function QuoteModal({ text, articleTitle, author, onClose }: QuoteModalProps) {
+export default function QuoteModal({ text, newsTitle, author, onClose }: QuoteModalProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -122,8 +122,8 @@ export default function QuoteModal({ text, articleTitle, author, onClose }: Quot
             </div>
 
             <div className="mt-auto pt-6 border-t border-gray-100">
-              <h4 className="text-sm font-bold text-gray-900 mb-1 line-clamp-2">{articleTitle}</h4>
-              <p className="text-xs text-gray-500 uppercase tracking-widest font-bold">{author}</p>
+              <h4 className="text-sm font-bold text-gray-900 mb-1 line-clamp-2">{newsTitle}</h4>
+              <p className="text-s text-gray-500 uppercase tracking-widest font-bold">{author}</p>
             </div>
           </div>
         </div>

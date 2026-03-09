@@ -1,10 +1,10 @@
-**Prerequisites:** Node.js
+**Prerequisites:** Node.js 22.12.0
+
 
 1. Install dependencies:
-
    `npm install -D @tailwindcss/vite`
    `npm install`
-4. Run the app:
+2. Run the app:
    `npm run dev`
 
 # capacitor 打包
@@ -22,8 +22,14 @@ npm run build
 npx cap sync android 
 rerun androidstudio app
 
+Docs：
+1. api
+   https://github.com/meetDeveloper/freeDictionaryAPI
+   https://xxapi.cn/doc/englishwords
+   https://free-api.com/
 
-api:
-https://github.com/meetDeveloper/freeDictionaryAPI
-https://xxapi.cn/doc/englishwords
-https://free-api.com/
+2. capacitor
+   https://capacitor.xuxo.top/docs/plugins/community
+
+3. llm
+   https://cloud.siliconflow.cn/me/models

@@ -55,7 +55,7 @@ body {
   background-color: #0f172a;
 }
 
-mark.article-highlight {
+mark.news-highlight {
   background: linear-gradient(
     to bottom,
     transparent 0%,
@@ -69,7 +69,7 @@ mark.article-highlight {
   transition: background 0.15s ease;
 }
 
-mark.article-highlight:hover {
+mark.news-highlight:hover {
   background: linear-gradient(
     to bottom,
     transparent 0%,

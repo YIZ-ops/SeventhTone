@@ -98,7 +98,7 @@ export default function CategoryList() {
       <header className="mb-12">
         <div className="flex items-center space-x-2 mb-2">
           <span className="h-px w-8 bg-brand dark:bg-emerald-400"></span>
-          <span className="text-xs font-extrabold tracking-[0.2em] text-brand dark:text-emerald-400 uppercase">Explore</span>
+          <span className="text-s font-extrabold tracking-[0.2em] text-brand dark:text-emerald-400 uppercase">Explore</span>
         </div>
         <h1 className="text-4xl md:text-5xl font-serif font-bold text-gray-900 dark:text-gray-100 tracking-tight">Sections</h1>
       </header>

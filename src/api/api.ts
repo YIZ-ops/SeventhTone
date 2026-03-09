@@ -1,6 +1,6 @@
 import { request } from "../utils/request";
 import { Capacitor, CapacitorHttp } from "@capacitor/core";
-import { ArticleListResponse, ArticleItem, Bookmark, Highlight, WebNode, Category, SearchResponse, VocabWord } from "../types";
+import { NewsListResponse, NewsItem, Bookmark, Highlight, WebNode, Category, SearchResponse, VocabWord } from "../types";
 
 const BASE_URL = "https://api.sixthtone.com";
 const SIXTH_TONE_WEB_BASE = "https://www.sixthtone.com";
@@ -34,7 +34,7 @@ const getDailyTonesByNodeId = async (nodeId: string | number) => {
     summary: item.summary || "",
     pubTime: item.pubTime || "",
     pubTimeLong: typeof item.pubTimeLong === "number" ? item.pubTimeLong : Date.now(),
-  })) as ArticleItem[];
+  })) as NewsItem[];
 
   return {
     ...res,
@@ -79,7 +79,7 @@ const isNativeRuntime = () => {
   return Capacitor.isNativePlatform() || protocol === "capacitor:" || protocol === "file:";
 };
 
-const normalizeArticleDetailResponse = (res: any) => {
+const normalizeNewsDetailResponse = (res: any) => {
   if (res && res.contId && res.content) {
     return { data: res };
   }
@@ -103,21 +103,21 @@ const fetchSixthToneDetailByBuildId = async (contId: string, buildId: string) =>
   });
 
   if (!response || response.status < 200 || response.status >= 300) {
-    throw new Error(`Failed to load article detail JSON: ${response?.status ?? "unknown"}`);
+    throw new Error(`Failed to load news detail JSON: ${response?.status ?? "unknown"}`);
   }
 
   const detailData = parseSixthToneDetail(response.data);
   if (!detailData) {
-    throw new Error("Article detail payload is missing.");
+    throw new Error("News detail payload is missing.");
   }
   return detailData;
 };
 
-const resolveLatestBuildIdFromArticleHtml = async (contId: string) => {
-  const articleUrl = `${SIXTH_TONE_WEB_BASE}/news/${contId}`;
+const resolveLatestBuildIdFromNewsHtml = async (contId: string) => {
+  const newsUrl = `${SIXTH_TONE_WEB_BASE}/news/${contId}`;
   const htmlResponse = await CapacitorHttp.request({
     method: "GET",
-    url: articleUrl,
+    url: newsUrl,
     headers: {
       Accept: "text/html,*/*",
       "User-Agent": MOBILE_UA,
@@ -128,45 +128,40 @@ const resolveLatestBuildIdFromArticleHtml = async (contId: string) => {
   return match?.[1] ?? null;
 };
 
-const getArticleDetailFromSixthToneNative = async (contId: string) => {
+const getNewsDetailFromSixthToneNative = async (contId: string) => {
   try {
     return await fetchSixthToneDetailByBuildId(contId, DEFAULT_BUILD_ID);
   } catch {
-    const latestBuildId = await resolveLatestBuildIdFromArticleHtml(contId);
+    const latestBuildId = await resolveLatestBuildIdFromNewsHtml(contId);
     if (!latestBuildId) {
-      throw new Error("Failed to resolve latest buildId from article HTML.");
+      throw new Error("Failed to resolve latest buildId from news HTML.");
     }
     return await fetchSixthToneDetailByBuildId(contId, latestBuildId);
   }
 };
 
-const getArticleDetailFromBackendRelay = async (contId: string, backendBase: string, isNative: boolean) => {
+const getNewsDetailFromBackendRelay = async (contId: string, backendBase: string, isNative: boolean) => {
   const candidates = isNative
-    ? [backendBase ? `${backendBase}/api/article/${contId}` : ""].filter(Boolean)
-    : ["/api/article/" + contId, backendBase ? `${backendBase}/api/article/${contId}` : "", "http://localhost:3000/api/article/" + contId].filter(
-        Boolean,
-      );
+    ? [backendBase ? `${backendBase}/api/news/${contId}` : ""].filter(Boolean)
+    : ["/api/news/" + contId, backendBase ? `${backendBase}/api/news/${contId}` : "", "http://localhost:3000/api/news/" + contId].filter(Boolean);
 
   let lastError: unknown = null;
   for (const url of candidates) {
     try {
       const res = await request<any>(url, { method: "GET" });
-      const normalized = normalizeArticleDetailResponse(res);
+      const normalized = normalizeNewsDetailResponse(res);
       if (normalized) return normalized;
     } catch (err) {
       lastError = err;
     }
   }
 
-  throw lastError || new Error("Failed to load article detail from backend.");
+  throw lastError || new Error("Failed to load news detail from backend.");
 };
 
 /** 获取全部节点（分类）原始接口 */
 export const getWebAllNodes = async () => {
-  const res = await request<{ code: number; data: { nodeList: WebNode[] } }>(
-    `${BASE_URL}/node/getWebAllNodes`,
-    { method: "GET" }
-  );
+  const res = await request<{ code: number; data: { nodeList: WebNode[] } }>(`${BASE_URL}/node/getWebAllNodes`, { method: "GET" });
   if (res?.code !== 200 || !Array.isArray(res?.data?.nodeList)) {
     throw new Error("Failed to fetch nodes.");
   }
@@ -212,8 +207,8 @@ export const searchNews = async (params: SearchNewsParams) => {
   return res;
 };
 
-export const getArticleList = async (nodeId: string, pageNum: number, pageSize: number = 20) => {
-  const res = await request<ArticleListResponse>(`${BASE_URL}/cont/nodeCont/getByNodeId`, {
+export const getNewsList = async (nodeId: string, pageNum: number, pageSize: number = 20) => {
+  const res = await request<NewsListResponse>(`${BASE_URL}/cont/nodeCont/getByNodeId`, {
     method: "POST",
     body: JSON.stringify({ nodeId, pageNum, pageSize }),
   });
@@ -227,14 +222,14 @@ export const getArticleList = async (nodeId: string, pageNum: number, pageSize: 
   return res;
 };
 
-export const getArticleDetail = async (contId: string) => {
+export const getNewsDetail = async (contId: string) => {
   const backendBase = (import.meta.env.VITE_BACKEND_URL || "").replace(/\/$/, "");
   const isNative = isNativeRuntime();
 
   // Native first: direct request to Seventh Tone via CapacitorHttp (OkHttp on Android).
   if (isNative) {
     try {
-      return await getArticleDetailFromSixthToneNative(contId);
+      return await getNewsDetailFromSixthToneNative(contId);
     } catch (nativeError) {
       if (!backendBase) {
         throw nativeError;
@@ -243,14 +238,14 @@ export const getArticleDetail = async (contId: string) => {
     }
   }
 
-  return await getArticleDetailFromBackendRelay(contId, backendBase, isNative);
+  return await getNewsDetailFromBackendRelay(contId, backendBase, isNative);
 };
 
 // Local storage for history (带阅读时间，用于只显示“今天读过”)
 const HISTORY_KEY = "sixthtone_reading_history";
 
 export interface HistoryEntry {
-  article: ArticleItem;
+  news: NewsItem;
   readAt: number;
 }
 
@@ -261,10 +256,10 @@ function getHistoryRaw(): HistoryEntry[] {
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
     return parsed.map((item: unknown) => {
-      if (item && typeof item === "object" && "article" in item && "readAt" in item) {
+      if (item && typeof item === "object" && "news" in item && "readAt" in item) {
         return item as HistoryEntry;
       }
-      return { article: item as ArticleItem, readAt: 0 };
+      return { news: item as NewsItem, readAt: 0 };
     });
   } catch (e) {
     console.error("Failed to parse history", e);
@@ -280,19 +275,16 @@ export const getHistoryEntriesToday = (): HistoryEntry[] => {
   return getHistoryRaw().filter((e) => e.readAt >= startOfToday && e.readAt < startOfTomorrow);
 };
 
-/** 仅返回今天阅读过的文章列表（兼容用） */
-export const getHistory = (): ArticleItem[] => {
-  return getHistoryEntriesToday().map((e) => e.article);
+/** 仅返回今天阅读过的新闻列表（兼容用） */
+export const getHistory = (): NewsItem[] => {
+  return getHistoryEntriesToday().map((e) => e.news);
 };
 
-export const addHistory = (article: ArticleItem) => {
+export const addHistory = (news: NewsItem) => {
   try {
     const raw = getHistoryRaw();
     const readAt = Date.now();
-    const newRaw = [
-      { article, readAt },
-      ...raw.filter((e) => e.article.contId !== article.contId),
-    ].slice(0, 100);
+    const newRaw = [{ news, readAt }, ...raw.filter((e) => e.news.contId !== news.contId)].slice(0, 100);
     localStorage.setItem(HISTORY_KEY, JSON.stringify(newRaw));
   } catch (e) {
     console.error("Failed to save history", e);
@@ -316,11 +308,11 @@ export const getBookmarks = (): Bookmark[] => {
   }
 };
 
-export const addBookmark = (article: ArticleItem, category: string) => {
+export const addBookmark = (news: NewsItem, category: string) => {
   try {
     const bookmarks = getBookmarks();
-    const newBookmark: Bookmark = { article, category, CollectedAt: Date.now() };
-    const newBookmarks = [newBookmark, ...bookmarks.filter((b) => b.article.contId !== article.contId)];
+    const newBookmark: Bookmark = { news, category, CollectedAt: Date.now() };
+    const newBookmarks = [newBookmark, ...bookmarks.filter((b) => b.news.contId !== news.contId)];
     localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(newBookmarks));
   } catch (e) {
     console.error("Failed to save bookmark", e);
@@ -330,7 +322,7 @@ export const addBookmark = (article: ArticleItem, category: string) => {
 export const removeBookmark = (contId: number) => {
   try {
     const bookmarks = getBookmarks();
-    const newBookmarks = bookmarks.filter((b) => b.article.contId !== contId);
+    const newBookmarks = bookmarks.filter((b) => b.news.contId !== contId);
     localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(newBookmarks));
   } catch (e) {
     console.error("Failed to remove bookmark", e);
@@ -360,7 +352,7 @@ export const deleteBookmarkCategory = (category: string) => {
   try {
     getBookmarks()
       .filter((b) => b.category === category)
-      .forEach((b) => removeBookmark(b.article.contId));
+      .forEach((b) => removeBookmark(b.news.contId));
   } catch (e) {
     console.error("Failed to delete bookmark category", e);
   }
@@ -409,7 +401,7 @@ export const getAllHighlights = (): Highlight[] => {
 export const addHighlight = (
   contId: number,
   text: string,
-  articleName?: string,
+  newsName?: string,
   start?: number,
   length?: number,
   category?: string,
@@ -418,17 +410,17 @@ export const addHighlight = (
   try {
     const allHighlightsStr = localStorage.getItem(HIGHLIGHTS_KEY);
     const allHighlights = allHighlightsStr ? JSON.parse(allHighlightsStr) : {};
-    const articleHighlights: Highlight[] = allHighlights[contId] || [];
+    const newsHighlights: Highlight[] = allHighlights[contId] || [];
 
     const hasSameRange =
-      typeof start === "number" && typeof length === "number" && articleHighlights.some((h) => h.start === start && h.length === length);
+      typeof start === "number" && typeof length === "number" && newsHighlights.some((h) => h.start === start && h.length === length);
     if (hasSameRange) return;
 
     const newHighlight: Highlight = {
       id: Math.random().toString(36).substring(2, 9),
       contId,
       text,
-      articleName,
+      newsName,
       category: category || "Highlights",
       thought: thought?.trim() || undefined,
       start,
@@ -436,7 +428,7 @@ export const addHighlight = (
       createdAt: Date.now(),
     };
 
-    allHighlights[contId] = [...articleHighlights, newHighlight];
+    allHighlights[contId] = [...newsHighlights, newHighlight];
     localStorage.setItem(HIGHLIGHTS_KEY, JSON.stringify(allHighlights));
   } catch (e) {
     console.error("Failed to save highlight", e);
@@ -459,9 +451,7 @@ export const renameHighlightCategory = (oldName: string, newName: string) => {
     const allStr = localStorage.getItem(HIGHLIGHTS_KEY);
     const all = allStr ? JSON.parse(allStr) : {};
     for (const contId of Object.keys(all)) {
-      all[contId] = (all[contId] as Highlight[]).map((h) =>
-        (h.category || "Highlights") === oldName ? { ...h, category: newName } : h,
-      );
+      all[contId] = (all[contId] as Highlight[]).map((h) => ((h.category || "Highlights") === oldName ? { ...h, category: newName } : h));
     }
     localStorage.setItem(HIGHLIGHTS_KEY, JSON.stringify(all));
   } catch (e) {
@@ -521,8 +511,7 @@ export const getVocab = (): VocabWord[] => {
   }
 };
 
-export const isInVocab = (word: string): boolean =>
-  getVocab().some((v) => v.word.toLowerCase() === word.toLowerCase());
+export const isInVocab = (word: string): boolean => getVocab().some((v) => v.word.toLowerCase() === word.toLowerCase());
 
 export const addVocab = (word: string, phonetic?: string, translations: string[] = []) => {
   try {

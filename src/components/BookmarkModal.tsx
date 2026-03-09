@@ -93,7 +93,7 @@ export default function BookmarkModal({ onClose, onSave }: Props) {
           {isCreating && (
             <button
               onClick={() => setIsCreating(false)}
-              className="px-4 py-2 text-gray-400 dark:text-gray-500 text-xs font-bold uppercase tracking-widest hover:text-gray-600 dark:hover:text-gray-500 transition-colors"
+              className="px-4 py-2 text-gray-400 dark:text-gray-500 text-s font-bold uppercase tracking-widest hover:text-gray-600 dark:hover:text-gray-500 transition-colors"
             >
               Cancel
             </button>
@@ -101,7 +101,7 @@ export default function BookmarkModal({ onClose, onSave }: Props) {
           <button
             onClick={handleSave}
             disabled={isCreating && !newCategory.trim()}
-            className="px-8 py-2.5 bg-gray-900 dark:bg-emerald-600 text-white rounded-full text-xs font-bold uppercase tracking-widest hover:bg-brand dark:hover:bg-emerald-500 transition-all disabled:opacity-50 shadow-lg"
+            className="px-8 py-2.5 bg-gray-900 dark:bg-emerald-600 text-white rounded-full text-s font-bold uppercase tracking-widest hover:bg-brand dark:hover:bg-emerald-500 transition-all disabled:opacity-50 shadow-lg"
           >
             Save
           </button>
