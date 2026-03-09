@@ -94,10 +94,14 @@ export default function My() {
 
   // Android 物理返回键：返回首页
   useEffect(() => {
-    if (Capacitor.getPlatform() !== "android" || section === "overview") return;
+    if (Capacitor.getPlatform() !== "android") return;
     let handle: { remove: () => Promise<void> } | null = null;
     CapacitorApp.addListener("backButton", () => {
-      navigate("/me");
+      if (section == "overview") {
+        navigate("/");
+      } else {
+        navigate("/me");
+      }
     }).then((h) => {
       handle = h;
     });
@@ -232,7 +236,7 @@ export default function My() {
             {
               to: "/me/history",
               icon: Clock3,
-              title: "History",
+              title: "History", 
               description: "Review your reading timeline and revisit recent news.",
             },
             {
