@@ -37,7 +37,7 @@ export default function PointsPage() {
           </div>
           <h2 className="text-2xl font-serif font-bold text-gray-900 dark:text-gray-100 mb-2">No points yet</h2>
           <p className="text-gray-400 dark:text-gray-500 text-sm max-w-xs mx-auto">
-            Your reward history will appear here after you read news and complete practice.
+            Your reward history will appear here after you complete practice.
           </p>
         </div>
       ) : (
@@ -54,8 +54,8 @@ export default function PointsPage() {
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0 flex-1">
                     <h3 className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">{item.title}</h3>
-                    <p className="mt-1 text-sm leading-5 text-gray-500 dark:text-gray-400">{item.description}</p>
-                    {item.articleTitle && <p className="mt-1.5 truncate text-sm font-medium text-gray-700 dark:text-gray-200">{item.articleTitle}</p>}
+                    {/* <p className="mt-1 text-sm leading-5 text-gray-500 dark:text-gray-400">{item.description}</p> */}
+                    {item.articleTitle && <p className="mt-1 text-sm leading-5 break-words text-gray-500 dark:text-gray-400">{item.articleTitle}</p>}
                   </div>
                   <div className="shrink-0 text-right">
                     <p className="text-lg font-bold leading-none text-amber-600 dark:text-amber-300">+{item.points}</p>

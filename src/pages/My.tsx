@@ -224,7 +224,7 @@ export default function My() {
                   {pointsSummary.totalPoints} pts
                 </span>
               </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Track rewards from reading and practice, and view your points history.</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Track rewards from practice, and view your points history.</p>
             </div>
             <ChevronRight
               size={18}

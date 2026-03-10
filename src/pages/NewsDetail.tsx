@@ -31,7 +31,7 @@ import { Directory, Filesystem } from "@capacitor/filesystem";
 import { Share } from "@capacitor/share";
 import TextSelectionHighlight from "../plugins/textSelectionHighlight";
 import { useTheme } from "../contexts/ThemeContext";
-import { awardNewsReadingPoints } from "../api/points";
+// import { awardNewsReadingPoints } from "../api/points";
 import { useBottomToast } from "../utils/toast";
 
 const SIXTH_TONE_WEB = "https://www.sixthtone.com";
@@ -390,10 +390,10 @@ export default function NewsDetailView() {
       if (sessionStart === 0) return;
       const durationMs = Date.now() - sessionStart;
       addReadingSession(news.contId, durationMs);
-      const reward = awardNewsReadingPoints(news.contId, news.name, durationMs);
-      if (reward.granted && document.visibilityState === "visible") {
-        showToast(`+${reward.points} points News read.`, "success");
-      }
+      // const reward = awardNewsReadingPoints(news.contId, news.name, durationMs);
+      // if (reward.granted && document.visibilityState === "visible") {
+      //   showToast(`+${reward.points} points News read.`, "success");
+      // }
       sessionStart = 0;
     };
 
