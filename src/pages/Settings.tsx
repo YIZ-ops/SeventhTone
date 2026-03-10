@@ -54,7 +54,7 @@ export default function SettingsPage() {
       link.click();
       document.body.removeChild(link);
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-      setExportSuccessInfo(`文件名：${filename}\n\n保存位置：浏览器默认下载目录`);
+      setExportSuccessInfo(`File name: ${filename}\n\nSaved to: your browser's default downloads folder`);
       setIsExporting(false);
       return;
     }
@@ -82,7 +82,7 @@ export default function SettingsPage() {
         uri = result.uri;
       }
 
-      setExportSuccessInfo(uri ? `导出路径：\n${uri}` : "导出完成。备份文件已保存到本地目录。");
+      setExportSuccessInfo(uri ? `Export path:\n${uri}` : "Export complete. Your backup file was saved locally.");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Export failed. Please check storage permissions and try again.";
       setExportError(message);
@@ -190,7 +190,7 @@ export default function SettingsPage() {
           <p className="text-[11px] uppercase tracking-[0.2em] text-brand dark:text-emerald-400 font-bold mb-2">Backup</p>
           <h2 className="text-2xl font-serif font-bold text-gray-900 dark:text-gray-100">Local Data Export and Import</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-5">
-            Create a local backup file or restore one when you switch devices or reinstall.
+            Create a local backup file or restore one when you switch devices or reinstall. Points data is included automatically.
           </p>
           <div className="flex flex-col sm:flex-row gap-3">
             <button
@@ -224,22 +224,24 @@ export default function SettingsPage() {
       {showImportConfirm && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/35 px-4">
           <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-slate-700 dark:bg-slate-900">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">确认导入备份</h3>
-            <p className="mt-3 text-sm leading-6 text-gray-600 dark:text-gray-300">导入会覆盖当前本地数据。确认后将使用备份内容替换现有记录。</p>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Import backup</h3>
+            <p className="mt-3 text-sm leading-6 text-gray-600 dark:text-gray-300">
+              Importing will replace your current local data, including points and reading history.
+            </p>
             <div className="mt-6 flex gap-3">
               <button
                 type="button"
                 onClick={handleCancelImport}
                 className="flex-1 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-50 dark:border-slate-600 dark:text-gray-100 dark:hover:bg-slate-800"
               >
-                取消
+                Cancel
               </button>
               <button
                 type="button"
                 onClick={handleConfirmImport}
                 className="flex-1 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-50 dark:border-slate-600 dark:text-gray-100 dark:hover:bg-slate-800"
               >
-                确认导入
+                Import now
               </button>
             </div>
           </div>
@@ -249,14 +251,14 @@ export default function SettingsPage() {
       {exportSuccessInfo && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/35 px-4">
           <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-slate-700 dark:bg-slate-900">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">导出成功</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Export complete</h3>
             <p className="mt-3 whitespace-pre-line break-all text-sm leading-6 text-gray-600 dark:text-gray-300">{exportSuccessInfo}</p>
             <button
               type="button"
               onClick={() => setExportSuccessInfo(null)}
               className="mt-6 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-800 transition-colors hover:bg-gray-50 dark:border-slate-600 dark:text-gray-100 dark:hover:bg-slate-800"
             >
-              知道了
+              Done
             </button>
           </div>
         </div>
@@ -265,8 +267,10 @@ export default function SettingsPage() {
       {importSuccess && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/35 px-4">
           <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-slate-700 dark:bg-slate-900">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">导入成功</h3>
-            <p className="mt-3 text-sm leading-6 text-gray-600 dark:text-gray-300">本地数据已导入，页面将自动刷新。</p>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Import complete</h3>
+            <p className="mt-3 text-sm leading-6 text-gray-600 dark:text-gray-300">
+              Your local data has been restored. The page will refresh automatically.
+            </p>
             <div className="mt-5 flex justify-center">
               <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-gray-700 dark:border-slate-600 dark:border-t-gray-200" />
             </div>

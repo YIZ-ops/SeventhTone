@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { ChevronLeft, ChevronRight, Loader2, CheckCircle2, XCircle, Brain, RotateCcw, LayoutGrid, X } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
@@ -13,6 +13,8 @@ import {
   type TranslationEval,
   type SummaryEvaluation,
 } from "../api/llm";
+import { awardPracticeAnswerPoints, awardPracticeCompletionPoints, type PointsAwardResult } from "../api/points";
+import { useBottomToast } from "../utils/toast";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type QEntry =
@@ -91,9 +93,12 @@ function badgeCls(answered: boolean, isSelected: boolean, isCorrect: boolean): s
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function NewsPractice() {
+  const params = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const { showToast } = useBottomToast();
   const state = location.state as { title?: string; contentHtml?: string } | null;
+  const articleId = Number(params.id ?? 0);
   const title = state?.title ?? "Practice";
   const contentHtml = state?.contentHtml ?? "";
 
@@ -120,6 +125,7 @@ export default function NewsPractice() {
   const [translEvals, setTranslEvals] = useState<Record<string, TranslationEval>>({});
   const [translEvalLoading, setTranslEvalLoading] = useState<Set<string>>(new Set());
   const [summaryText, setSummaryText] = useState("");
+  const [summaryRevealed, setSummaryRevealed] = useState(false);
   /** Summary AI feedback — evaluated inline on the summary card */
   const [summaryEval, setSummaryEval] = useState<SummaryEvaluation | null>(null);
   const [summaryEvalLoading, setSummaryEvalLoading] = useState(false);
@@ -180,6 +186,36 @@ export default function NewsPractice() {
     return true; // translation / summary: always passable
   }, [exercises, currentEntry, vocabAnswers, compAnswers]);
 
+  const isSubjectiveEntry = useCallback((entry: QEntry | null): entry is Extract<QEntry, { type: "en2cn" | "cn2en" | "summary" }> => {
+    return !!entry && (entry.type === "en2cn" || entry.type === "cn2en" || entry.type === "summary");
+  }, []);
+
+  const isSubjectiveReadyForNext = useCallback(
+    (entry: Extract<QEntry, { type: "en2cn" | "cn2en" | "summary" }> | null) => {
+      if (!entry || !exercises) return false;
+      if (entry.type === "summary") {
+        const hasText = summaryText.trim().length > 0;
+        return summaryRevealed && (!hasText || (!!summaryEval && !summaryEvalLoading));
+      }
+      const q = entry.type === "en2cn" ? exercises.en2cn[entry.idx] : exercises.cn2en[entry.idx];
+      const hasText = (translTexts[q.id] ?? "").trim().length > 0;
+      return translRevealed.has(q.id) && (!hasText || (!!translEvals[q.id] && !translEvalLoading.has(q.id)));
+    },
+    [exercises, summaryText, summaryRevealed, summaryEval, summaryEvalLoading, translTexts, translRevealed, translEvals, translEvalLoading],
+  );
+
+  const currentIsSubjective = isSubjectiveEntry(currentEntry);
+  const currentSubjectiveReadyForNext = currentIsSubjective ? isSubjectiveReadyForNext(currentEntry) : false;
+  const answeredCount = useMemo(() => questions.filter((entry) => getStatus(entry) !== "unanswered").length, [questions, getStatus]);
+
+  const notifyPointsAward = useCallback(
+    (result: PointsAwardResult) => {
+      if (!result.granted) return;
+      showToast(`+${result.points} points ${result.transaction?.title ?? "Reward earned"}.`, "success");
+    },
+    [showToast],
+  );
+
   // ── Answer card sections ──────────────────────────────────────────────────
   const sheetSections = useMemo(() => {
     if (!exercises) return [];
@@ -214,11 +250,15 @@ export default function NewsPractice() {
   // ── Navigation helpers ────────────────────────────────────────────────────
   const jumpTo = useCallback(
     (idx: number) => {
+      if (idx > currentIdx && currentIsSubjective && !currentSubjectiveReadyForNext) {
+        setShowSheet(false);
+        return;
+      }
       setNavDir(idx > currentIdx ? 1 : -1);
       setCurrentIdx(idx);
       setShowSheet(false);
     },
-    [currentIdx],
+    [currentIdx, currentIsSubjective, currentSubjectiveReadyForNext],
   );
 
   const goPrev = useCallback(() => {
@@ -228,42 +268,144 @@ export default function NewsPractice() {
   }, [currentIdx]);
 
   const goNext = useCallback(() => {
+    if (currentIsSubjective && !currentSubjectiveReadyForNext) return;
     if (currentIdx < questions.length - 1) {
       setNavDir(1);
       setCurrentIdx((i) => i + 1);
     }
-  }, [currentIdx, questions.length]);
+  }, [currentIdx, questions.length, currentIsSubjective, currentSubjectiveReadyForNext]);
 
   // ── Answer handlers ───────────────────────────────────────────────────────
   const handleVocabAnswer = useCallback(
     (qId: string, option: string) => {
       if (vocabAnswers[qId]) return;
+      const isCorrect = exercises?.vocabulary.find((item) => item.id === qId)?.answer === option;
+      notifyPointsAward(
+        awardPracticeAnswerPoints({
+          articleId,
+          articleTitle: title,
+          questionId: qId,
+          sectionTitle: SECTION_META.vocab.label,
+          isCorrect,
+        }),
+      );
       setVocabAnswers((prev) => ({ ...prev, [qId]: option }));
     },
-    [vocabAnswers],
+    [vocabAnswers, exercises, notifyPointsAward, articleId, title],
   );
 
   const handleCompAnswer = useCallback(
     (qId: string, idx: number) => {
       if (compAnswers[qId] !== undefined) return;
+      const isCorrect = exercises?.comprehension.find((item) => item.id === qId)?.answer === idx;
+      notifyPointsAward(
+        awardPracticeAnswerPoints({
+          articleId,
+          articleTitle: title,
+          questionId: qId,
+          sectionTitle: SECTION_META.comp.label,
+          isCorrect,
+        }),
+      );
       setCompAnswers((prev) => ({ ...prev, [qId]: idx }));
     },
-    [compAnswers],
+    [compAnswers, exercises, notifyPointsAward, articleId, title],
+  );
+
+  const handleSubmitTranslation = useCallback(
+    async (entry: Extract<QEntry, { type: "en2cn" | "cn2en" }>) => {
+      if (!exercises) return;
+      const q = entry.type === "en2cn" ? exercises.en2cn[entry.idx] : exercises.cn2en[entry.idx];
+      const trimmed = (translTexts[q.id] ?? "").trim();
+
+      setTranslRevealed((prev) => new Set([...prev, q.id]));
+
+      if (!trimmed || translEvalLoading.has(q.id) || translEvals[q.id]) return;
+
+      setTranslEvalLoading((prev) => new Set([...prev, q.id]));
+      try {
+        const results = await evaluateTranslations([
+          {
+            id: q.id,
+            direction: entry.type,
+            source: q.sourceText,
+            userAnswer: trimmed,
+            modelAnswer: q.modelAnswer,
+          },
+        ]);
+        if (results[0]) {
+          setTranslEvals((prev) => ({ ...prev, [q.id]: results[0] }));
+        }
+      } catch {
+        setTranslEvals((prev) => ({
+          ...prev,
+          [q.id]: {
+            id: q.id,
+            score: 0,
+            feedback: "AI feedback is temporarily unavailable. Please compare your answer with the reference version.",
+            improved: q.modelAnswer,
+          },
+        }));
+      } finally {
+        notifyPointsAward(
+          awardPracticeAnswerPoints({
+            articleId,
+            articleTitle: title,
+            questionId: q.id,
+            sectionTitle: SECTION_META[entry.type].label,
+            isSubjective: true,
+          }),
+        );
+        setTranslEvalLoading((prev) => {
+          const next = new Set(prev);
+          next.delete(q.id);
+          return next;
+        });
+      }
+    },
+    [exercises, translTexts, translEvalLoading, translEvals, notifyPointsAward, articleId, title],
   );
 
   // ── Inline summary evaluation ─────────────────────────────────────────────
-  const handleEvalSummary = useCallback(async () => {
-    if (!summaryText.trim() || summaryEvalLoading) return;
+  const handleSubmitSummary = useCallback(async () => {
+    const trimmed = summaryText.trim();
+    setSummaryRevealed(true);
+    if (!trimmed || summaryEvalLoading || summaryEval) return;
+
     setSummaryEvalLoading(true);
     try {
-      const result = await evaluateSummary(prepareNewsText(contentHtml), summaryText);
+      const result = await evaluateSummary(prepareNewsText(contentHtml), trimmed);
       setSummaryEval(result);
     } catch {
-      // silently fail
+      setSummaryEval({
+        score: 0,
+        grammar: "AI feedback is temporarily unavailable. Start by checking sentence clarity against the reference summary.",
+        content: "Make sure your summary covers the main angle, key facts, and impact of the story.",
+        vocabulary: "Prefer precise, concise wording that sounds natural in news English.",
+        improved: exercises?.modelSummary ?? "",
+      });
     } finally {
+      notifyPointsAward(
+        awardPracticeAnswerPoints({
+          articleId,
+          articleTitle: title,
+          questionId: "summary",
+          sectionTitle: SECTION_META.summary.label,
+          isSubjective: true,
+        }),
+      );
       setSummaryEvalLoading(false);
     }
-  }, [summaryText, summaryEvalLoading, contentHtml]);
+  }, [summaryText, summaryEvalLoading, summaryEval, contentHtml, exercises?.modelSummary, notifyPointsAward, articleId, title]);
+
+  const handleSubmitCurrentSubjective = useCallback(async () => {
+    if (!currentEntry || !isSubjectiveEntry(currentEntry)) return;
+    if (currentEntry.type === "summary") {
+      await handleSubmitSummary();
+      return;
+    }
+    await handleSubmitTranslation(currentEntry);
+  }, [currentEntry, isSubjectiveEntry, handleSubmitSummary, handleSubmitTranslation]);
 
   // ── Load exercises ────────────────────────────────────────────────────────
   const startGeneration = useCallback(() => {
@@ -286,6 +428,18 @@ export default function NewsPractice() {
   useEffect(() => {
     startGeneration();
   }, []);
+
+  useEffect(() => {
+    if (!Number.isFinite(articleId) || articleId <= 0) return;
+    notifyPointsAward(
+      awardPracticeCompletionPoints({
+        articleId,
+        articleTitle: title,
+        totalQuestions: questions.length,
+        answeredQuestions: answeredCount,
+      }),
+    );
+  }, [articleId, title, questions.length, answeredCount, notifyPointsAward]);
 
   // ── Back button ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -464,6 +618,25 @@ export default function NewsPractice() {
   //  BOTTOM NAV (shared across all question types)
   // ═══════════════════════════════════════════════════════════════════════════
   const isLastQ = currentIdx === questions.length - 1;
+  const currentSubjectiveBusy =
+    currentIsSubjective && currentEntry.type !== "summary"
+      ? exercises
+        ? translEvalLoading.has((currentEntry.type === "en2cn" ? exercises.en2cn[currentEntry.idx] : exercises.cn2en[currentEntry.idx]).id)
+        : false
+      : summaryEvalLoading;
+
+  const currentPrimaryLabel = currentIsSubjective
+    ? currentSubjectiveReadyForNext
+      ? isLastQ
+        ? "Done"
+        : "Next"
+      : currentSubjectiveBusy
+        ? "Checking..."
+        : "View "
+    : isLastQ
+      ? "Done"
+      : "Next";
+
   const bottomNav = (
     <div className="fixed bottom-0 left-0 right-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-gray-100 dark:border-slate-700/60 pb-safe shadow-[0_-8px_24px_-20px_rgba(0,0,0,0.5)]">
       <div className="max-w-2xl mx-auto px-4 h-14 flex items-center gap-3">
@@ -484,7 +657,7 @@ export default function NewsPractice() {
         </div>
 
         {/* Next / Done */}
-        {isLastQ ? (
+        {!currentIsSubjective && isLastQ ? (
           <button
             onClick={() => navigate(-1)}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold bg-brand dark:bg-emerald-600 text-white hover:bg-brand/90 transition-colors shadow-sm shadow-emerald-500/20"
@@ -493,11 +666,22 @@ export default function NewsPractice() {
           </button>
         ) : (
           <button
-            onClick={goNext}
-            disabled={!canGoNext}
+            onClick={async () => {
+              if (currentIsSubjective) {
+                if (currentSubjectiveReadyForNext) {
+                  if (isLastQ) navigate(-1);
+                  else goNext();
+                  return;
+                }
+                await handleSubmitCurrentSubjective();
+                return;
+              }
+              goNext();
+            }}
+            disabled={currentIsSubjective ? currentSubjectiveBusy : !canGoNext}
             className="flex items-center gap-1 px-3.5 py-2 rounded-xl text-sm font-bold bg-brand dark:bg-emerald-600 text-white disabled:opacity-30 hover:bg-brand/90 transition-colors shadow-sm shadow-emerald-500/20"
           >
-            Next <ChevronRight size={16} />
+            {currentPrimaryLabel} <ChevronRight size={16} />
           </button>
         )}
       </div>
@@ -507,42 +691,73 @@ export default function NewsPractice() {
   // ═══════════════════════════════════════════════════════════════════════════
   //  PHASE: QUESTIONS
   // ═══════════════════════════════════════════════════════════════════════════
-  // ─── Shared: AI score card ────────────────────────────────────────────────
-  const renderEvalCard = (score: number, feedbacks: { label?: string; text: string }[], improved?: string) => (
+  // ─── Shared: subjective result cards ─────────────────────────────────────
+  const getScoreLevel = (score: number) => {
+    if (score >= 85) return "优秀";
+    if (score >= 70) return "良好";
+    if (score >= 60) return "合格";
+    return "待提升";
+  };
+
+  const renderReferenceCard = (answer: string) => (
     <motion.div
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 overflow-hidden shadow-sm"
     >
-      {/* Score header */}
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-slate-700">
+        <div className="flex-1">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">参考答案</p>
+        </div>
+      </div>
+      <div className="px-4 py-3">
+        <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{answer}</p>
+      </div>
+    </motion.div>
+  );
+
+  const renderAiScoreCard = (score: number, reasons: Array<{ label?: string; text: string }>) => (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 overflow-hidden shadow-sm"
+    >
       <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-slate-700">
         <div
-          className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 ${
-            score >= 80 ? "bg-emerald-500 text-white" : score >= 50 ? "bg-amber-400 text-white" : "bg-red-400 text-white"
+          className={`w-11 h-11 rounded-xl flex flex-col items-center justify-center font-bold text-sm shrink-0 ${
+            score >= 80 ? "bg-emerald-500 text-white" : score >= 60 ? "bg-amber-400 text-white" : "bg-red-400 text-white"
           }`}
         >
-          {score}
+          <span className="leading-none">{score}</span>
+          <span className="text-[10px] leading-none mt-0.5">分</span>
         </div>
-        <div className="flex-1">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">AI Score</p>
-          <p className="text-[12px] font-semibold text-gray-800 dark:text-gray-200">Overall Evaluation</p>
+        <div className="flex-1 min-w-0">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">AI评分</p>
+          <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">评级：{getScoreLevel(score)}</p>
         </div>
-        <div className="text-[10px] font-semibold text-gray-400 dark:text-gray-500">/100</div>
       </div>
-      {/* Feedback rows */}
-      <div className="px-4 py-3 space-y-3">
-        {feedbacks.map(({ label, text }, i) => (
+      <div className="px-4 py-3 space-y-2.5">
+        {reasons.map(({ label, text }, i) => (
           <div key={i}>
             {label && <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">{label}</p>}
             <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{text}</p>
           </div>
         ))}
-        {improved && (
-          <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-3 border border-emerald-100 dark:border-emerald-800 mt-1">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 mb-1">Improved Version</p>
-            <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">{improved}</p>
-          </div>
-        )}
+      </div>
+    </motion.div>
+  );
+
+  const renderSuggestionCard = (content: string) => (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 overflow-hidden shadow-sm"
+    >
+      <div className="px-4 py-3 border-b border-gray-100 dark:border-slate-700">
+        <p className="text-[11px] font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400">优化建议</p>
+      </div>
+      <div className="px-4 py-3">
+        <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{content}</p>
       </div>
     </motion.div>
   );
@@ -748,45 +963,6 @@ export default function NewsPractice() {
     const isEvalLoading = translEvalLoading.has(q.id);
     const hasText = userText.trim().length > 0;
 
-    const handleCheck = async () => {
-      if (!hasText || isEvalLoading) return;
-      setTranslRevealed((prev) => new Set([...prev, q.id]));
-      setTranslEvalLoading((prev) => new Set([...prev, q.id]));
-      try {
-        const results = await evaluateTranslations([
-          {
-            id: q.id,
-            direction: entry.type,
-            source: q.sourceText,
-            userAnswer: userText.trim(),
-            modelAnswer: q.modelAnswer,
-          },
-        ]);
-        if (results[0]) setTranslEvals((prev) => ({ ...prev, [q.id]: results[0] }));
-      } catch {
-        /* silently fail */
-      } finally {
-        setTranslEvalLoading((prev) => {
-          const n = new Set(prev);
-          n.delete(q.id);
-          return n;
-        });
-      }
-    };
-
-    const handleReScore = () => {
-      setTranslRevealed((prev) => {
-        const n = new Set(prev);
-        n.delete(q.id);
-        return n;
-      });
-      setTranslEvals((prev) => {
-        const { [q.id]: _, ...rest } = prev;
-        return rest;
-      });
-      setTranslTexts((prev) => ({ ...prev, [q.id]: "" }));
-    };
-
     return (
       <div className="space-y-4">
         {renderSectionBadge(entry)}
@@ -813,52 +989,18 @@ export default function NewsPractice() {
           />
         </div>
 
-        {/* Score button (before reveal) */}
-        {!revealed && (
-          <button
-            type="button"
-            onClick={handleCheck}
-            disabled={!hasText || isEvalLoading}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-brand/10 dark:bg-emerald-900/30 text-brand dark:text-emerald-400 hover:bg-brand/20 dark:hover:bg-emerald-900/50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
-            {isEvalLoading ? (
-              <>
-                <Loader2 size={14} className="animate-spin" /> 评分中…
-              </>
-            ) : (
-              <>
-                <Brain size={14} /> 获取 AI 评分
-              </>
-            )}
-          </button>
-        )}
-
         {/* Reference + result (after reveal) */}
         {revealed && (
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
-            <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4 border border-emerald-200 dark:border-emerald-800">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">Reference Answer</span>
-                <span className="text-[10px] font-semibold text-emerald-600/80 dark:text-emerald-400/80">Model</span>
-              </div>
-              <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">{q.modelAnswer}</p>
-            </div>
+            {renderReferenceCard(q.modelAnswer)}
             {isEvalLoading && (
               <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500 py-1">
                 <Loader2 size={14} className="animate-spin" />
-                <span>AI 评分中…</span>
+                <span>AI checking…</span>
               </div>
             )}
-            {evalResult && !isEvalLoading && renderEvalCard(evalResult.score, [{ text: evalResult.feedback }], evalResult.improved)}
-            {!isEvalLoading && (
-              <button
-                type="button"
-                onClick={handleReScore}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 text-sm font-semibold text-gray-500 dark:text-gray-400 hover:border-brand hover:text-brand dark:hover:border-emerald-500 dark:hover:text-emerald-400 transition-colors"
-              >
-                <RotateCcw size={14} /> 重新作答
-              </button>
-            )}
+            {hasText && evalResult && !isEvalLoading && renderAiScoreCard(evalResult.score, [{ text: evalResult.feedback }])}
+            {hasText && evalResult && !isEvalLoading && renderSuggestionCard(evalResult.improved)}
           </motion.div>
         )}
       </div>
@@ -868,13 +1010,8 @@ export default function NewsPractice() {
   // ─── Summary ──────────────────────────────────────────────────────────────
   const renderSummary = () => {
     const wordCount = summaryText.trim() ? summaryText.trim().split(/\s+/).length : 0;
-    const locked = !!summaryEval || summaryEvalLoading;
+    const locked = summaryRevealed || summaryEvalLoading;
     const hasText = summaryText.trim().length > 0;
-
-    const handleReScore = () => {
-      setSummaryEval(null);
-      setSummaryText("");
-    };
 
     return (
       <div className="space-y-4">
@@ -899,45 +1036,24 @@ export default function NewsPractice() {
           </p>
         </div>
 
-        {/* Score button */}
-        {!summaryEval && (
-          <button
-            type="button"
-            onClick={handleEvalSummary}
-            disabled={!hasText || summaryEvalLoading}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-brand/10 dark:bg-emerald-900/30 text-brand dark:text-emerald-400 hover:bg-brand/20 dark:hover:bg-emerald-900/50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
-            {summaryEvalLoading ? (
-              <>
-                <Loader2 size={14} className="animate-spin" /> 评分中…
-              </>
-            ) : (
-              <>
-                <Brain size={14} /> 获取 AI 评分
-              </>
-            )}
-          </button>
-        )}
-
-        {/* Score result + re-try */}
-        {summaryEval && (
+        {summaryRevealed && (
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
-            {renderEvalCard(
-              summaryEval.score,
-              [
+            {renderReferenceCard(exercises.modelSummary)}
+            {summaryEvalLoading && (
+              <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500 py-1">
+                <Loader2 size={14} className="animate-spin" />
+                <span>AI checking…</span>
+              </div>
+            )}
+            {hasText &&
+              summaryEval &&
+              !summaryEvalLoading &&
+              renderAiScoreCard(summaryEval.score, [
                 { label: "语法", text: summaryEval.grammar },
                 { label: "内容", text: summaryEval.content },
                 { label: "词汇", text: summaryEval.vocabulary },
-              ],
-              summaryEval.improved,
-            )}
-            <button
-              type="button"
-              onClick={handleReScore}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-gray-200 dark:border-slate-600 text-sm font-semibold text-gray-500 dark:text-gray-400 hover:border-brand hover:text-brand dark:hover:border-emerald-500 dark:hover:text-emerald-400 transition-colors"
-            >
-              <RotateCcw size={14} /> 重新作答
-            </button>
+              ])}
+            {hasText && summaryEval && !summaryEvalLoading && renderSuggestionCard(summaryEval.improved || exercises.modelSummary)}
           </motion.div>
         )}
       </div>

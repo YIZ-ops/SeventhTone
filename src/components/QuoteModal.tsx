@@ -109,7 +109,7 @@ export default function QuoteModal({ text, newsTitle, author, onClose }: QuoteMo
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6" data-popup onClick={(e) => e.stopPropagation()}>
       <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm" onClick={onClose} />
 
       <motion.div

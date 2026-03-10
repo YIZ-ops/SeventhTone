@@ -31,6 +31,8 @@ import { Directory, Filesystem } from "@capacitor/filesystem";
 import { Share } from "@capacitor/share";
 import TextSelectionHighlight from "../plugins/textSelectionHighlight";
 import { useTheme } from "../contexts/ThemeContext";
+import { awardNewsReadingPoints } from "../api/points";
+import { useBottomToast } from "../utils/toast";
 
 const SIXTH_TONE_WEB = "https://www.sixthtone.com";
 
@@ -242,6 +244,7 @@ export default function NewsDetailView() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { fontScale } = useTheme();
+  const { showToast } = useBottomToast();
   const [news, setNews] = useState<NewsDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -385,7 +388,12 @@ export default function NewsDetailView() {
 
     const pauseSession = () => {
       if (sessionStart === 0) return;
-      addReadingSession(news.contId, Date.now() - sessionStart);
+      const durationMs = Date.now() - sessionStart;
+      addReadingSession(news.contId, durationMs);
+      const reward = awardNewsReadingPoints(news.contId, news.name, durationMs);
+      if (reward.granted && document.visibilityState === "visible") {
+        showToast(`+${reward.points} points · News read.`, "success");
+      }
       sessionStart = 0;
     };
 
@@ -411,7 +419,7 @@ export default function NewsDetailView() {
       window.removeEventListener("pagehide", pauseSession);
       pauseSession();
     };
-  }, [news]);
+  }, [news, showToast]);
 
   // Dismiss dictionary popup on pointerdown outside content area and popups
   useEffect(() => {
@@ -855,7 +863,7 @@ export default function NewsDetailView() {
 
       <div className={`relative z-10 ${news.headPic ? "-mt-14 sm:-mt-16" : "mt-6"}`}>
         <article className="max-w-3xl mx-auto px-4 pb-16 select-text relative">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-gray-100 dark:border-slate-800 shadow-lg shadow-black/5 p-4 sm:p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-lg shadow-black/5 p-4 sm:p-4">
             {/* Header：标题和 summary 支持点击查词 */}
             <header className="mb-8">
               <h1
@@ -1161,6 +1169,7 @@ export default function NewsDetailView() {
       {showSentenceModal && pendingSentenceText && (
         <SentenceSaveModal
           selectedText={pendingSentenceText}
+          newsTitle={news?.name || "Unknown news"}
           onClose={() => {
             setShowSentenceModal(false);
             setPendingSentenceText(null);

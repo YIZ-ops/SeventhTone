@@ -1,15 +1,17 @@
 import { useEffect, useMemo, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
-import { ChevronRight, Clock3, Info, Settings } from "lucide-react";
+import { ChevronRight, Clock3, Info, Settings, Star } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { App as CapacitorApp } from "@capacitor/app";
 import { getReadingStats } from "../api/localData";
+import { getPointsSummary } from "../api/points";
 import HistoryPage from "./History";
 import SettingsPage from "./Settings";
 import AboutPage from "./About";
+import PointsPage from "./Points";
 
-type MySection = "overview" | "history" | "settings" | "about";
+type MySection = "overview" | "points" | "history" | "settings" | "about";
 
 function formatDuration(ms: number) {
   const totalMinutes = Math.max(0, Math.round(ms / 60000));
@@ -69,6 +71,7 @@ export default function My() {
   const navigate = useNavigate();
   const location = useLocation();
   const stats = getReadingStats();
+  const pointsSummary = getPointsSummary();
   const calendarDate = useMemo(() => new Date(), []);
   const calendarCells = useMemo(
     () => buildCalendar(calendarDate.getFullYear(), calendarDate.getMonth(), stats.readingDays),
@@ -76,13 +79,15 @@ export default function My() {
   );
 
   const section: MySection =
-    location.pathname === "/me/history"
-      ? "history"
-      : location.pathname === "/me/settings"
-        ? "settings"
-        : location.pathname === "/me/about"
-          ? "about"
-          : "overview";
+    location.pathname === "/me/points"
+      ? "points"
+      : location.pathname === "/me/history"
+        ? "history"
+        : location.pathname === "/me/settings"
+          ? "settings"
+          : location.pathname === "/me/about"
+            ? "about"
+            : "overview";
 
   useEffect(() => {
     if (section !== "overview") {
@@ -112,6 +117,14 @@ export default function My() {
     return (
       <MySubpage>
         <HistoryPage />
+      </MySubpage>
+    );
+  }
+
+  if (section === "points") {
+    return (
+      <MySubpage>
+        <PointsPage />
       </MySubpage>
     );
   }
@@ -197,6 +210,28 @@ export default function My() {
         </section>
 
         <div className="grid gap-4">
+          <Link
+            to="/me/points"
+            className="group flex items-center gap-4 rounded-2xl border border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 px-5 py-5 shadow-sm hover:bg-gray-50 dark:hover:bg-slate-700/60 transition-colors"
+          >
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300">
+              <Star size={20} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-3">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Points</h3>
+                <span className="inline-flex items-center rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+                  {pointsSummary.totalPoints} pts
+                </span>
+              </div>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Track rewards from reading and practice, and view your points history.</p>
+            </div>
+            <ChevronRight
+              size={18}
+              className="shrink-0 text-gray-400 dark:text-gray-500 group-hover:text-brand dark:group-hover:text-emerald-300 transition-colors"
+            />
+          </Link>
+
           {[
             {
               to: "/me/history",

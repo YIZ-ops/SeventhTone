@@ -7,6 +7,7 @@ export default function Header() {
   const isSubPage = location.pathname.startsWith("/category/");
   const isHome = location.pathname === "/";
   const mySubpageConfig: Record<string, { title: string; backTarget: string }> = {
+    "/me/points": { title: "Points", backTarget: "/me" },
     "/me/history": { title: "History", backTarget: "/me" },
     "/me/settings": { title: "Settings", backTarget: "/me" },
     "/me/about": { title: "About", backTarget: "/me" },

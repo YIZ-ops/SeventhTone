@@ -39,6 +39,7 @@ function AppContent() {
           <Route path="/search" element={<Search />} />
           <Route path="/me" element={<My />} />
           <Route path="/me/saved" element={<Navigate to="/bookmarks" replace />} />
+          <Route path="/me/points" element={<My />} />
           <Route path="/me/history" element={<My />} />
           <Route path="/me/settings" element={<My />} />
           <Route path="/me/about" element={<My />} />

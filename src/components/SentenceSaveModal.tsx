@@ -1,20 +1,22 @@
 import { useState, useEffect, useRef } from "react";
-import { X, Plus } from "lucide-react";
+import { X, Plus, Image as ImageIcon } from "lucide-react";
 import { getSentenceCategories } from "../api/api";
+import QuoteModal from "./QuoteModal";
 
 interface Props {
   selectedText: string;
+  newsTitle: string;
   onClose: () => void;
   onSave: (category: string, thought?: string) => void;
 }
 
-export default function SentenceSaveModal({ selectedText, onClose, onSave }: Props) {
+export default function SentenceSaveModal({ selectedText, newsTitle, onClose, onSave }: Props) {
   const [categories, setCategories] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("Sentences");
   const [thought, setThought] = useState("");
   const [isNewCategory, setIsNewCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
-  const cardRef = useRef<HTMLDivElement>(null);
+  const [showQuoteModal, setShowQuoteModal] = useState(false);
 
   // Guard: prevent the same tap that opened this modal from immediately closing it
   const justOpenedRef = useRef(false);
@@ -63,13 +65,29 @@ export default function SentenceSaveModal({ selectedText, onClose, onSave }: Pro
         <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
           <div>
             <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1.5">Quote</label>
-            <div ref={cardRef} className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-3">
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-3">
               <p className="text-sm text-gray-700 dark:text-gray-200 font-serif italic line-clamp-4 bg-gray-50 dark:bg-slate-700/50 rounded-lg p-3">
                 &ldquo;{selectedText}&rdquo;
               </p>
               {thought.trim() && <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 italic">{thought.trim()}</p>}
             </div>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setShowQuoteModal(true)}
+            className="group w-full rounded-2xl border border-emerald-100/80 dark:border-emerald-500/20 bg-gradient-to-r from-emerald-50/90 via-white to-white dark:from-emerald-500/10 dark:via-slate-800 dark:to-slate-800 px-4 py-3 text-left shadow-sm hover:shadow-md hover:border-brand/30 dark:hover:border-emerald-400/40 transition-all"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white dark:bg-slate-700 text-brand dark:text-emerald-400 shadow-sm ring-1 ring-emerald-100 dark:ring-emerald-500/20">
+                <ImageIcon size={18} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">生成书摘图片</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">先预览成书摘卡片，需要的话可以直接保存到相册或下载。</p>
+              </div>
+            </div>
+          </button>
 
           <div>
             <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1.5">
@@ -154,6 +172,8 @@ export default function SentenceSaveModal({ selectedText, onClose, onSave }: Pro
           </div>
         </div>
       </div>
+
+      {showQuoteModal && <QuoteModal text={selectedText} newsTitle={newsTitle} author="Seventh Tone" onClose={() => setShowQuoteModal(false)} />}
     </div>
   );
 }

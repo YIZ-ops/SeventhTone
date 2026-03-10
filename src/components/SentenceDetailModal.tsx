@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
-import { X, Pencil, Trash2, Check, Tag } from "lucide-react";
+import { X, Pencil, Trash2, Check, Tag, Image as ImageIcon } from "lucide-react";
 import { Sentence } from "../types";
 import { getSentenceCategories } from "../api/api";
+import QuoteModal from "./QuoteModal";
 
 interface Props {
   sentence: Sentence;
@@ -19,6 +20,7 @@ export default function SentenceDetailModal({ sentence, onClose, onDelete, onSav
   const [newCategoryName, setNewCategoryName] = useState("");
   const [isNewCategory, setIsNewCategory] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showQuoteModal, setShowQuoteModal] = useState(false);
 
   const justOpenedRef = useRef(false);
   useEffect(() => {
@@ -95,6 +97,24 @@ export default function SentenceDetailModal({ sentence, onClose, onDelete, onSav
           <div className="relative pl-4 border-l-2 border-brand/40 dark:border-emerald-500/40">
             <p className="text-sm text-gray-700 dark:text-gray-200 font-serif italic leading-relaxed line-clamp-4">{sentence.text}</p>
           </div>
+
+          {!isEditing && (
+            <button
+              type="button"
+              onClick={() => setShowQuoteModal(true)}
+              className="group w-full rounded-2xl border border-emerald-100/80 dark:border-emerald-500/20 bg-gradient-to-r from-emerald-50/90 via-white to-white dark:from-emerald-500/10 dark:via-slate-800 dark:to-slate-800 px-4 py-3 text-left shadow-sm hover:shadow-md hover:border-brand/30 dark:hover:border-emerald-400/40 transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white dark:bg-slate-700 text-brand dark:text-emerald-400 shadow-sm ring-1 ring-emerald-100 dark:ring-emerald-500/20">
+                  <ImageIcon size={18} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">生成书摘图片</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">把这段高亮内容快速生成成精致卡片，方便保存或分享。</p>
+                </div>
+              </div>
+            </button>
+          )}
 
           {/* Thought */}
           {isEditing ? (
@@ -248,6 +268,15 @@ export default function SentenceDetailModal({ sentence, onClose, onDelete, onSav
             </div>
           </div>
         </div>
+      )}
+
+      {showQuoteModal && (
+        <QuoteModal
+          text={sentence.text}
+          newsTitle={sentence.newsName || "Unknown news"}
+          author="Seventh Tone"
+          onClose={() => setShowQuoteModal(false)}
+        />
       )}
     </div>
   );
