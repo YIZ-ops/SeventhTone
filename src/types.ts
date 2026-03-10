@@ -49,7 +49,7 @@ export interface Bookmark {
   CollectedAt: number;
 }
 
-export interface Highlight {
+export interface Sentence {
   id: string;
   contId: number;
   text: string;

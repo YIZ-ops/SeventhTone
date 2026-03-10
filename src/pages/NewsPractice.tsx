@@ -26,13 +26,14 @@ type AnswerStatus = "unanswered" | "correct" | "wrong" | "answered";
 
 const LABELS = ["A", "B", "C", "D"];
 
-const SECTION_META: Record<QEntry["type"], { label: string; short: string; accent: string; ring: string; bg: string }> = {
+const SECTION_META: Record<QEntry["type"], { label: string; short: string; accent: string; ring: string; bg: string; badge: string }> = {
   vocab: {
     label: "Vocabulary",
     short: "Vocab",
     accent: "text-emerald-600 dark:text-emerald-400",
     ring: "ring-emerald-400",
     bg: "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800",
+    badge: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800",
   },
   comp: {
     label: "Comprehension",
@@ -40,20 +41,23 @@ const SECTION_META: Record<QEntry["type"], { label: string; short: string; accen
     accent: "text-blue-600 dark:text-blue-400",
     ring: "ring-blue-400",
     bg: "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800",
+    badge: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800",
   },
   en2cn: {
-    label: "English → Chinese",
-    short: "EN→CN",
+    label: "Translate to Chinese",
+    short: "EN to CN",
     accent: "text-purple-600 dark:text-purple-400",
     ring: "ring-purple-400",
     bg: "bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800",
+    badge: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800",
   },
   cn2en: {
-    label: "Chinese → English",
-    short: "CN→EN",
+    label: "Translate to English",
+    short: "CN to EN",
     accent: "text-orange-600 dark:text-orange-400",
     ring: "ring-orange-400",
     bg: "bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800",
+    badge: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 border border-orange-200 dark:border-orange-800",
   },
   summary: {
     label: "Summary Writing",
@@ -61,12 +65,14 @@ const SECTION_META: Record<QEntry["type"], { label: string; short: string; accen
     accent: "text-rose-600 dark:text-rose-400",
     ring: "ring-rose-400",
     bg: "bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-800",
+    badge: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800",
   },
 };
 
 // ─── Option button helpers ────────────────────────────────────────────────────
 function optionCls(answered: boolean, isSelected: boolean, isCorrect: boolean): string {
-  const base = "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 transition-all text-left select-none";
+  const base =
+    "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 transition-all text-left select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 dark:focus-visible:ring-emerald-500/40";
   if (!answered)
     return `${base} border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 active:scale-[0.985] hover:border-gray-300 dark:hover:border-slate-500`;
   if (isSelected && isCorrect) return `${base} border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30`;
@@ -341,8 +347,8 @@ export default function NewsPractice() {
   //  SHARED: TOP BAR
   // ═══════════════════════════════════════════════════════════════════════════
   const topBar = (
-    <div className="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-gray-100 dark:border-slate-700/60 pt-safe">
-      <div className="max-w-2xl mx-auto px-3 h-12 flex items-center gap-2">
+    <div className="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-gray-100 dark:border-slate-700/60 pt-safe shadow-[0_6px_20px_-18px_rgba(0,0,0,0.5)]">
+      <div className="max-w-2xl mx-auto px-3 h-14 flex items-center gap-2">
         <button
           onClick={() => navigate(-1)}
           className="p-2 -ml-1 text-gray-500 dark:text-gray-400 hover:text-brand dark:hover:text-emerald-400 transition-colors shrink-0"
@@ -356,7 +362,7 @@ export default function NewsPractice() {
               {currentIdx + 1}/{questions.length}
             </p>
           </div>
-          <div className="w-full h-1 bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden">
+          <div className="w-full h-1.5 bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden">
             <div className="h-full bg-emerald-500 rounded-full transition-all duration-400" style={{ width: `${progress}%` }} />
           </div>
         </div>
@@ -459,13 +465,13 @@ export default function NewsPractice() {
   // ═══════════════════════════════════════════════════════════════════════════
   const isLastQ = currentIdx === questions.length - 1;
   const bottomNav = (
-    <div className="fixed bottom-0 left-0 right-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-gray-100 dark:border-slate-700/60 pb-safe">
+    <div className="fixed bottom-0 left-0 right-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-gray-100 dark:border-slate-700/60 pb-safe shadow-[0_-8px_24px_-20px_rgba(0,0,0,0.5)]">
       <div className="max-w-2xl mx-auto px-4 h-14 flex items-center gap-3">
         {/* Previous */}
         <button
           onClick={goPrev}
           disabled={currentIdx === 0}
-          className="flex items-center gap-1 px-3.5 py-2 rounded-xl text-sm font-medium text-gray-500 dark:text-gray-400 disabled:opacity-30 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
+          className="flex items-center gap-1 px-3.5 py-2 rounded-xl text-sm font-medium text-gray-500 dark:text-gray-400 disabled:opacity-30 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-gray-200 dark:hover:border-slate-700"
         >
           <ChevronLeft size={16} /> Prev
         </button>
@@ -481,7 +487,7 @@ export default function NewsPractice() {
         {isLastQ ? (
           <button
             onClick={() => navigate(-1)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold bg-brand dark:bg-emerald-600 text-white hover:bg-brand/90 transition-colors"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold bg-brand dark:bg-emerald-600 text-white hover:bg-brand/90 transition-colors shadow-sm shadow-emerald-500/20"
           >
             Done <ChevronRight size={14} />
           </button>
@@ -489,7 +495,7 @@ export default function NewsPractice() {
           <button
             onClick={goNext}
             disabled={!canGoNext}
-            className="flex items-center gap-1 px-3.5 py-2 rounded-xl text-sm font-bold bg-brand dark:bg-emerald-600 text-white disabled:opacity-30 hover:bg-brand/90 transition-colors"
+            className="flex items-center gap-1 px-3.5 py-2 rounded-xl text-sm font-bold bg-brand dark:bg-emerald-600 text-white disabled:opacity-30 hover:bg-brand/90 transition-colors shadow-sm shadow-emerald-500/20"
           >
             Next <ChevronRight size={16} />
           </button>
@@ -506,7 +512,7 @@ export default function NewsPractice() {
     <motion.div
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 overflow-hidden"
+      className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 overflow-hidden shadow-sm"
     >
       {/* Score header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-slate-700">
@@ -517,22 +523,23 @@ export default function NewsPractice() {
         >
           {score}
         </div>
-        <div>
-          <p className="text-xs font-bold text-gray-700 dark:text-gray-300">AI 评分</p>
-          <p className="text-[10px] text-gray-400 dark:text-gray-500">满分 100</p>
+        <div className="flex-1">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">AI Score</p>
+          <p className="text-[12px] font-semibold text-gray-800 dark:text-gray-200">Overall Evaluation</p>
         </div>
+        <div className="text-[10px] font-semibold text-gray-400 dark:text-gray-500">/100</div>
       </div>
       {/* Feedback rows */}
-      <div className="px-4 py-3 space-y-2">
+      <div className="px-4 py-3 space-y-3">
         {feedbacks.map(({ label, text }, i) => (
           <div key={i}>
-            {label && <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400 mb-0.5">{label}</p>}
-            <p className="text-sm text-gray-700 dark:text-gray-300">{text}</p>
+            {label && <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">{label}</p>}
+            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{text}</p>
           </div>
         ))}
         {improved && (
           <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-3 border border-emerald-100 dark:border-emerald-800 mt-1">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-600 dark:text-emerald-400 mb-1">建议版本</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 mb-1">Improved Version</p>
             <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">{improved}</p>
           </div>
         )}
@@ -556,7 +563,7 @@ export default function NewsPractice() {
         : null;
     return (
       <div className="flex items-center justify-between mb-5">
-        <span className={`text-xs font-bold uppercase tracking-widest ${meta.accent}`}>{meta.label}</span>
+        <span className={`text-[10px] font-bold uppercase tracking-[0.2em] px-2.5 py-1 rounded-full ${meta.badge}`}>{meta.label}</span>
         {num && <span className="text-xs text-gray-400 dark:text-gray-500">{num}</span>}
       </div>
     );
@@ -575,7 +582,6 @@ export default function NewsPractice() {
 
         {/* Sentence card */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-slate-700">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400 mb-3">Fill in the blank</p>
           <p className="text-base text-gray-900 dark:text-gray-100 leading-relaxed font-serif">
             {q.sentence.split("___").map((part, i, arr) => (
               <span key={i}>
@@ -642,12 +648,16 @@ export default function NewsPractice() {
                   : "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800"
               }`}
             >
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">Explanation</span>
+                <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">{correct ? "Correct" : "Try again"}</span>
+              </div>
               <p
                 className={`text-sm font-semibold mb-1 ${correct ? "text-emerald-700 dark:text-emerald-400" : "text-amber-700 dark:text-amber-400"}`}
               >
                 {correct ? "✓ Correct!" : `✗ The answer is "${q.answer}"`}
               </p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">{q.explanation}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{q.explanation}</p>
             </motion.div>
           )}
         </AnimatePresence>
@@ -667,8 +677,7 @@ export default function NewsPractice() {
         {renderSectionBadge(entry)}
 
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-slate-700">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400 mb-3">Multiple choice</p>
-          <p className="text-base font-semibold text-gray-900 dark:text-gray-100 leading-snug">{q.question}</p>
+          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 leading-snug">{q.question}</p>
         </div>
 
         <div className="space-y-2">
@@ -713,12 +722,15 @@ export default function NewsPractice() {
                   : "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800"
               }`}
             >
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">Explanation</span>
+              </div>
               <p
                 className={`text-sm font-semibold mb-1 ${correct ? "text-emerald-700 dark:text-emerald-400" : "text-amber-700 dark:text-amber-400"}`}
               >
                 {correct ? "✓ Correct!" : `✗ The answer is "${q.options[q.answer]}"`}
               </p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">{q.explanation}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{q.explanation}</p>
             </motion.div>
           )}
         </AnimatePresence>
@@ -781,9 +793,6 @@ export default function NewsPractice() {
 
         {/* Source text */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-slate-700">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400 mb-3">
-            {isEn2Cn ? "Translate to Chinese" : "Translate to English"}
-          </p>
           <p
             className={`text-base leading-relaxed ${isEn2Cn ? "font-serif italic text-gray-800 dark:text-gray-100" : "text-gray-800 dark:text-gray-100"}`}
           >
@@ -828,7 +837,10 @@ export default function NewsPractice() {
         {revealed && (
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
             <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4 border border-emerald-200 dark:border-emerald-800">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-600 dark:text-emerald-400 mb-2">Reference answer</p>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">Reference Answer</span>
+                <span className="text-[10px] font-semibold text-emerald-600/80 dark:text-emerald-400/80">Model</span>
+              </div>
               <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">{q.modelAnswer}</p>
             </div>
             {isEvalLoading && (
@@ -870,7 +882,7 @@ export default function NewsPractice() {
 
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-slate-700">
           <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">Write an English summary of this news (3–5 sentences).</p>
-          <p className="text-xs text-gray-400 dark:text-gray-500">Cover the main point, key facts, and any significant implication.</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500">Cover the main points, key facts, and any significant implication.</p>
         </div>
 
         <div>

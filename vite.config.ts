@@ -1,30 +1,33 @@
-import tailwindcss from '@tailwindcss/vite';
-import react from '@vitejs/plugin-react';
-import path from 'path';
-import { defineConfig, loadEnv } from 'vite';
+import tailwindcss from "@tailwindcss/vite";
+import react from "@vitejs/plugin-react";
+import path from "path";
+import { defineConfig, loadEnv } from "vite";
 
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, '.', '');
+  const env = loadEnv(mode, ".", "");
 
   return {
-    base: '',
+    base: "",
     plugins: [react(), tailwindcss()],
+    optimizeDeps: {
+      include: ["html2canvas-pro"],
+    },
     css: {
       postcss: {},
     },
     define: {
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+      "process.env.GEMINI_API_KEY": JSON.stringify(env.GEMINI_API_KEY),
     },
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, '.'),
+        "@": path.resolve(__dirname, "."),
       },
     },
     server: {
-      hmr: process.env.DISABLE_HMR !== 'true',
+      hmr: process.env.DISABLE_HMR !== "true",
       proxy: {
-        '/api': {
-          target: 'http://localhost:3000',
+        "/api": {
+          target: "http://localhost:3000",
           changeOrigin: true,
         },
       },

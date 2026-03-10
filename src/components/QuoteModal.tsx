@@ -1,9 +1,10 @@
 import React, { useRef, useState } from "react";
-import html2canvas from "html2canvas";
+import html2canvas from "html2canvas-pro";
 import { Capacitor } from "@capacitor/core";
-import { Media } from "@capacitor-community/media";
 import { X, Download, Loader2, Check } from "lucide-react";
 import { motion } from "motion/react";
+import { saveImageToAlbum } from "../utils/mediaSave";
+import { useBottomToast } from "../utils/toast";
 
 interface QuoteModalProps {
   text: string;
@@ -16,24 +17,38 @@ export default function QuoteModal({ text, newsTitle, author, onClose }: QuoteMo
   const cardRef = useRef<HTMLDivElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const { showToast } = useBottomToast();
 
   const saveToGallery = async (canvas: HTMLCanvasElement, fileName: string) => {
-    // @capacitor-community/media 的 savePhoto 直接支持 base64 data URL
-    const dataUrl = canvas.toDataURL("image/png");
-    const opts: { path: string; albumIdentifier?: string; fileName?: string } = {
-      path: dataUrl,
-      fileName: fileName.replace(/\.png$/i, ""),
-    };
-    if (Capacitor.getPlatform() === "android") {
-      try {
-        const { albums } = await Media.getAlbums();
-        const target = albums.find((a) => a.name === "Camera Roll" || a.name === "Recent") ?? albums[0];
-        if (target?.identifier) opts.albumIdentifier = target.identifier;
-      } catch {
-        // ignore album lookup errors
-      }
+    const fileBase = fileName.replace(/\.(png|jpg|jpeg)$/i, "");
+    const jpegDataUrl = canvas.toDataURL("image/jpeg", 0.95);
+
+    try {
+      await saveImageToAlbum({
+        path: jpegDataUrl,
+        fileName: fileBase,
+      });
+      return;
+    } catch (error) {
+      console.warn("Save quote as JPEG failed, retrying as PNG:", error);
     }
-    await Media.savePhoto(opts);
+
+    const pngDataUrl = canvas.toDataURL("image/png");
+    await saveImageToAlbum({
+      path: pngDataUrl,
+      fileName: fileBase,
+    });
+  };
+
+  const isPermissionError = (message: string) => {
+    const text = message.toLowerCase();
+    return text.includes("permission") || text.includes("denied") || text.includes("not allowed") || text.includes("unauthorized");
+  };
+
+  const getSaveFailureToast = (message: string) => {
+    if (isPermissionError(message)) return "Save failed. Please allow Photos permission.";
+    return "Save failed. Please try again.";
   };
 
   const saveViaWeb = async (canvas: HTMLCanvasElement, fileName: string) => {
@@ -61,6 +76,7 @@ export default function QuoteModal({ text, newsTitle, author, onClose }: QuoteMo
     if (!cardRef.current) return;
     setIsGenerating(true);
     setSaved(false);
+    setSaveError(null);
     try {
       const canvas = await html2canvas(cardRef.current, {
         scale: 2,
@@ -70,7 +86,7 @@ export default function QuoteModal({ text, newsTitle, author, onClose }: QuoteMo
         logging: false,
       });
 
-      const fileName = `quote-${Date.now()}.png`;
+      const fileName = `quote-${Date.now()}.jpg`;
 
       if (Capacitor.isNativePlatform()) {
         await saveToGallery(canvas, fileName);
@@ -79,10 +95,14 @@ export default function QuoteModal({ text, newsTitle, author, onClose }: QuoteMo
       }
 
       setSaved(true);
+      showToast(Capacitor.isNativePlatform() ? "Saved to photos." : "Download started.", "success");
       setTimeout(() => setSaved(false), 2000);
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") return;
       console.error("Failed to generate image", err);
+      const message = err instanceof Error ? err.message : "Failed to save image.";
+      setSaveError(message);
+      showToast(getSaveFailureToast(message), "error");
     } finally {
       setIsGenerating(false);
     }
@@ -99,29 +119,37 @@ export default function QuoteModal({ text, newsTitle, author, onClose }: QuoteMo
         className="relative w-full max-w-md flex flex-col items-center"
       >
         {/* The Card to capture */}
-        <div ref={cardRef} className="w-full bg-white rounded-[2rem] p-8 sm:p-10 shadow-2xl relative overflow-hidden">
+        <div ref={cardRef} className="w-full rounded-2xl p-8 sm:p-10 shadow-2xl relative overflow-hidden" style={{ backgroundColor: "#ffffff" }}>
           {/* Decorative elements */}
-          <div className="absolute top-0 left-0 w-full h-2 bg-brand" />
-          <div className="absolute -top-24 -right-24 w-48 h-48 bg-brand/5 rounded-full blur-3xl" />
+          <div className="absolute top-0 left-0 w-full h-2" style={{ backgroundColor: "#10b981" }} />
+          <div className="absolute -top-24 -right-24 w-48 h-48 rounded-full blur-3xl" style={{ backgroundColor: "rgba(16, 185, 129, 0.08)" }} />
 
           <div className="relative z-10 flex flex-col h-full min-h-[320px]">
             <div className="mb-8">
-              <div className="w-10 h-10 bg-gray-900 rounded-xl flex items-center justify-center mb-6">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-6" style={{ backgroundColor: "#111827" }}>
                 <span className="text-white font-serif font-bold text-xl">S</span>
               </div>
             </div>
 
             <div className="flex-1 flex flex-col justify-center mb-10">
-              <p className="text-xl sm:text-2xl text-gray-900 font-serif leading-relaxed italic relative">
-                <span className="text-4xl text-brand/20 absolute -top-4 -left-4 font-serif">&ldquo;</span>
+              <p className="text-xl sm:text-2xl font-serif leading-relaxed italic relative" style={{ color: "#111827" }}>
+                <span className="text-4xl absolute -top-4 -left-4 font-serif" style={{ color: "rgba(16, 185, 129, 0.2)" }}>
+                  &ldquo;
+                </span>
                 {text}
-                <span className="text-4xl text-brand/20 absolute -bottom-6 -right-2 font-serif">&rdquo;</span>
+                <span className="text-4xl absolute -bottom-6 -right-2 font-serif" style={{ color: "rgba(16, 185, 129, 0.2)" }}>
+                  &rdquo;
+                </span>
               </p>
             </div>
 
-            <div className="mt-auto pt-6 border-t border-gray-100">
-              <h4 className="text-sm font-bold text-gray-900 mb-1 line-clamp-2">{newsTitle}</h4>
-              <p className="text-xs text-gray-500 uppercase tracking-widest font-bold">{author}</p>
+            <div className="mt-auto pt-6 border-t" style={{ borderColor: "#f3f4f6" }}>
+              <h4 className="text-sm font-bold mb-1 line-clamp-2" style={{ color: "#111827" }}>
+                {newsTitle}
+              </h4>
+              <p className="text-xs uppercase tracking-widest font-bold" style={{ color: "#6b7280" }}>
+                {author}
+              </p>
             </div>
           </div>
         </div>
@@ -145,6 +173,7 @@ export default function QuoteModal({ text, newsTitle, author, onClose }: QuoteMo
             {saved && <span className="text-sm font-bold uppercase tracking-widest">Saved</span>}
           </button>
         </div>
+        {saveError && <p className="mt-4 text-center text-xs text-red-500 dark:text-red-400">{saveError}</p>}
       </motion.div>
     </div>
   );

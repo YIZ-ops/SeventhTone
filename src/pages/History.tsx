@@ -28,7 +28,7 @@ export default function History() {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-4xl mx-auto pb-32">
       {entries.length === 0 ? (
-        <div className="text-center py-32 bg-white dark:bg-slate-800 rounded-[2rem] border border-gray-100 dark:border-slate-600 shadow-sm">
+        <div className="text-center py-32 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-600 shadow-sm">
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gray-50 dark:bg-slate-700 mb-6">
             <Clock size={32} className="text-gray-200 dark:text-gray-500" />
           </div>

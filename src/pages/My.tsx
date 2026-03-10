@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
+import { useEffect, useMemo, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import { ChevronRight, Clock3, Info, Settings } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { App as CapacitorApp } from "@capacitor/app";
-import { exportLocalData, getReadingStats, importLocalData } from "../api/localData";
+import { getReadingStats } from "../api/localData";
 import HistoryPage from "./History";
 import SettingsPage from "./Settings";
 import AboutPage from "./About";
@@ -68,8 +68,6 @@ function MySubpage({ children }: { children: ReactNode }) {
 export default function My() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [importError, setImportError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const stats = getReadingStats();
   const calendarDate = useMemo(() => new Date(), []);
   const calendarCells = useMemo(
@@ -110,39 +108,6 @@ export default function My() {
     };
   }, [navigate, section]);
 
-  const handleExport = () => {
-    const payload = exportLocalData();
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `seventh-tone-backup-${new Date().toISOString().slice(0, 10)}.json`;
-    link.style.display = "none";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-  };
-
-  const handleImportFile = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    try {
-      setImportError(null);
-      const text = await file.text();
-      const payload = JSON.parse(text);
-      const confirmed = window.confirm("Importing will replace your current local data. Continue?");
-      if (!confirmed) return;
-      importLocalData(payload);
-      window.location.reload();
-    } catch (error) {
-      setImportError(error instanceof Error ? error.message : "Import failed.");
-    } finally {
-      event.target.value = "";
-    }
-  };
-
   if (section === "history") {
     return (
       <MySubpage>
@@ -154,7 +119,7 @@ export default function My() {
   if (section === "settings") {
     return (
       <MySubpage>
-        <SettingsPage onExport={handleExport} onImportFile={handleImportFile} importError={importError} fileInputRef={fileInputRef} />
+        <SettingsPage />
       </MySubpage>
     );
   }
@@ -173,29 +138,29 @@ export default function My() {
 
       <div className="space-y-6">
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          <div className="rounded-3xl border border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
+          <div className="rounded-2xl border border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
             <p className="text-[11px] uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 font-bold mb-3">Today</p>
             <p className="text-3xl font-serif font-bold text-gray-900 dark:text-gray-100">{stats.todayNewsCount}</p>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">news read</p>
           </div>
-          <div className="rounded-3xl border border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
+          <div className="rounded-2xl border border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
             <p className="text-[11px] uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 font-bold mb-3">Total</p>
             <p className="text-3xl font-serif font-bold text-gray-900 dark:text-gray-100">{stats.totalNewsCount}</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">unique news learned</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">news read</p>
           </div>
-          <div className="rounded-3xl border border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
+          <div className="rounded-2xl border border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
             <p className="text-[11px] uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 font-bold mb-3">Today</p>
             <p className="text-3xl font-serif font-bold text-gray-900 dark:text-gray-100">{formatDuration(stats.todayDurationMs)}</p>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">reading time</p>
           </div>
-          <div className="rounded-3xl border border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
+          <div className="rounded-2xl border border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
             <p className="text-[11px] uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 font-bold mb-3">All Time</p>
             <p className="text-3xl font-serif font-bold text-gray-900 dark:text-gray-100">{formatDuration(stats.totalDurationMs)}</p>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">reading time</p>
           </div>
         </div>
 
-        <section className="rounded-[2rem] border border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
+        <section className="rounded-2xl border border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
           <div className="flex items-start justify-between gap-4 mb-6">
             <div>
               <p className="text-[11px] uppercase tracking-[0.2em] text-brand dark:text-emerald-400 font-bold mb-2">Reading Streak</p>
@@ -255,7 +220,7 @@ export default function My() {
             <Link
               key={to}
               to={to}
-              className="group flex items-center gap-4 rounded-[2rem] border border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 px-5 py-5 shadow-sm hover:bg-gray-50 dark:hover:bg-slate-700/60 transition-colors"
+              className="group flex items-center gap-4 rounded-2xl border border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 px-5 py-5 shadow-sm hover:bg-gray-50 dark:hover:bg-slate-700/60 transition-colors"
             >
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand/10 text-brand dark:bg-emerald-500/15 dark:text-emerald-300">
                 <Icon size={20} />

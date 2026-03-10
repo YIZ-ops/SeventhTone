@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { X, Plus } from "lucide-react";
-import { getHighlightCategories } from "../api/api";
+import { getSentenceCategories } from "../api/api";
 
 interface Props {
   selectedText: string;
@@ -8,12 +8,13 @@ interface Props {
   onSave: (category: string, thought?: string) => void;
 }
 
-export default function HighlightSaveModal({ selectedText, onClose, onSave }: Props) {
+export default function SentenceSaveModal({ selectedText, onClose, onSave }: Props) {
   const [categories, setCategories] = useState<string[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>("Highlights");
+  const [selectedCategory, setSelectedCategory] = useState<string>("Sentences");
   const [thought, setThought] = useState("");
   const [isNewCategory, setIsNewCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
+  const cardRef = useRef<HTMLDivElement>(null);
 
   // Guard: prevent the same tap that opened this modal from immediately closing it
   const justOpenedRef = useRef(false);
@@ -26,9 +27,9 @@ export default function HighlightSaveModal({ selectedText, onClose, onSave }: Pr
   }, []);
 
   useEffect(() => {
-    const cats = getHighlightCategories();
+    const cats = getSentenceCategories();
     setCategories(cats);
-    setSelectedCategory(cats.includes("Highlights") ? "Highlights" : (cats[0] ?? "Highlights"));
+    setSelectedCategory(cats.includes("Sentences") ? "Sentences" : (cats[0] ?? "Sentences"));
   }, []);
 
   const handleSave = () => {
@@ -50,7 +51,7 @@ export default function HighlightSaveModal({ selectedText, onClose, onSave }: Pr
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-slate-600">
-          <h3 className="font-semibold text-gray-900 dark:text-gray-100">Save Highlight</h3>
+          <h3 className="font-semibold text-gray-900 dark:text-gray-100">Save Sentence</h3>
           <button
             onClick={onClose}
             className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-500 rounded-full hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors"
@@ -62,9 +63,12 @@ export default function HighlightSaveModal({ selectedText, onClose, onSave }: Pr
         <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
           <div>
             <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1.5">Quote</label>
-            <p className="text-sm text-gray-700 dark:text-gray-200 font-serif italic line-clamp-3 bg-gray-50 dark:bg-slate-700/50 rounded-xl p-3">
-              &ldquo;{selectedText}&rdquo;
-            </p>
+            <div ref={cardRef} className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-3">
+              <p className="text-sm text-gray-700 dark:text-gray-200 font-serif italic line-clamp-4 bg-gray-50 dark:bg-slate-700/50 rounded-lg p-3">
+                &ldquo;{selectedText}&rdquo;
+              </p>
+              {thought.trim() && <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 italic">{thought.trim()}</p>}
+            </div>
           </div>
 
           <div>
@@ -132,20 +136,22 @@ export default function HighlightSaveModal({ selectedText, onClose, onSave }: Pr
           </div>
         </div>
 
-        <div className="px-4 pt-4 pb-safe-or-4 border-t border-gray-100 dark:border-slate-600 flex gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 py-2.5 text-sm font-semibold text-gray-500 dark:text-gray-400 rounded-full border border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={isNewCategory && !newCategoryName.trim()}
-            className="flex-1 py-2.5 text-sm font-semibold text-white bg-gray-900 dark:bg-emerald-600 rounded-full hover:bg-brand dark:hover:bg-emerald-500 transition-colors disabled:opacity-50"
-          >
-            Save
-          </button>
+        <div className="px-4 pt-4 pb-safe-or-4 border-t border-gray-100 dark:border-slate-600 space-y-3">
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="flex-1 py-2.5 text-sm font-semibold text-gray-500 dark:text-gray-400 rounded-full border border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={isNewCategory && !newCategoryName.trim()}
+              className="flex-1 py-2.5 text-sm font-semibold text-white bg-gray-900 dark:bg-emerald-600 rounded-full hover:bg-brand dark:hover:bg-emerald-500 transition-colors disabled:opacity-50"
+            >
+              Save
+            </button>
+          </div>
         </div>
       </div>
     </div>

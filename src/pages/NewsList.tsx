@@ -197,7 +197,6 @@ export default function NewsList() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-slate-900 p-4">
         <Loader2 className="w-10 h-10 text-brand animate-spin mb-4" />
-        <p className="text-gray-500 dark:text-gray-400 text-sm">Loading...</p>
       </div>
     );
   }
@@ -281,7 +280,7 @@ export default function NewsList() {
           )}
 
           {error && (
-            <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-6 rounded-3xl mb-10 text-sm flex items-center justify-between">
+            <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-6 rounded-2xl mb-10 text-sm flex items-center justify-between">
               <span>{error}</span>
               <button
                 onClick={() => fetchNews(page)}

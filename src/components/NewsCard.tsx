@@ -22,7 +22,7 @@ export default function NewsCard({ news }: Props) {
   return (
     <Link
       to={`/news/${news.contId}`}
-      className="group block bg-white dark:bg-slate-800 rounded-3xl border border-gray-100 dark:border-slate-600 overflow-hidden hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.08)] dark:hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.3)] transition-all duration-500 active:scale-[0.99]"
+      className="group block bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-600 overflow-hidden hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.08)] dark:hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.3)] transition-all duration-500 active:scale-[0.99]"
     >
       <div className="flex flex-col">
         <div className="w-full aspect-[16/9] relative overflow-hidden bg-gray-50 dark:bg-slate-700">

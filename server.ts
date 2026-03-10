@@ -40,8 +40,7 @@ async function startServer() {
       const dataUrl = `https://www.sixthtone.com/_next/data/${id}/news/${contId}.json?contId=${contId}`;
       const response = await axios.get(dataUrl, {
         headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
           Accept: "application/json,text/plain,*/*",
         },
         timeout: 10000,
@@ -56,8 +55,7 @@ async function startServer() {
         const newsUrl = `https://www.sixthtone.com/news/${contId}`;
         const htmlResponse = await axios.get(newsUrl, {
           headers: {
-            "User-Agent":
-              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
           },
           timeout: 10000,
           maxRedirects: 5,
@@ -80,9 +78,9 @@ async function startServer() {
       res.json(detailData);
     } catch (error: any) {
       console.error(`Error fetching news ${contId}:`, error.message);
-      res.status(error.response?.status || 500).json({ 
+      res.status(error.response?.status || 500).json({
         error: "Failed to fetch news",
-        message: error.message 
+        message: error.message,
       });
     }
   });
@@ -92,6 +90,10 @@ async function startServer() {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
+      optimizeDeps: {
+        include: ["html2canvas-pro"],
+        force: true,
+      },
     });
     app.use(vite.middlewares);
   } else {

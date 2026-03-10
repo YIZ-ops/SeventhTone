@@ -1,19 +1,19 @@
 import { useState, useRef, useEffect } from "react";
 import { X, Pencil, Trash2, Check, Tag } from "lucide-react";
-import { Highlight } from "../types";
-import { getHighlightCategories } from "../api/api";
+import { Sentence } from "../types";
+import { getSentenceCategories } from "../api/api";
 
 interface Props {
-  highlight: Highlight;
+  sentence: Sentence;
   onClose: () => void;
   onDelete: () => void;
   onSave: (updates: { thought?: string; category?: string }) => void;
 }
 
-export default function HighlightDetailModal({ highlight, onClose, onDelete, onSave }: Props) {
+export default function SentenceDetailModal({ sentence, onClose, onDelete, onSave }: Props) {
   const [isEditing, setIsEditing] = useState(false);
-  const [thought, setThought] = useState(highlight.thought ?? "");
-  const [category, setCategory] = useState(highlight.category ?? "Highlights");
+  const [thought, setThought] = useState(sentence.thought ?? "");
+  const [category, setCategory] = useState(sentence.category ?? "Sentences");
   const [categories, setCategories] = useState<string[]>([]);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
@@ -30,7 +30,7 @@ export default function HighlightDetailModal({ highlight, onClose, onDelete, onS
   }, []);
 
   useEffect(() => {
-    setCategories(getHighlightCategories());
+    setCategories(getSentenceCategories());
   }, []);
 
   const handleSave = () => {
@@ -42,8 +42,8 @@ export default function HighlightDetailModal({ highlight, onClose, onDelete, onS
   };
 
   const handleCancel = () => {
-    setThought(highlight.thought ?? "");
-    setCategory(highlight.category ?? "Highlights");
+    setThought(sentence.thought ?? "");
+    setCategory(sentence.category ?? "Sentences");
     setIsEditing(false);
     setShowCategoryPicker(false);
     setIsNewCategory(false);
@@ -60,7 +60,7 @@ export default function HighlightDetailModal({ highlight, onClose, onDelete, onS
       <div className="bg-white dark:bg-slate-800 rounded-t-2xl w-full overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-gray-100 dark:border-slate-600">
-          <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">Highlight</h3>
+          <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">Sentence</h3>
           <div className="flex items-center gap-1">
             {!isEditing && (
               <button
@@ -93,7 +93,7 @@ export default function HighlightDetailModal({ highlight, onClose, onDelete, onS
         <div className="px-4 py-4 space-y-4 max-h-[70vh] overflow-y-auto">
           {/* Quote */}
           <div className="relative pl-4 border-l-2 border-brand/40 dark:border-emerald-500/40">
-            <p className="text-sm text-gray-700 dark:text-gray-200 font-serif italic leading-relaxed line-clamp-4">{highlight.text}</p>
+            <p className="text-sm text-gray-700 dark:text-gray-200 font-serif italic leading-relaxed line-clamp-4">{sentence.text}</p>
           </div>
 
           {/* Thought */}
@@ -164,10 +164,10 @@ export default function HighlightDetailModal({ highlight, onClose, onDelete, onS
           ) : (
             <>
               {/* Thought display */}
-              {highlight.thought ? (
+              {sentence.thought ? (
                 <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl px-3 py-2.5">
                   <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Your thought</p>
-                  <p className="text-sm text-gray-700 dark:text-gray-200 leading-relaxed">{highlight.thought}</p>
+                  <p className="text-sm text-gray-700 dark:text-gray-200 leading-relaxed">{sentence.thought}</p>
                 </div>
               ) : (
                 <button
@@ -183,7 +183,7 @@ export default function HighlightDetailModal({ highlight, onClose, onDelete, onS
               {/* Category display */}
               <div className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
                 <Tag size={12} />
-                <span>{highlight.category ?? "Highlights"}</span>
+                <span>{sentence.category ?? "Sentences"}</span>
               </div>
             </>
           )}
@@ -224,12 +224,12 @@ export default function HighlightDetailModal({ highlight, onClose, onDelete, onS
       {/* Delete confirmation inline */}
       {showDeleteConfirm && (
         <div className="absolute inset-0 flex items-center justify-center p-6 z-10 bg-black/20 dark:bg-black/50" onClick={(e) => e.stopPropagation()}>
-          <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-6 w-full max-w-xs text-center border border-gray-100 dark:border-slate-600">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 w-full max-w-xs text-center border border-gray-100 dark:border-slate-600">
             <div className="w-12 h-12 rounded-full bg-red-50 dark:bg-red-900/30 flex items-center justify-center mx-auto mb-4">
               <Trash2 size={22} className="text-red-500 dark:text-red-400" />
             </div>
-            <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-1.5">Remove highlight?</h4>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">This will delete the highlight and any note you added.</p>
+            <h4 className="font-bold text-gray-900 dark:text-gray-100 mb-1.5">Remove sentence?</h4>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">This will delete the sentence and any note you added.</p>
             <div className="flex gap-3">
               <button
                 type="button"

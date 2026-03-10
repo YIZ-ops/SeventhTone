@@ -50,7 +50,7 @@ export default function ConfirmModal({ open, onClose, onConfirm, title, message,
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 8 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="relative w-full max-w-sm bg-white dark:bg-slate-800 rounded-3xl shadow-xl border border-gray-100 dark:border-slate-600 overflow-hidden"
+            className="relative w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-gray-100 dark:border-slate-600 overflow-hidden"
           >
             <div className="p-6 sm:p-8 text-center">
               <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gray-100 dark:bg-slate-700 mb-5">

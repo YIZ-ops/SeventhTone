@@ -6,24 +6,24 @@ import {
   getBookmarks,
   getBookmarkCategories,
   removeBookmark,
-  getAllHighlights,
-  getHighlightCategories,
-  removeHighlight,
+  getAllSentences,
+  getSentenceCategories,
+  removeSentence,
   deleteBookmarkCategory,
-  deleteHighlightCategory,
+  deleteSentenceCategory,
   renameBookmarkCategory,
-  renameHighlightCategory,
+  renameSentenceCategory,
   getVocab,
   removeVocab,
 } from "../api/api";
-import { Bookmark, Highlight, VocabWord } from "../types";
+import { Bookmark, Sentence, VocabWord } from "../types";
 import { Bookmark as BookmarkIcon, Trash2, Highlighter, Image as ImageIcon, ChevronLeft, BookOpen, Pencil, Check, X } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import QuoteModal from "../components/QuoteModal";
 import ConfirmModal from "../components/ConfirmModal";
 
-type ConfirmType = "bookmark" | "highlight" | "vocab" | null;
-type TabType = "bookmarks" | "highlights" | "vocabulary";
+type ConfirmType = "bookmark" | "sentence" | "vocab" | null;
+type TabType = "bookmarks" | "sentences" | "vocabulary";
 // "default" = flat all-items list, "grid" = category grid, other string = inside a category
 type ViewMode = "default" | "grid" | string;
 
@@ -147,15 +147,15 @@ export default function Bookmarks() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<TabType>("bookmarks");
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
-  const [highlights, setHighlights] = useState<Highlight[]>([]);
+  const [sentences, setSentences] = useState<Sentence[]>([]);
   const [vocab, setVocab] = useState<VocabWord[]>([]);
   const [bookmarkCategories, setBookmarkCategories] = useState<string[]>([]);
-  const [highlightCategories, setHighlightCategories] = useState<string[]>([]);
+  const [highlightCategories, setSentenceCategories] = useState<string[]>([]);
 
   const [bookmarkView, setBookmarkView] = useState<ViewMode>("grid");
-  const [highlightView, setHighlightView] = useState<ViewMode>("grid");
+  const [highlightView, setSentenceView] = useState<ViewMode>("grid");
 
-  const [activeQuote, setActiveQuote] = useState<Highlight | null>(null);
+  const [activeQuote, setActiveQuote] = useState<Sentence | null>(null);
   const [confirmState, setConfirmState] = useState<{ type: ConfirmType; contId?: number; highlightId?: string; vocabId?: string }>({ type: null });
   const [deleteCategoryState, setDeleteCategoryState] = useState<{ tab: TabType; category: string } | null>(null);
   const [renameCategoryState, setRenameCategoryState] = useState<{ tab: TabType; category: string } | null>(null);
@@ -167,19 +167,19 @@ export default function Bookmarks() {
 
   const reload = () => {
     setBookmarks(getBookmarks());
-    setHighlights(getAllHighlights());
+    setSentences(getAllSentences());
     setVocab(getVocab());
     setBookmarkCategories(getBookmarkCategories());
-    setHighlightCategories(getHighlightCategories());
+    setSentenceCategories(getSentenceCategories());
   };
 
-  const currentView = tab === "bookmarks" ? bookmarkView : tab === "highlights" ? highlightView : "default";
+  const currentView = tab === "bookmarks" ? bookmarkView : tab === "sentences" ? highlightView : "default";
   const setCurrentView = (v: ViewMode) => {
     if (tab === "bookmarks") setBookmarkView(v);
-    else if (tab === "highlights") setHighlightView(v);
+    else if (tab === "sentences") setSentenceView(v);
   };
 
-  const TAB_ORDER: TabType[] = ["bookmarks", "highlights", "vocabulary"];
+  const TAB_ORDER: TabType[] = ["bookmarks", "sentences", "vocabulary"];
 
   // Use refs so swipe/back handlers always read latest state without stale closures
   const swipeStateRef = useRef({ currentView, tab });
@@ -198,7 +198,7 @@ export default function Bookmarks() {
       const isInDetail = cv !== "default" && cv !== "grid";
       if (isInDetail) {
         if (t === "bookmarks") setBookmarkView("grid");
-        else if (t === "highlights") setHighlightView("grid");
+        else if (t === "sentences") setSentenceView("grid");
       } else {
         navigate("/");
       }
@@ -257,7 +257,7 @@ export default function Bookmarks() {
   // Items for the current view (filtered by selected category if in detail mode)
   const isDetail = currentView !== "default" && currentView !== "grid";
   const filteredBookmarks = isDetail ? bookmarks.filter((b) => b.category === currentView) : bookmarks;
-  const filteredHighlights = isDetail ? highlights.filter((h) => (h.category || "Highlights") === currentView) : highlights;
+  const filteredSentences = isDetail ? sentences.filter((h) => (h.category || "Sentences") === currentView) : sentences;
 
   // Category data with cover / preview
   const namedBookmarkCats = bookmarkCategories.map((cat) => {
@@ -265,8 +265,8 @@ export default function Bookmarks() {
     const cover = items.find((b) => b.news.pic || b.news.appHeadPic)?.news;
     return { name: cat, count: items.length, cover: cover?.pic || cover?.appHeadPic };
   });
-  const namedHighlightCats = highlightCategories.map((cat) => {
-    const items = highlights.filter((h) => (h.category || "Highlights") === cat);
+  const namedSentenceCats = highlightCategories.map((cat) => {
+    const items = sentences.filter((h) => (h.category || "Sentences") === cat);
     return { name: cat, count: items.length, preview: items[0]?.text };
   });
 
@@ -274,8 +274,8 @@ export default function Bookmarks() {
     if (confirmState.type === "bookmark" && confirmState.contId != null) {
       removeBookmark(confirmState.contId);
       reload();
-    } else if (confirmState.type === "highlight" && confirmState.contId != null && confirmState.highlightId) {
-      removeHighlight(confirmState.contId, confirmState.highlightId);
+    } else if (confirmState.type === "sentence" && confirmState.contId != null && confirmState.highlightId) {
+      removeSentence(confirmState.contId, confirmState.highlightId);
       reload();
     } else if (confirmState.type === "vocab" && confirmState.vocabId) {
       removeVocab(confirmState.vocabId);
@@ -289,8 +289,8 @@ export default function Bookmarks() {
       deleteBookmarkCategory(deleteCategoryState.category);
       if (bookmarkView === deleteCategoryState.category) setBookmarkView("grid");
     } else {
-      deleteHighlightCategory(deleteCategoryState.category);
-      if (highlightView === deleteCategoryState.category) setHighlightView("grid");
+      deleteSentenceCategory(deleteCategoryState.category);
+      if (highlightView === deleteCategoryState.category) setSentenceView("grid");
     }
     reload();
     setDeleteCategoryState(null);
@@ -312,19 +312,19 @@ export default function Bookmarks() {
       renameBookmarkCategory(renameCategoryState.category, newName);
       if (bookmarkView === renameCategoryState.category) setBookmarkView(newName);
     } else {
-      renameHighlightCategory(renameCategoryState.category, newName);
-      if (highlightView === renameCategoryState.category) setHighlightView(newName);
+      renameSentenceCategory(renameCategoryState.category, newName);
+      if (highlightView === renameCategoryState.category) setSentenceView(newName);
     }
     reload();
     setRenameCategoryState(null);
   };
 
   const groupedBookmarks: { label: string; items: Bookmark[] }[] = groupByDay(filteredBookmarks, (b) => b.CollectedAt);
-  const groupedHighlights: { label: string; items: Highlight[] }[] = groupByDay(filteredHighlights, (h) => h.createdAt);
+  const groupedSentences: { label: string; items: Sentence[] }[] = groupByDay(filteredSentences, (h) => h.createdAt);
   const groupedVocab: { label: string; items: VocabWord[] }[] = groupByDay(vocab, (v) => v.addedAt);
 
-  const isEmpty = tab === "bookmarks" ? bookmarks.length === 0 : tab === "highlights" ? highlights.length === 0 : vocab.length === 0;
-  const hasCategories = tab === "bookmarks" ? bookmarkCategories.length > 0 : tab === "highlights" ? highlightCategories.length > 0 : false;
+  const isEmpty = tab === "bookmarks" ? bookmarks.length === 0 : tab === "sentences" ? sentences.length === 0 : vocab.length === 0;
+  const hasCategories = tab === "bookmarks" ? bookmarkCategories.length > 0 : tab === "sentences" ? highlightCategories.length > 0 : false;
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-4xl mx-auto px-4 py-8 pb-32">
@@ -339,9 +339,9 @@ export default function Bookmarks() {
 
       {/* 三个 tab：收藏文章 / 句库 / 生词本 */}
       <div className="flex rounded-2xl bg-gray-100 dark:bg-slate-700/50 p-1 mb-4">
-        {(["bookmarks", "highlights", "vocabulary"] as TabType[]).map((t) => {
-          const labels: Record<TabType, string> = { bookmarks: "News", highlights: "Highlights", vocabulary: "Vocabulary" };
-          const counts: Record<TabType, number> = { bookmarks: bookmarks.length, highlights: highlights.length, vocabulary: vocab.length };
+        {(["bookmarks", "sentences", "vocabulary"] as TabType[]).map((t) => {
+          const labels: Record<TabType, string> = { bookmarks: "News", sentences: "Sentences", vocabulary: "Vocabulary" };
+          const counts: Record<TabType, number> = { bookmarks: bookmarks.length, sentences: sentences.length, vocabulary: vocab.length };
           return (
             <button
               key={t}
@@ -372,14 +372,14 @@ export default function Bookmarks() {
             <h2 className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{currentView}</h2>
           </div>
           <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0">
-            {tab === "bookmarks" ? filteredBookmarks.length : filteredHighlights.length} items
+            {tab === "bookmarks" ? filteredBookmarks.length : filteredSentences.length} items
           </span>
         </div>
       )}
 
       {/* Empty states */}
       {isEmpty && tab === "bookmarks" && (
-        <div className="text-center py-32 bg-white dark:bg-slate-800 rounded-[2rem] border border-gray-100 dark:border-slate-600 shadow-sm">
+        <div className="text-center py-32 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-600 shadow-sm">
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gray-50 dark:bg-slate-700 mb-6">
             <BookmarkIcon size={32} className="text-gray-200 dark:text-gray-500" />
           </div>
@@ -387,17 +387,17 @@ export default function Bookmarks() {
           <p className="text-gray-400 dark:text-gray-500 text-sm max-w-xs mx-auto">Click the bookmark button on an news to save it here.</p>
         </div>
       )}
-      {isEmpty && tab === "highlights" && (
-        <div className="text-center py-32 bg-white dark:bg-slate-800 rounded-[2rem] border border-gray-100 dark:border-slate-600 shadow-sm">
+      {isEmpty && tab === "sentences" && (
+        <div className="text-center py-32 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-600 shadow-sm">
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gray-50 dark:bg-slate-700 mb-6">
             <Highlighter size={32} className="text-gray-200 dark:text-gray-500" />
           </div>
-          <h2 className="text-2xl font-serif font-bold text-gray-900 dark:text-gray-100 mb-2">No highlights</h2>
-          <p className="text-gray-400 dark:text-gray-500 text-sm max-w-xs mx-auto">Select text in an news and click "Highlight" to save it here.</p>
+          <h2 className="text-2xl font-serif font-bold text-gray-900 dark:text-gray-100 mb-2">No sentences</h2>
+          <p className="text-gray-400 dark:text-gray-500 text-sm max-w-xs mx-auto">Select text in an news and click "Sentence" to save it here.</p>
         </div>
       )}
       {isEmpty && tab === "vocabulary" && (
-        <div className="text-center py-32 bg-white dark:bg-slate-800 rounded-[2rem] border border-gray-100 dark:border-slate-600 shadow-sm">
+        <div className="text-center py-32 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-600 shadow-sm">
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gray-50 dark:bg-slate-700 mb-6">
             <BookOpen size={32} className="text-gray-200 dark:text-gray-500" />
           </div>
@@ -475,13 +475,13 @@ export default function Bookmarks() {
               </div>
             )}
 
-            {tab === "highlights" && (
+            {tab === "sentences" && (
               <div className="grid grid-cols-2 gap-3">
-                {namedHighlightCats.map((cat) => (
+                {namedSentenceCats.map((cat) => (
                   <div
                     key={cat.name}
                     className="relative rounded-2xl overflow-hidden min-h-[140px] bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-600 cursor-pointer group hover:shadow-md hover:border-brand/20 dark:hover:border-emerald-500/30 transition-all p-4 flex flex-col"
-                    onClick={() => setHighlightView(cat.name)}
+                    onClick={() => setSentenceView(cat.name)}
                   >
                     {/* 操作按钮：重命名 + 删除 */}
                     <div className="absolute top-2 right-2 z-10 flex gap-1">
@@ -489,7 +489,7 @@ export default function Bookmarks() {
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          openRename("highlights", cat.name);
+                          openRename("sentences", cat.name);
                         }}
                         className="p-1.5 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-gray-400 hover:bg-brand/10 hover:text-brand dark:hover:text-emerald-400 transition-all"
                       >
@@ -499,7 +499,7 @@ export default function Bookmarks() {
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setDeleteCategoryState({ tab: "highlights", category: cat.name });
+                          setDeleteCategoryState({ tab: "sentences", category: cat.name });
                         }}
                         className="p-1.5 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-500 dark:hover:text-red-400 transition-all"
                       >
@@ -514,7 +514,7 @@ export default function Bookmarks() {
                     <div className="mt-auto">
                       <p className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{cat.name}</p>
                       <p className="text-xs text-brand/60 dark:text-emerald-400/70 mt-0.5">
-                        {cat.count} {cat.count === 1 ? "highlight" : "highlights"}
+                        {cat.count} {cat.count === 1 ? "sentence" : "sentences"}
                       </p>
                     </div>
                   </div>
@@ -536,7 +536,7 @@ export default function Bookmarks() {
             {isDetail && tab === "bookmarks" && filteredBookmarks.length === 0 && (
               <div className="text-center py-20 text-gray-400 dark:text-gray-500 text-sm">This Category is empty.</div>
             )}
-            {isDetail && tab === "highlights" && filteredHighlights.length === 0 && (
+            {isDetail && tab === "sentences" && filteredSentences.length === 0 && (
               <div className="text-center py-20 text-gray-400 dark:text-gray-500 text-sm">This Category is empty.</div>
             )}
 
@@ -580,14 +580,14 @@ export default function Bookmarks() {
                 </div>
               ))}
 
-            {tab === "highlights" &&
-              groupedHighlights.map((group) => (
+            {tab === "sentences" &&
+              groupedSentences.map((group) => (
                 <div key={group.label} className="mb-4">
                   <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 px-1">{group.label}</p>
                   <div className="space-y-2">
                     {group.items.map((h, index) => (
                       <motion.div key={h.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.03 }}>
-                        <SwipeRow onDelete={() => setConfirmState({ type: "highlight", contId: h.contId, highlightId: h.id })}>
+                        <SwipeRow onDelete={() => setConfirmState({ type: "sentence", contId: h.contId, highlightId: h.id })}>
                           <div className="relative bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700/60 transition-colors">
                             {/* 生成书摘图片按钮 */}
                             <button
@@ -681,11 +681,11 @@ export default function Bookmarks() {
         variant="danger"
       />
       <ConfirmModal
-        open={confirmState.type === "highlight"}
+        open={confirmState.type === "sentence"}
         onClose={() => setConfirmState({ type: null })}
         onConfirm={onConfirmRemove}
-        title="Remove this highlight?"
-        message="This highlight will be deleted and cannot be restored."
+        title="Remove this sentence?"
+        message="This sentence will be deleted and cannot be restored."
         confirmLabel="Remove"
         variant="danger"
       />

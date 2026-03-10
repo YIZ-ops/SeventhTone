@@ -6,24 +6,28 @@ import {
   addBookmark,
   getBookmarks,
   removeBookmark,
-  getHighlights,
-  addHighlight,
-  removeHighlight,
-  updateHighlight,
+  getSentences,
+  addSentence,
+  removeSentence,
+  updateSentence,
   addVocab,
   isInVocab,
+  getVocab,
+  removeVocab,
 } from "../api/api";
-import { NewsDetail, Highlight } from "../types";
+import { NewsDetail, Sentence } from "../types";
 import DOMPurify from "dompurify";
+import html2canvas from "html2canvas-pro";
 import Mark from "mark.js";
 import { ChevronLeft, ChevronRight, Loader2, Clock, Bookmark, BookmarkCheck, BookmarkPlus, X, Share2, Volume2, Brain } from "lucide-react";
 import BookmarkModal from "../components/BookmarkModal";
-import HighlightSaveModal from "../components/HighlightSaveModal";
-import HighlightDetailModal from "../components/HighlightDetailModal";
+import SentenceSaveModal from "../components/SentenceSaveModal";
+import SentenceDetailModal from "../components/SentenceDetailModal";
 import { request } from "../utils/request";
 import { addReadingSession } from "../api/localData";
 import { Capacitor } from "@capacitor/core";
 import { App as CapacitorApp } from "@capacitor/app";
+import { Directory, Filesystem } from "@capacitor/filesystem";
 import { Share } from "@capacitor/share";
 import TextSelectionHighlight from "../plugins/textSelectionHighlight";
 import { useTheme } from "../contexts/ThemeContext";
@@ -79,6 +83,128 @@ interface DictApiResponse {
 
 const DICT_API_BASE = "https://v2.xxapi.cn/api/englishwords";
 
+/**
+ * Explicit font stack for the share card.
+ * html2canvas resolves fonts at render-time; without a declared family it falls
+ * back to its own default which differs across platforms and causes glyph-width
+ * mismatches ("@" gets extra gaps, "." gets swallowed, etc.).
+ */
+const SHARE_FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+
+/**
+ * Minimal HTML cleaning for the share card.
+ *
+ * Key principles:
+ *  1. Keep the original HTML structure – the browser handles word spacing.
+ *  2. Use **px** for font-size AND line-height (never rem / unitless multiplier)
+ *     so html2canvas calculates identical metrics regardless of root font-size.
+ *  3. Declare font-family on every element so html2canvas doesn't fall back to
+ *     a mismatched default font stack.
+ */
+function buildShareContentHtml(html: string): string {
+  const temp = document.createElement("div");
+  temp.innerHTML = html;
+
+  // Remove non-text elements
+  temp
+    .querySelectorAll("img, figure, figcaption, video, audio, iframe, table, script, style, noscript, svg, picture, source")
+    .forEach((n) => n.remove());
+
+  // Strip class/style so Tailwind / dark-mode classes don't leak in
+  temp.querySelectorAll("*").forEach((el) => {
+    el.removeAttribute("class");
+    el.removeAttribute("style");
+  });
+
+  // Block-level styles (font-size + line-height in px, explicit font-family)
+  const font = `font-family:${SHARE_FONT};`;
+  const pStyle = `${font}font-size:22px;line-height:39px;color:#1e293b;margin:18px 0 0;letter-spacing:0px;`;
+  temp.querySelectorAll("p").forEach((el) => el.setAttribute("style", pStyle));
+  temp
+    .querySelectorAll("h2")
+    .forEach((el) => el.setAttribute("style", `${font}font-size:28px;line-height:40px;font-weight:700;color:#1e293b;margin:18px 0 0;`));
+  temp
+    .querySelectorAll("h3, h4")
+    .forEach((el) => el.setAttribute("style", `${font}font-size:24px;line-height:35px;font-weight:700;color:#1e293b;margin:18px 0 0;`));
+  temp
+    .querySelectorAll("blockquote")
+    .forEach((el) =>
+      el.setAttribute(
+        "style",
+        `${font}font-size:22px;line-height:39px;color:#334155;margin:18px 0 0;padding-left:18px;border-left:4px solid rgba(16,185,129,0.28);`,
+      ),
+    );
+  temp.querySelectorAll("ul, ol").forEach((el) => el.setAttribute("style", `${font}margin:18px 0 0;padding-left:24px;`));
+  temp.querySelectorAll("li").forEach((el) => el.setAttribute("style", `${font}font-size:22px;line-height:39px;color:#1e293b;`));
+
+  // Inline elements – inherit size/height, but set font-family explicitly
+  temp.querySelectorAll("a").forEach((el) => el.setAttribute("style", `${font}color:#059669;text-decoration:none;`));
+  temp.querySelectorAll("strong, b").forEach((el) => el.setAttribute("style", `${font}font-weight:700;`));
+  temp.querySelectorAll("em, i").forEach((el) => el.setAttribute("style", `${font}font-style:italic;`));
+  temp.querySelectorAll("span").forEach((el) => el.setAttribute("style", `${font}`));
+
+  // Zero-out margin on the very first visible block
+  const first = temp.querySelector("p, h2, h3, h4, blockquote, ul, ol");
+  if (first) {
+    const s = first.getAttribute("style") || "";
+    first.setAttribute("style", s.replace(/margin:\s*18px 0 0/, "margin:0"));
+  }
+
+  return temp.innerHTML;
+}
+
+function normalizeTextWithMap(text: string) {
+  let normalized = "";
+  const normalizedToRaw: number[] = [];
+  let pendingSpace = false;
+
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+
+    if (/\s/.test(char)) {
+      if (normalized.length > 0) {
+        pendingSpace = true;
+      }
+      continue;
+    }
+
+    if (pendingSpace) {
+      normalized += " ";
+      normalizedToRaw.push(index);
+      pendingSpace = false;
+    }
+
+    normalized += char;
+    normalizedToRaw.push(index);
+  }
+
+  return { normalized, normalizedToRaw };
+}
+
+function findTextRange(rawText: string, needle: string, occupiedRanges: Array<{ start: number; end: number }>) {
+  const haystack = normalizeTextWithMap(rawText);
+  const target = normalizeTextWithMap(needle).normalized;
+  if (!target) return null;
+
+  let fromIndex = 0;
+  while (fromIndex <= haystack.normalized.length - target.length) {
+    const normalizedIndex = haystack.normalized.indexOf(target, fromIndex);
+    if (normalizedIndex === -1) return null;
+
+    const rawStart = haystack.normalizedToRaw[normalizedIndex];
+    const rawEnd = haystack.normalizedToRaw[normalizedIndex + target.length - 1] + 1;
+    const overlaps = occupiedRanges.some((range) => rawStart < range.end && rawEnd > range.start);
+
+    if (!overlaps) {
+      return { start: rawStart, length: rawEnd - rawStart, end: rawEnd };
+    }
+
+    fromIndex = normalizedIndex + target.length;
+  }
+
+  return null;
+}
+
 function getWordAtPoint(clientX: number, clientY: number): { word: string; rect: DOMRect } | null {
   const doc = document;
   let range: Range | null = null;
@@ -124,17 +250,20 @@ export default function NewsDetailView() {
   const [showBookmarkModal, setShowBookmarkModal] = useState(false);
 
   const [scrollProgress, setScrollProgress] = useState(0);
+  const [showTopBar, setShowTopBar] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
 
-  const [highlights, setHighlights] = useState<Highlight[]>([]);
-  // activeHighlight is set directly in handleMarkClick (not via an intermediate
-  // activeHighlightId) so that the scroll-dismiss handler never holds a reference
+  const [sentences, setSentences] = useState<Sentence[]>([]);
+  // activeSentence is set directly in handleMarkClick (not via an intermediate
+  // activeSentenceId) so that the scroll-dismiss handler never holds a reference
   // to it keyboard appearance causes a scroll event that would otherwise clear
   // the modal while the user is editing.
-  const [activeHighlight, setActiveHighlight] = useState<Highlight | null>(null);
-  const [showHighlightModal, setShowHighlightModal] = useState(false);
-  const [pendingHighlightText, setPendingHighlightText] = useState<string | null>(null);
+  const [activeSentence, setActiveSentence] = useState<Sentence | null>(null);
+  const [showSentenceModal, setShowSentenceModal] = useState(false);
+  const [pendingSentenceText, setPendingSentenceText] = useState<string | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const dictAudioRef = useRef<HTMLAudioElement>(null);
+  const shareCardRef = useRef<HTMLDivElement>(null);
 
   // Dictionary lookup popup (click word to show definition) declared early so useEffects below can reference it
   const [dictPopup, setDictPopup] = useState<{ x: number; y: number; word: string } | null>(null);
@@ -169,6 +298,31 @@ export default function NewsDetailView() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    if (!news) return;
+    if (!news.headPic) {
+      setShowTopBar(true);
+      return;
+    }
+    const update = () => {
+      setShowTopBar(window.scrollY > 0);
+    };
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, [news]);
+
+  useEffect(() => {
+    const meta = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
+    if (!meta) return;
+    // Transparent header over image: use dark theme-color so status bar icons stay light.
+    meta.content = showTopBar ? "#ffffff" : "#000000";
+  }, [showTopBar]);
 
   useEffect(() => {
     if (!id) return;
@@ -220,7 +374,7 @@ export default function NewsDetailView() {
 
   useEffect(() => {
     if (news) {
-      setHighlights(getHighlights(news.contId));
+      setSentences(getSentences(news.contId));
     }
   }, [news]);
 
@@ -286,8 +440,8 @@ export default function NewsDetailView() {
     TextSelectionHighlight.addListener("highlightSelection", (e) => {
       const text = (e?.selectedText ?? "").trim();
       if (text.length < 2) return;
-      setPendingHighlightText(text);
-      setShowHighlightModal(true);
+      setPendingSentenceText(text);
+      setShowSentenceModal(true);
     }).then((h) => {
       removeListener = h.remove;
     });
@@ -301,11 +455,11 @@ export default function NewsDetailView() {
   // can read current values without re-registering listeners.
   const backStateRef = useRef({
     dictPopup: null as typeof dictPopup,
-    activeHighlight: null as typeof activeHighlight,
-    showHighlightModal: false,
+    activeSentence: null as typeof activeSentence,
+    showSentenceModal: false,
     showBookmarkModal: false,
   });
-  backStateRef.current = { dictPopup, activeHighlight, showHighlightModal, showBookmarkModal };
+  backStateRef.current = { dictPopup, activeSentence, showSentenceModal, showBookmarkModal };
 
   // Handle the native Android back button via Capacitor.
   useEffect(() => {
@@ -317,13 +471,13 @@ export default function NewsDetailView() {
         setDictPopup(null);
         return;
       }
-      if (s.activeHighlight) {
-        setActiveHighlight(null);
+      if (s.activeSentence) {
+        setActiveSentence(null);
         return;
       }
-      if (s.showHighlightModal) {
-        setShowHighlightModal(false);
-        setPendingHighlightText(null);
+      if (s.showSentenceModal) {
+        setShowSentenceModal(false);
+        setPendingSentenceText(null);
         window.getSelection()?.removeAllRanges();
         return;
       }
@@ -344,38 +498,38 @@ export default function NewsDetailView() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
-  // pendingHighlightText: stable copy of selected text so the modal isn't destroyed when
+  // pendingSentenceText: stable copy of selected text so the modal isn't destroyed when
   // selectionPopup is cleared (e.g. by the scroll handler when the mobile keyboard appears).
 
-  const handleSaveHighlight = useCallback(
+  const handleSaveSentence = useCallback(
     (category: string, thought?: string) => {
-      if (!pendingHighlightText || !news) return;
-      addHighlight(news.contId, pendingHighlightText, news.name, undefined, undefined, category, thought);
-      setHighlights(getHighlights(news.contId));
+      if (!pendingSentenceText || !news) return;
+      addSentence(news.contId, pendingSentenceText, news.name, undefined, undefined, category, thought);
+      setSentences(getSentences(news.contId));
       window.getSelection()?.removeAllRanges();
-      setPendingHighlightText(null);
-      setShowHighlightModal(false);
+      setPendingSentenceText(null);
+      setShowSentenceModal(false);
     },
-    [pendingHighlightText, news],
+    [pendingSentenceText, news],
   );
 
-  const handleRemoveHighlight = useCallback(
+  const handleRemoveSentence = useCallback(
     (highlightId: string) => {
       if (!news) return;
-      removeHighlight(news.contId, highlightId);
-      setHighlights(getHighlights(news.contId));
-      setActiveHighlight(null);
+      removeSentence(news.contId, highlightId);
+      setSentences(getSentences(news.contId));
+      setActiveSentence(null);
     },
     [news],
   );
 
-  const handleUpdateHighlight = useCallback(
+  const handleUpdateSentence = useCallback(
     (highlightId: string, updates: { thought?: string; category?: string }) => {
       if (!news) return;
-      updateHighlight(news.contId, highlightId, updates);
-      setHighlights(getHighlights(news.contId));
-      // Update the activeHighlight state to reflect the saved changes immediately
-      setActiveHighlight((prev) =>
+      updateSentence(news.contId, highlightId, updates);
+      setSentences(getSentences(news.contId));
+      // Update the activeSentence state to reflect the saved changes immediately
+      setActiveSentence((prev) =>
         prev && prev.id === highlightId
           ? { ...prev, ...updates, thought: updates.thought ?? undefined, category: updates.category ?? prev.category }
           : prev,
@@ -385,25 +539,63 @@ export default function NewsDetailView() {
   );
 
   const handleShare = useCallback(async () => {
-    if (!news) return;
-    const url = `${SIXTH_TONE_WEB}/news/${news.contId}`;
+    if (!news || !shareCardRef.current || isSharing) return;
+    const authorLabel = news.authorList?.map((a) => a.name).join(", ") || "Seventh Tone";
+    const fileName = `seventh-tone-news-${news.contId}.jpg`;
+
     try {
-      const { value: canShareValue } = await Share.canShare();
-      if (canShareValue) {
+      setIsSharing(true);
+      const canvas = await html2canvas(shareCardRef.current, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: "#f8fafc",
+        logging: false,
+      });
+
+      if (Capacitor.isNativePlatform()) {
+        const base64 = canvas.toDataURL("image/jpeg", 0.95).split(",")[1];
+        const result = await Filesystem.writeFile({
+          path: fileName,
+          data: base64,
+          directory: Directory.Cache,
+        });
+
         await Share.share({
           title: news.name,
-          text: news.name,
-          url,
-          dialogTitle: "Share news",
+          text: `${news.name} · ${authorLabel}`,
+          files: [result.uri],
+          dialogTitle: "Share news image",
         });
       } else {
-        // 降级：复制链接到剪贴板
-        await navigator.clipboard.writeText(url);
+        const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob((value) => resolve(value), "image/jpeg", 0.95));
+        if (!blob) throw new Error("Failed to create image blob.");
+
+        const file = new File([blob], fileName, { type: "image/jpeg" });
+        if (typeof navigator !== "undefined" && navigator.canShare?.({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: news.name,
+            text: `${news.name} · ${authorLabel}`,
+          });
+        } else {
+          const objectUrl = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = objectUrl;
+          link.download = fileName;
+          link.style.display = "none";
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.setTimeout(() => URL.revokeObjectURL(objectUrl), 3000);
+        }
       }
     } catch {
       // 用户取消或出错，静默忽略
+    } finally {
+      setIsSharing(false);
     }
-  }, [news]);
+  }, [news, isSharing]);
 
   const toggleBookmark = () => {
     if (isBookmarked && news) {
@@ -449,46 +641,50 @@ export default function NewsDetailView() {
   }, [news]);
 
   const highlightedContent = useMemo(() => {
-    if (!sanitizedContent || !highlights.length) return sanitizedContent;
+    if (!sanitizedContent || !sentences.length) return sanitizedContent;
     const tmp = document.createElement("div");
     tmp.innerHTML = sanitizedContent;
     const instance = new Mark(tmp);
-    for (const h of highlights) {
-      let found = false;
-      instance.mark(h.text, {
-        separateWordSearch: false,
-        acrossElements: true,
-        className: "news-highlight",
-        filter: () => {
-          if (found) return false;
-          found = true;
-          return true;
-        },
+    const rawText = tmp.textContent || "";
+    const occupiedRanges: Array<{ start: number; end: number }> = [];
+
+    for (const h of sentences) {
+      const range = findTextRange(rawText, h.text, occupiedRanges);
+      if (!range) continue;
+
+      occupiedRanges.push({ start: range.start, end: range.end });
+      instance.markRanges([range], {
+        className: "news-sentence",
         each: (el) => {
-          el.setAttribute("data-highlight-id", h.id);
+          el.setAttribute("data-sentence-id", h.id);
         },
       });
     }
     return tmp.innerHTML;
-  }, [sanitizedContent, highlights]);
+  }, [sanitizedContent, sentences]);
+
+  const shareContentHtml = useMemo(() => {
+    if (!sanitizedContent) return "";
+    return buildShareContentHtml(sanitizedContent);
+  }, [sanitizedContent]);
 
   const handleMarkClick = useCallback(
     (e: MouseEvent<HTMLElement>) => {
-      const mark = (e.target as HTMLElement).closest("mark[data-highlight-id]") as HTMLElement | null;
+      const mark = (e.target as HTMLElement).closest("mark[data-sentence-id]") as HTMLElement | null;
       if (!mark) return;
       e.stopPropagation();
-      const hId = mark.getAttribute("data-highlight-id");
+      const hId = mark.getAttribute("data-sentence-id");
       if (hId) {
-        // Resolve the highlight object immediately and store it directly.
-        // We intentionally do NOT keep an activeHighlightId in state so that
+        // Resolve the sentence object immediately and store it directly.
+        // We intentionally do NOT keep an activeSentenceId in state so that
         // the scroll-dismiss handler (which fires when the mobile keyboard
         // appears after the user taps the edit textarea) has nothing to clear.
-        const found = highlights.find((h) => h.id === hId) ?? null;
-        setActiveHighlight(found);
+        const found = sentences.find((h) => h.id === hId) ?? null;
+        setActiveSentence(found);
         window.getSelection()?.removeAllRanges();
       }
     },
-    [highlights],
+    [sentences],
   );
 
   // Fetch dictionary when user clicks a word (GET ?word=xxx)
@@ -519,7 +715,7 @@ export default function NewsDetailView() {
   // Double-click a word to open the dictionary popup.
   const handleContentDblClick = useCallback((e: MouseEvent<HTMLElement>) => {
     const target = e.target as HTMLElement;
-    if (target.closest("a") || target.closest("mark[data-highlight-id]")) return;
+    if (target.closest("a") || target.closest("mark[data-sentence-id]")) return;
     const hit = getWordAtPoint(e.clientX, e.clientY);
     if (!hit) return;
     // Clear the browser selection before opening the popup.
@@ -529,16 +725,32 @@ export default function NewsDetailView() {
 
   // Whether the current popup word is already saved in vocabulary.
   const [wordInVocab, setWordInVocab] = useState(false);
+  const [vocabEntryId, setVocabEntryId] = useState<string | null>(null);
   useEffect(() => {
-    setWordInVocab(dictPopup?.word ? isInVocab(dictPopup.word) : false);
+    if (!dictPopup?.word) {
+      setWordInVocab(false);
+      setVocabEntryId(null);
+      return;
+    }
+    const vocabEntry = getVocab().find((v) => v.word.toLowerCase() === dictPopup.word.toLowerCase());
+    setWordInVocab(Boolean(vocabEntry));
+    setVocabEntryId(vocabEntry?.id ?? null);
   }, [dictPopup?.word]);
 
-  const handleAddToVocab = useCallback(() => {
-    if (!dictPopup || wordInVocab) return;
+  const handleToggleVocab = useCallback(() => {
+    if (!dictPopup?.word) return;
+    if (wordInVocab && vocabEntryId) {
+      removeVocab(vocabEntryId);
+      setWordInVocab(false);
+      setVocabEntryId(null);
+      return;
+    }
     const translations = dictData?.translations?.map((t) => `${t.pos}. ${t.tran_cn}`) ?? [];
     addVocab(dictPopup.word, dictData?.ukphone, translations);
+    const vocabEntry = getVocab().find((v) => v.word.toLowerCase() === dictPopup.word.toLowerCase());
     setWordInVocab(true);
-  }, [dictPopup, wordInVocab, dictData]);
+    setVocabEntryId(vocabEntry?.id ?? null);
+  }, [dictPopup?.word, wordInVocab, vocabEntryId, dictData]);
 
   if (loading) {
     return (
@@ -565,35 +777,61 @@ export default function NewsDetailView() {
   }
 
   return (
-    <div className="bg-white dark:bg-slate-900 min-h-screen pb-32 overflow-x-hidden">
+    <div className={`bg-white dark:bg-slate-900 min-h-screen pb-32 overflow-x-hidden ${news?.headPic ? "pt-0" : "pt-14"}`}>
       {/* Progress Bar */}
       <div className="fixed top-0 left-0 w-full h-1 z-[60] pointer-events-none">
         <div className="h-full bg-brand transition-all duration-300" style={{ width: `${scrollProgress}%` }} />
       </div>
 
       {/* Top Navigation */}
-      <div className="sticky top-0 z-50 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-gray-100 dark:border-slate-700 pt-safe">
-        <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
+      <div
+        className={`fixed inset-x-0 top-0 z-50 pt-safe transition-all duration-200 ${
+          showTopBar
+            ? "bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-gray-100 dark:border-slate-700"
+            : "bg-transparent border-b border-transparent backdrop-blur-0"
+        }`}
+      >
+        <div className="max-w-3xl mx-auto px-4 h-14 flex items-center gap-2">
           <button
             onClick={() => navigate(-1)}
-            className="p-2 -ml-2 text-gray-500 dark:text-gray-400 hover:text-brand dark:hover:text-emerald-400 transition-colors"
+            className={`p-2 -ml-2 transition-colors ${
+              showTopBar ? "text-gray-500 dark:text-gray-400 hover:text-brand dark:hover:text-emerald-400" : "text-white/90 hover:text-white"
+            }`}
           >
             <ChevronLeft size={24} />
           </button>
+          <div className="flex-1 px-2 text-center">
+            <div
+              className={`mx-auto max-w-[60vw] truncate text-sm font-semibold transition-opacity ${
+                showTopBar ? "text-gray-700 dark:text-gray-200 opacity-100" : "text-white/90 opacity-0"
+              }`}
+              aria-hidden={!showTopBar}
+            >
+              {news.name}
+            </div>
+          </div>
           <div className="flex items-center space-x-1">
             <button
               onClick={handleShare}
-              className="p-2 transition-colors rounded-full text-gray-600 dark:text-gray-400 hover:text-brand dark:hover:text-emerald-400 hover:bg-brand/5 dark:hover:bg-emerald-500/10"
+              className={`p-2 transition-colors rounded-full ${
+                showTopBar
+                  ? "text-gray-600 dark:text-gray-400 hover:text-brand dark:hover:text-emerald-400 hover:bg-brand/5 dark:hover:bg-emerald-500/10"
+                  : "text-white/90 hover:text-white hover:bg-white/10"
+              }`}
               aria-label="Share news"
             >
-              <Share2 size={20} />
+              {isSharing ? <Loader2 size={20} className="animate-spin" /> : <Share2 size={20} />}
             </button>
             <button
               onClick={toggleBookmark}
               className={`p-2 transition-colors rounded-full ${
                 isBookmarked
-                  ? "text-brand dark:text-emerald-400 bg-brand/10 dark:bg-emerald-500/20 hover:bg-brand/20"
-                  : "text-gray-600 dark:text-gray-400 hover:text-brand dark:hover:text-emerald-400 hover:bg-brand/5 dark:hover:bg-emerald-500/10"
+                  ? showTopBar
+                    ? "text-brand dark:text-emerald-400 bg-brand/10 dark:bg-emerald-500/20 hover:bg-brand/20"
+                    : "text-white bg-emerald-500/80 hover:bg-emerald-500"
+                  : showTopBar
+                    ? "text-gray-600 dark:text-gray-400 hover:text-brand dark:hover:text-emerald-400 hover:bg-brand/5 dark:hover:bg-emerald-500/10"
+                    : "text-white/90 hover:text-white hover:bg-white/10"
               }`}
               aria-label={isBookmarked ? "Unbookmark news" : "Bookmark news"}
             >
@@ -603,110 +841,126 @@ export default function NewsDetailView() {
         </div>
       </div>
 
-      <article className="max-w-3xl mx-auto px-4 py-6 md:py-10 select-text relative">
-        {/* Header：标题和 summary 支持点击查词 */}
-        <header className="mb-8">
-          <h1
-            className={`${newsScaleClasses[fontScale].title} font-serif font-bold text-gray-900 dark:text-gray-100 leading-tight mb-6 cursor-text`}
-            onDoubleClick={(e) => {
-              if (!(e.target as HTMLElement).closest("a")) handleContentDblClick(e);
-            }}
-          >
-            {news.name}
-          </h1>
+      {news.headPic && (
+        <section className="relative">
+          <img
+            src={news.headPic}
+            alt={news.name}
+            className="w-full h-[34vh] sm:h-[34vh] object-cover bg-gray-100 dark:bg-slate-800"
+            referrerPolicy="no-referrer"
+          />
+          <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/35 to-transparent" />
+        </section>
+      )}
 
-          <p
-            className={`${newsScaleClasses[fontScale].summary} text-gray-600 dark:text-gray-500 font-serif italic mb-8 leading-relaxed cursor-text`}
-            onDoubleClick={(e) => {
-              if (!(e.target as HTMLElement).closest("a")) handleContentDblClick(e);
-            }}
-          >
-            {news.summary}
-          </p>
+      <div className={`relative z-10 ${news.headPic ? "-mt-14 sm:-mt-16" : "mt-6"}`}>
+        <article className="max-w-3xl mx-auto px-4 pb-16 select-text relative">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-gray-100 dark:border-slate-800 shadow-lg shadow-black/5 p-4 sm:p-4">
+            {/* Header：标题和 summary 支持点击查词 */}
+            <header className="mb-8">
+              <h1
+                className={`${newsScaleClasses[fontScale].title} font-serif font-bold text-gray-900 dark:text-gray-100 leading-tight mb-6 cursor-text`}
+                onDoubleClick={(e) => {
+                  if (!(e.target as HTMLElement).closest("a")) handleContentDblClick(e);
+                }}
+              >
+                {news.name}
+              </h1>
 
-          <div className="flex items-center justify-between py-4 border-y border-gray-100 dark:border-slate-700">
-            <div className="flex items-center space-x-3">
-              {news.authorList?.[0]?.pic && (
-                <img
-                  src={news.authorList[0].pic}
-                  alt={news.authorList[0].name}
-                  className="w-10 h-10 rounded-full object-cover"
-                  referrerPolicy="no-referrer"
-                />
-              )}
-              <div>
-                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                  {news.authorList?.map((a) => a.name).join(", ") || "Seventh Tone"}
-                </p>
-                <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                  <Clock size={12} className="mr-1" />
-                  <time dateTime={news.pubTime}>{news.pubTime}</time>
+              <p
+                className={`${newsScaleClasses[fontScale].summary} text-gray-600 dark:text-gray-500 font-serif italic mb-8 leading-relaxed cursor-text`}
+                onDoubleClick={(e) => {
+                  if (!(e.target as HTMLElement).closest("a")) handleContentDblClick(e);
+                }}
+              >
+                {news.summary}
+              </p>
+
+              <div className="flex items-center justify-between py-4 border-y border-gray-100 dark:border-slate-700">
+                <div className="flex items-center space-x-3">
+                  {news.authorList?.[0]?.pic && (
+                    <img
+                      src={news.authorList[0].pic}
+                      alt={news.authorList[0].name}
+                      className="w-10 h-10 rounded-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  )}
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                      {news.authorList?.map((a) => a.name).join(", ") || "Seventh Tone"}
+                    </p>
+                    <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      <Clock size={12} className="mr-1" />
+                      <time dateTime={news.pubTime}>{news.pubTime}</time>
+                    </div>
+                  </div>
                 </div>
+              </div>
+            </header>
+
+            {/* Content */}
+            <div
+              ref={contentRef}
+              className={`prose ${newsScaleClasses[fontScale].prose} prose-emerald max-w-none overflow-x-hidden break-words prose-p:font-serif prose-p:leading-relaxed prose-p:text-gray-800 dark:prose-p:text-gray-200 prose-a:text-emerald-600 dark:prose-a:text-emerald-400 prose-img:rounded-xl prose-img:max-w-full prose-img:h-auto prose-pre:max-w-full prose-pre:overflow-x-auto prose-table:block prose-table:max-w-full prose-table:overflow-x-auto [&_iframe]:max-w-full [&_video]:max-w-full [&_svg]:max-w-full [&_*]:break-words select-text`}
+              dangerouslySetInnerHTML={{ __html: highlightedContent }}
+              onClick={handleMarkClick}
+              onDoubleClick={handleContentDblClick}
+            />
+
+            {/* AI Practice CTA*/}
+            <div className="mt-14 pt-8 border-t border-gray-100 dark:border-slate-800/60">
+              <div className="relative overflow-hidden rounded-2xl border border-emerald-100/70 dark:border-emerald-500/20 bg-gradient-to-br from-emerald-50 via-white to-emerald-100/50 dark:from-slate-900 dark:via-slate-900 dark:to-emerald-900/20 shadow-sm">
+                <div className="absolute -top-12 -right-6 h-28 w-28 rounded-full bg-emerald-200/35 blur-3xl dark:bg-emerald-500/10" />
+                <div className="absolute -bottom-14 -left-10 h-32 w-32 rounded-full bg-teal-200/30 blur-3xl dark:bg-emerald-500/10" />
+                <button
+                  type="button"
+                  onClick={() =>
+                    navigate(`/practice/${news.contId}`, {
+                      state: {
+                        title: news.name,
+                        contentHtml: news.content,
+                      },
+                    })
+                  }
+                  className="group relative z-10 w-full flex flex-col sm:flex-row sm:items-center gap-5 sm:gap-6 p-5 sm:p-6"
+                >
+                  <div className="flex items-center justify-center gap-4 flex-1 min-w-0">
+                    <div className="min-w-0 text-center">
+                      <div className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-700/80 dark:text-emerald-300/80">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                        Practice Mode
+                      </div>
+                      <h4 className="mt-2 text-[18px] sm:text-[20px] font-semibold text-gray-900 dark:text-gray-100 leading-snug">
+                        Test Your Understanding
+                      </h4>
+                      <p className="mt-2 text-[13px] sm:text-[14px] text-gray-700 dark:text-gray-400">
+                        Short AI exercises built from this article to lock in vocabulary and key points.
+                      </p>
+                      <div className="mt-3 flex flex-wrap justify-center gap-2 text-[12px] text-gray-700 dark:text-gray-400">
+                        <span className="px-2.5 py-1 rounded-full bg-white/90 ring-1 ring-emerald-200 dark:bg-slate-800/70 dark:ring-emerald-500/30">
+                          Vocabulary boost
+                        </span>
+                        <span className="px-2.5 py-1 rounded-full bg-white/90 ring-1 ring-emerald-200 dark:bg-slate-800/70 dark:ring-emerald-500/30">
+                          Key points check
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-center w-full sm:w-auto gap-3">
+                    <div className="relative">
+                      <div className="relative flex items-center gap-1 px-4 py-2 rounded-xl bg-emerald-600 text-white shadow-sm shadow-emerald-500/20">
+                        <span className="text-[12px] font-bold tracking-[0.2em]">START</span>
+                        <ChevronRight className="w-4 h-4" />
+                      </div>
+                    </div>
+                  </div>
+                </button>
               </div>
             </div>
           </div>
-        </header>
-
-        {/* Hero Image */}
-        {news.headPic && (
-          <figure className="mb-10 -mx-4 sm:mx-0">
-            <img
-              src={news.headPic}
-              alt={news.name}
-              className="w-full h-auto sm:rounded-xl object-cover bg-gray-100 dark:bg-slate-800"
-              referrerPolicy="no-referrer"
-            />
-          </figure>
-        )}
-
-        {/* Content */}
-        <div
-          ref={contentRef}
-          className={`prose ${newsScaleClasses[fontScale].prose} prose-emerald max-w-none overflow-x-hidden break-words prose-p:font-serif prose-p:leading-relaxed prose-p:text-gray-800 dark:prose-p:text-gray-200 prose-a:text-emerald-600 dark:prose-a:text-emerald-400 prose-img:rounded-xl prose-img:max-w-full prose-img:h-auto prose-pre:max-w-full prose-pre:overflow-x-auto prose-table:block prose-table:max-w-full prose-table:overflow-x-auto [&_iframe]:max-w-full [&_video]:max-w-full [&_svg]:max-w-full [&_*]:break-words select-text`}
-          dangerouslySetInnerHTML={{ __html: highlightedContent }}
-          onClick={handleMarkClick}
-          onDoubleClick={handleContentDblClick}
-        />
-
-        {/* AI Practice CTA*/}
-        <div className="mt-14 pt-8 border-t border-gray-100 dark:border-slate-800/60">
-          <button
-            type="button"
-            onClick={() =>
-              navigate(`/practice/${news.contId}`, {
-                state: {
-                  title: news.name,
-                  contentHtml: news.content,
-                },
-              })
-            }
-            className="group relative w-full flex items-center gap-4 p-4 rounded-xl 
-                      bg-transparent hover:bg-gray-50/80 dark:hover:bg-slate-800/40 
-                      border border-gray-100 dark:border-slate-800 
-                      hover:border-emerald-200 dark:hover:border-emerald-500/30
-                      transition-all duration-200 ease-in-out"
-          >
-            {/* 1. Icon: No background, purely icon-focused */}
-            <div className="flex items-center justify-center shrink-0">
-              <Brain className="w-6 h-6 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform duration-300" />
-            </div>
-
-            {/* 2. Text Content: Balanced spacing and hierarchy */}
-            <div className="flex-1 text-left min-w-0">
-              <h4 className="text-[16px] font-semibold text-gray-900 dark:text-gray-100 leading-none">Test Your Understanding</h4>
-              <div className="flex items-center gap-2 mt-2">
-                <span className="text-[13px] text-gray-500 dark:text-gray-400">AI exercises</span>
-              </div>
-            </div>
-
-            {/* 3. Action: Clean button pill */}
-            <div className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 group-hover:bg-emerald-600 transition-colors duration-200">
-              <span className="text-[12px] font-bold text-emerald-700 dark:text-emerald-400 group-hover:text-white tracking-wide">START</span>
-              <ChevronRight className="w-4 h-4 text-emerald-600 dark:text-emerald-400 group-hover:text-white group-hover:translate-x-0.5 transition-all" />
-            </div>
-          </button>
-        </div>
-      </article>
+        </article>
+      </div>
 
       {dictPopup && (
         <button
@@ -729,15 +983,14 @@ export default function NewsDetailView() {
             <div className="flex items-center gap-1 shrink-0">
               <button
                 type="button"
-                onClick={handleAddToVocab}
-                disabled={wordInVocab}
+                onClick={handleToggleVocab}
                 className={`p-1.5 rounded-full transition-colors ${
                   wordInVocab
-                    ? "text-emerald-500 dark:text-emerald-400"
+                    ? "text-emerald-500 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30"
                     : "text-gray-400 dark:text-gray-500 hover:text-brand dark:hover:text-emerald-400 hover:bg-gray-100 dark:hover:bg-slate-600"
                 }`}
-                aria-label={wordInVocab ? "Already in vocabulary" : "Add to vocabulary"}
-                title={wordInVocab ? "Already in vocabulary" : "Add to vocabulary"}
+                aria-label={wordInVocab ? "Remove from vocabulary" : "Add to vocabulary"}
+                title={wordInVocab ? "Remove from vocabulary" : "Add to vocabulary"}
               >
                 {wordInVocab ? <BookmarkCheck size={18} /> : <BookmarkPlus size={18} />}
               </button>
@@ -894,27 +1147,132 @@ export default function NewsDetailView() {
         </div>
       )}
 
-      {/* Highlight Detail Modal */}
-      {activeHighlight && (
-        <HighlightDetailModal
-          highlight={activeHighlight}
-          onClose={() => setActiveHighlight(null)}
-          onDelete={() => handleRemoveHighlight(activeHighlight.id)}
-          onSave={(updates) => handleUpdateHighlight(activeHighlight.id, updates)}
+      {/* Sentence Detail Modal */}
+      {activeSentence && (
+        <SentenceDetailModal
+          sentence={activeSentence}
+          onClose={() => setActiveSentence(null)}
+          onDelete={() => handleRemoveSentence(activeSentence.id)}
+          onSave={(updates) => handleUpdateSentence(activeSentence.id, updates)}
         />
       )}
 
       {showBookmarkModal && <BookmarkModal onClose={() => setShowBookmarkModal(false)} onSave={handleSaveBookmark} />}
-      {showHighlightModal && pendingHighlightText && (
-        <HighlightSaveModal
-          selectedText={pendingHighlightText}
+      {showSentenceModal && pendingSentenceText && (
+        <SentenceSaveModal
+          selectedText={pendingSentenceText}
           onClose={() => {
-            setShowHighlightModal(false);
-            setPendingHighlightText(null);
+            setShowSentenceModal(false);
+            setPendingSentenceText(null);
             window.getSelection()?.removeAllRanges();
           }}
-          onSave={handleSaveHighlight}
+          onSave={handleSaveSentence}
         />
+      )}
+
+      {news && (
+        <div
+          aria-hidden="true"
+          style={{
+            position: "fixed",
+            left: "-10000px",
+            top: 0,
+            width: "720px",
+            pointerEvents: "none",
+            zIndex: -1,
+          }}
+        >
+          <div
+            ref={shareCardRef}
+            style={{
+              background: "linear-gradient(180deg, #f8fafc 0%, #ffffff 100%)",
+              fontFamily: SHARE_FONT,
+              color: "#0f172a",
+              borderRadius: "32px",
+              overflow: "hidden",
+              boxShadow: "0 24px 80px rgba(15, 23, 42, 0.16)",
+              border: "1px solid rgba(148, 163, 184, 0.18)",
+            }}
+          >
+            <div style={{ padding: "32px 40px 36px" }}>
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  padding: "8px 14px",
+                  borderRadius: "999px",
+                  backgroundColor: "rgba(16, 185, 129, 0.1)",
+                  color: "#047857",
+                  fontFamily: SHARE_FONT,
+                  fontSize: "13px",
+                  lineHeight: "20px",
+                  fontWeight: 700,
+                  letterSpacing: "0.16em",
+                  textTransform: "uppercase",
+                }}
+              >
+                <span style={{ width: "8px", height: "8px", borderRadius: "999px", backgroundColor: "#10b981" }} />
+                Seventh Tone
+              </div>
+
+              <h1 style={{ fontFamily: SHARE_FONT, fontSize: "42px", lineHeight: "50px", fontWeight: 700, margin: "20px 0 16px" }}>{news.name}</h1>
+
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "12px",
+                  color: "#475569",
+                  fontFamily: SHARE_FONT,
+                  fontSize: "18px",
+                  lineHeight: "28px",
+                  marginBottom: "20px",
+                }}
+              >
+                <span>{news.authorList?.map((a) => a.name).join(", ") || "Seventh Tone"}</span>
+                <span>•</span>
+                <span>{news.pubTime}</span>
+              </div>
+
+              <p style={{ fontFamily: SHARE_FONT, fontSize: "24px", lineHeight: "41px", color: "#334155", margin: 0 }}>{news.summary}</p>
+
+              {shareContentHtml && (
+                <div
+                  style={{
+                    marginTop: "28px",
+                    padding: "24px 26px",
+                    borderRadius: "24px",
+                    backgroundColor: "#f8fafc",
+                    border: "1px solid rgba(148, 163, 184, 0.18)",
+                  }}
+                  dangerouslySetInnerHTML={{ __html: shareContentHtml }}
+                />
+              )}
+
+              <div
+                style={{
+                  marginTop: "30px",
+                  paddingTop: "22px",
+                  borderTop: "1px solid rgba(148, 163, 184, 0.2)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "16px",
+                  fontFamily: SHARE_FONT,
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: "18px", lineHeight: "26px", fontWeight: 700, color: "#0f172a" }}>Seventh Tone</div>
+                  <div style={{ fontSize: "16px", lineHeight: "24px", color: "#64748b", marginTop: "6px" }}>Read China with context</div>
+                </div>
+                <div
+                  style={{ fontSize: "16px", lineHeight: "24px", color: "#64748b", textAlign: "right" }}
+                >{`${SIXTH_TONE_WEB}/news/${news.contId}`}</div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -2,10 +2,13 @@ import { useEffect, useMemo, useRef, useState, type TouchEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
 import { App as CapacitorApp } from "@capacitor/app";
-import { ChevronLeft, ChevronRight, ImageOff, Loader2, Calendar as CalendarIcon, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, ImageOff, Loader2, Calendar as CalendarIcon, X } from "lucide-react";
 import { getDailyTonesByDate, getDailyTonesCalendar } from "../api/api";
 import { NewsItem } from "../types";
 import { motion, AnimatePresence } from "motion/react";
+import { Media } from "@capacitor-community/media";
+import { saveRemoteImageToAlbum } from "../utils/mediaSave";
+import { useBottomToast } from "../utils/toast";
 
 const toInputDate = (d: Date) => {
   const y = d.getFullYear();
@@ -51,10 +54,13 @@ export default function DailyTones() {
   const [error, setError] = useState<string | null>(null);
   const [activeSlide, setActiveSlide] = useState(0);
   const [showCalendar, setShowCalendar] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const sliderRef = useRef<HTMLDivElement>(null);
   const swipeStartX = useRef<number | null>(null);
   const swipeStartY = useRef<number | null>(null);
   const swipeIsH = useRef<boolean | null>(null);
+  const { showToast } = useBottomToast();
 
   useEffect(() => {
     if (Capacitor.getPlatform() !== "android") return;
@@ -155,7 +161,7 @@ export default function DailyTones() {
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -10 }}
-        className="absolute top-full left-4 right-4 mt-2 bg-zinc-900/95 backdrop-blur-xl border border-white/10 rounded-3xl p-5 shadow-2xl z-50"
+        className="absolute top-full left-4 right-4 mt-2 bg-zinc-900/95 backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-2xl z-50"
       >
         <div className="flex items-center justify-between mb-4">
           <button
@@ -245,6 +251,65 @@ export default function DailyTones() {
     else if (dx > 50) goToSlide(activeSlide - 1);
   };
 
+  const handleDownloadImage = async () => {
+    if (isSaving) return;
+    const activeItem = items[activeSlide];
+    const imageUrl = activeItem?.pic || activeItem?.appHeadPic;
+    if (!imageUrl) {
+      setSaveError("No image available for download.");
+      showToast("No image available.", "error");
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveError(null);
+    const filenameBase = `daily-tone-${selectedDate}-${activeItem.contId || activeSlide + 1}`;
+
+    if (!Capacitor.isNativePlatform()) {
+      try {
+        const response = await fetch(imageUrl);
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `${filenameBase}.jpg`;
+        link.style.display = "none";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+        showToast("Download started.", "success");
+      } catch (error) {
+        console.error("Download failed:", error);
+        const link = document.createElement("a");
+        link.href = imageUrl;
+        link.download = `${filenameBase}.jpg`;
+        link.target = "_blank";
+        link.rel = "noreferrer";
+        link.style.display = "none";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast("Opened image in a new tab.", "success");
+      } finally {
+        setIsSaving(false);
+      }
+      return;
+    }
+
+    try {
+      await saveRemoteImageToAlbum({ imageUrl, fileName: filenameBase });
+      showToast("Saved to photos.", "success");
+    } catch (error) {
+      console.error("Save to album failed:", error);
+      const message = error instanceof Error ? error.message : "Failed to save to album.";
+      setSaveError(message);
+      showToast("Save failed. Please allow Photos permission.", "error");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <div
       className="fixed inset-0 bg-black text-white overflow-hidden"
@@ -311,7 +376,7 @@ export default function DailyTones() {
           </div>
         )}
         {!loading && !error && items.length === 0 && (
-          <div className="flex flex-col items-center text-white/50 bg-black/30 backdrop-blur-md px-8 py-10 rounded-3xl border border-white/5">
+          <div className="flex flex-col items-center text-white/50 bg-black/30 backdrop-blur-md px-8 py-10 rounded-2xl border border-white/5">
             <ImageOff className="w-12 h-12 mb-4 opacity-50" />
             <p className="text-sm tracking-widest uppercase">No content for {formatDisplayDate(selectedDate)}</p>
           </div>
@@ -342,8 +407,8 @@ export default function DailyTones() {
             </AnimatePresence>
 
             {/* Navigation Controls */}
-            {items.length > 1 && (
-              <div className="flex items-center justify-between mt-8">
+            <div className="flex items-center justify-between mt-8">
+              {items.length > 1 ? (
                 <div className="flex gap-1.5">
                   {items.map((item, index) => (
                     <button
@@ -356,33 +421,48 @@ export default function DailyTones() {
                     />
                   ))}
                 </div>
+              ) : (
+                <span className="text-xs uppercase tracking-[0.3em] text-white/40">Single tone</span>
+              )}
 
-                <div className="flex space-x-3">
-                  <button
-                    onClick={() => goToSlide(activeSlide - 1)}
-                    disabled={activeSlide === 0}
-                    className={`w-12 h-12 rounded-full backdrop-blur-md border flex items-center justify-center transition-all ${
-                      activeSlide === 0
-                        ? "bg-white/5 border-white/5 text-white/20 cursor-not-allowed"
-                        : "bg-white/10 border-white/20 text-white hover:bg-white/20 hover:scale-105"
-                    }`}
-                  >
-                    <ChevronLeft size={20} />
-                  </button>
-                  <button
-                    onClick={() => goToSlide(activeSlide + 1)}
-                    disabled={activeSlide === items.length - 1}
-                    className={`w-12 h-12 rounded-full backdrop-blur-md border flex items-center justify-center transition-all ${
-                      activeSlide === items.length - 1
-                        ? "bg-white/5 border-white/5 text-white/20 cursor-not-allowed"
-                        : "bg-white/10 border-white/20 text-white hover:bg-white/20 hover:scale-105"
-                    }`}
-                  >
-                    <ChevronRight size={20} />
-                  </button>
-                </div>
+              <div className="flex space-x-3">
+                <button
+                  onClick={handleDownloadImage}
+                  disabled={isSaving}
+                  className={`w-12 h-12 rounded-full backdrop-blur-md border flex items-center justify-center transition-all ${
+                    isSaving
+                      ? "bg-white/5 border-white/5 text-white/20 cursor-not-allowed"
+                      : "bg-white/10 border-white/20 text-white hover:bg-white/20 hover:scale-105"
+                  }`}
+                  aria-label="Download image"
+                >
+                  {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
+                </button>
+                <button
+                  onClick={() => goToSlide(activeSlide - 1)}
+                  disabled={activeSlide === 0 || items.length <= 1}
+                  className={`w-12 h-12 rounded-full backdrop-blur-md border flex items-center justify-center transition-all ${
+                    activeSlide === 0 || items.length <= 1
+                      ? "bg-white/5 border-white/5 text-white/20 cursor-not-allowed"
+                      : "bg-white/10 border-white/20 text-white hover:bg-white/20 hover:scale-105"
+                  }`}
+                >
+                  <ChevronLeft size={20} />
+                </button>
+                <button
+                  onClick={() => goToSlide(activeSlide + 1)}
+                  disabled={activeSlide === items.length - 1 || items.length <= 1}
+                  className={`w-12 h-12 rounded-full backdrop-blur-md border flex items-center justify-center transition-all ${
+                    activeSlide === items.length - 1 || items.length <= 1
+                      ? "bg-white/5 border-white/5 text-white/20 cursor-not-allowed"
+                      : "bg-white/10 border-white/20 text-white hover:bg-white/20 hover:scale-105"
+                  }`}
+                >
+                  <ChevronRight size={20} />
+                </button>
               </div>
-            )}
+            </div>
+            {saveError && <p className="text-red-300 text-xs mt-3">{saveError}</p>}
           </div>
         </div>
       )}

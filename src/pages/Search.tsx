@@ -29,7 +29,7 @@ function formatNewsTime(pubTime?: string, pubTimeLong?: number): string {
   return formatDistanceToNow(new Date(ts), { addSuffix: true });
 }
 
-function sanitizeHighlightHtml(html: string | undefined): string {
+function sanitizeSentenceHtml(html: string | undefined): string {
   if (!html || typeof html !== "string") return "";
   const sanitized = DOMPurify.sanitize(html, SANITIZE_OPTIONS);
   // 将接口返回的橙色等高亮统一改为绿色
@@ -170,8 +170,8 @@ export default function Search() {
       <div className="grid grid-cols-1 gap-6">
         {list.map((item, index) => {
           const imgSrc = item.pic || item.appHeadPic;
-          const safeTitle = sanitizeHighlightHtml(item.name);
-          const safeSummary = item.summary ? sanitizeHighlightHtml(item.summary) : "";
+          const safeTitle = sanitizeSentenceHtml(item.name);
+          const safeSummary = item.summary ? sanitizeSentenceHtml(item.summary) : "";
           return (
             <motion.div
               key={`${item.contId}-${index}`}
