@@ -392,7 +392,7 @@ export default function NewsDetailView() {
       addReadingSession(news.contId, durationMs);
       const reward = awardNewsReadingPoints(news.contId, news.name, durationMs);
       if (reward.granted && document.visibilityState === "visible") {
-        showToast(`+${reward.points} points · News read.`, "success");
+        showToast(`+${reward.points} points News read.`, "success");
       }
       sessionStart = 0;
     };

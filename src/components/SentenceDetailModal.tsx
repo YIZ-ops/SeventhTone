@@ -109,8 +109,8 @@ export default function SentenceDetailModal({ sentence, onClose, onDelete, onSav
                   <ImageIcon size={18} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">生成书摘图片</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">把这段高亮内容快速生成成精致卡片，方便保存或分享。</p>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Generate quote card</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">Quickly generate a beautiful quote card from this highlighted text for easy saving or sharing.</p>
                 </div>
               </div>
             </button>
