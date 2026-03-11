@@ -29,6 +29,7 @@ import { Capacitor } from "@capacitor/core";
 import { App as CapacitorApp } from "@capacitor/app";
 import TextSelectionHighlight from "../plugins/textSelectionHighlight";
 import { useTheme } from "../contexts/ThemeContext";
+import { getNewsDetailCache, setNewsDetailCache } from "../store/newsDetailCache";
 // import { awardNewsReadingPoints } from "../api/points";
 import { useBottomToast } from "../utils/toast";
 
@@ -248,6 +249,15 @@ export default function NewsDetailView() {
     const bookmarks = getBookmarks();
     setIsBookmarked(bookmarks.some((b) => b.news.contId === Number(id)));
 
+    const contId = Number(id);
+    const cachedDetail = Number.isFinite(contId) ? getNewsDetailCache(contId) : null;
+    if (cachedDetail) {
+      setNews(cachedDetail);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
     const fetchDetail = async () => {
       setLoading(true);
       setError(null);
@@ -260,6 +270,9 @@ export default function NewsDetailView() {
 
         if (detailData) {
           setNews(detailData);
+          if (Number.isFinite(Number(detailData.contId))) {
+            setNewsDetailCache(Number(detailData.contId), detailData);
+          }
           addHistory({
             contId: detailData.contId,
             nodeId: detailData.nodeId,

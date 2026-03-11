@@ -2,6 +2,7 @@ import { request } from "../utils/request";
 import { Capacitor, CapacitorHttp } from "@capacitor/core";
 import { NewsListResponse, NewsItem, Bookmark, Sentence, WebNode, Category, SearchResponse, VocabWord } from "../types";
 import { formatQuoteText } from "../utils/quoteText";
+import { getCategoriesCache, setCategoriesCache } from "../store/categoriesCache";
 
 const BASE_URL = "https://api.sixthtone.com";
 const SIXTH_TONE_WEB_BASE = "https://www.sixthtone.com";
@@ -169,14 +170,14 @@ export const getWebAllNodes = async () => {
   return res;
 };
 
-let categoriesCache: Category[] | null = null;
-
 /** 获取分类列表（映射为前端 Category，带缓存） */
 export const getCategories = async (): Promise<Category[]> => {
-  if (categoriesCache) return categoriesCache;
+  const cached = getCategoriesCache();
+  if (cached) return cached;
+
   const res = await getWebAllNodes();
   const list = res.data.nodeList ?? [];
-  categoriesCache = list
+  const categories = list
     .filter((node) => node.nodeType === 0 && node.name !== "DAILY TONES")
     .map((node) => ({
       id: String(node.nodeId),
@@ -185,7 +186,8 @@ export const getCategories = async (): Promise<Category[]> => {
       pic: node.pic,
       tonePic: node.tonePic,
     }));
-  return categoriesCache;
+  setCategoriesCache(categories);
+  return categories;
 };
 
 export interface SearchNewsParams {
@@ -359,17 +361,6 @@ export const deleteBookmarkCategory = (category: string) => {
   }
 };
 
-/** @deprecated 保留兼容，建议改用 deleteBookmarkCategory */
-export const reassignBookmarkCategory = (fromCategory: string, defaultCategory = "") => {
-  try {
-    const bookmarks = getBookmarks();
-    const updated = bookmarks.map((b) => (b.category === fromCategory ? { ...b, category: defaultCategory } : b));
-    localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(updated));
-  } catch (e) {
-    console.error("Failed to reassign bookmark category", e);
-  }
-};
-
 // Local storage for sentences
 const HIGHLIGHTS_KEY = "sixthtone_sentences";
 
@@ -469,20 +460,6 @@ export const deleteSentenceCategory = (category: string) => {
       .forEach((h) => removeSentence(h.contId, h.id));
   } catch (e) {
     console.error("Failed to delete sentence category", e);
-  }
-};
-
-/** @deprecated 保留兼容 */
-export const reassignSentenceCategory = (fromCategory: string, defaultCategory = "") => {
-  try {
-    const allStr = localStorage.getItem(HIGHLIGHTS_KEY);
-    const all = allStr ? JSON.parse(allStr) : {};
-    for (const contId of Object.keys(all)) {
-      all[contId] = (all[contId] as Sentence[]).map((h) => ((h.category || "Sentences") === fromCategory ? { ...h, category: defaultCategory } : h));
-    }
-    localStorage.setItem(HIGHLIGHTS_KEY, JSON.stringify(all));
-  } catch (e) {
-    console.error("Failed to reassign sentence category", e);
   }
 };
 
