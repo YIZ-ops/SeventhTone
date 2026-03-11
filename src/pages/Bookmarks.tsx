@@ -96,7 +96,6 @@ function SwipeRow({ onDelete, children }: { onDelete: () => void; children: Reac
           className="flex flex-col items-center gap-0.5 text-white w-full h-full justify-center"
         >
           <Trash2 size={18} />
-          <span className="text-[10px] font-bold">Remove</span>
         </button>
       </div>
       {/* 条目内容（可左滑） */}
@@ -383,8 +382,8 @@ export default function Bookmarks() {
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gray-50 dark:bg-slate-700 mb-6">
             <BookmarkIcon size={32} className="text-gray-200 dark:text-gray-500" />
           </div>
-          <h2 className="text-2xl font-serif font-bold text-gray-900 dark:text-gray-100 mb-2">No saved news</h2>
-          <p className="text-gray-400 dark:text-gray-500 text-sm max-w-xs mx-auto">Click the bookmark button on an news to save it here.</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">No collected news</h2>
+          <p className="text-gray-400 dark:text-gray-500 text-sm max-w-xs mx-auto">Click the bookmark button on an news to collect it here.</p>
         </div>
       )}
       {isEmpty && tab === "sentences" && (
@@ -392,8 +391,8 @@ export default function Bookmarks() {
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gray-50 dark:bg-slate-700 mb-6">
             <Highlighter size={32} className="text-gray-200 dark:text-gray-500" />
           </div>
-          <h2 className="text-2xl font-serif font-bold text-gray-900 dark:text-gray-100 mb-2">No sentences</h2>
-          <p className="text-gray-400 dark:text-gray-500 text-sm max-w-xs mx-auto">Select text in an news and click "Sentence" to save it here.</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">No collected sentences</h2>
+          <p className="text-gray-400 dark:text-gray-500 text-sm max-w-xs mx-auto">Select text in an news and click "Sentence" to collect it here.</p>
         </div>
       )}
       {isEmpty && tab === "vocabulary" && (
@@ -401,9 +400,9 @@ export default function Bookmarks() {
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gray-50 dark:bg-slate-700 mb-6">
             <BookOpen size={32} className="text-gray-200 dark:text-gray-500" />
           </div>
-          <h2 className="text-2xl font-serif font-bold text-gray-900 dark:text-gray-100 mb-2">Vocabulary is empty</h2>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">No collected words</h2>
           <p className="text-gray-400 dark:text-gray-500 text-sm max-w-xs mx-auto">
-            Tap a word in an news to view its definition, and click <span className="text-brand">+</span> to add it here.
+            Tap a word in an news to view its definition, and click <span className="text-brand">+</span> to collect it here.
           </p>
         </div>
       )}

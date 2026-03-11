@@ -198,7 +198,7 @@ export function awardPracticeAnswerPoints(params: {
     articleId,
     articleTitle,
     questionId,
-    referenceKey: `practice-answer:${questionId}`,
+    referenceKey: `practice-answer:${articleId}:${questionId}`,
   });
 }
 

@@ -274,9 +274,7 @@ export default function NewsList() {
 
         <div className="max-w-4xl mx-auto px-4 mt-8">
           {category.description && (
-            <p className="text-gray-500 dark:text-gray-400 leading-relaxed max-w-2xl text-sm md:text-base italic font-serif mb-10">
-              {category.description}
-            </p>
+            <p className="text-gray-500 dark:text-gray-400 leading-relaxed max-w-2xl text-sm md:text-base italic mb-10">{category.description}</p>
           )}
 
           {error && (

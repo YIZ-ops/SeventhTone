@@ -153,22 +153,22 @@ export default function My() {
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <div className="rounded-2xl border border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
             <p className="text-[11px] uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 font-bold mb-3">Today</p>
-            <p className="text-3xl font-serif font-bold text-gray-900 dark:text-gray-100">{stats.todayNewsCount}</p>
+            <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{stats.todayNewsCount}</p>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">news read</p>
           </div>
           <div className="rounded-2xl border border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
             <p className="text-[11px] uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 font-bold mb-3">Total</p>
-            <p className="text-3xl font-serif font-bold text-gray-900 dark:text-gray-100">{stats.totalNewsCount}</p>
+            <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{stats.totalNewsCount}</p>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">news read</p>
           </div>
           <div className="rounded-2xl border border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
             <p className="text-[11px] uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 font-bold mb-3">Today</p>
-            <p className="text-3xl font-serif font-bold text-gray-900 dark:text-gray-100">{formatDuration(stats.todayDurationMs)}</p>
+            <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{formatDuration(stats.todayDurationMs)}</p>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">reading time</p>
           </div>
           <div className="rounded-2xl border border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
             <p className="text-[11px] uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 font-bold mb-3">All Time</p>
-            <p className="text-3xl font-serif font-bold text-gray-900 dark:text-gray-100">{formatDuration(stats.totalDurationMs)}</p>
+            <p className="text-3xl font-bold text-gray-900 dark:text-gray-100">{formatDuration(stats.totalDurationMs)}</p>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">reading time</p>
           </div>
         </div>
@@ -177,7 +177,7 @@ export default function My() {
           <div className="flex items-start justify-between gap-4 mb-6">
             <div>
               <p className="text-[11px] uppercase tracking-[0.2em] text-brand dark:text-emerald-400 font-bold mb-2">Reading Streak</p>
-              <h2 className="text-2xl font-serif font-bold text-gray-900 dark:text-gray-100">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 {stats.currentStreak} day{stats.currentStreak === 1 ? "" : "s"}
               </h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Keep your streak active by opening at least one news each day.</p>
@@ -224,7 +224,7 @@ export default function My() {
                   {pointsSummary.totalPoints} pts
                 </span>
               </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Track rewards from practice, and view your points history.</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Track rewards from practice and view your points history.</p>
             </div>
             <ChevronRight
               size={18}

@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;500;700&family=Playfair+Display:wght@400;700&display=swap");
+
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
@@ -49,6 +51,12 @@
 body {
   -webkit-tap-sentence-color: transparent;
   background-color: #fcfcfc;
+}
+
+html,
+body,
+#root {
+  font-family: var(--font-sans);
 }
 
 .dark body {

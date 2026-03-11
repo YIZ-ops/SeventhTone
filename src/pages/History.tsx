@@ -32,7 +32,7 @@ export default function History() {
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gray-50 dark:bg-slate-700 mb-6">
             <Clock size={32} className="text-gray-200 dark:text-gray-500" />
           </div>
-          <h2 className="text-2xl font-serif font-bold text-gray-900 dark:text-gray-100 mb-2">No reading today</h2>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">No reading today</h2>
           <p className="text-gray-400 dark:text-gray-500 text-sm max-w-xs mx-auto">news you read today will appear here.</p>
         </div>
       ) : (

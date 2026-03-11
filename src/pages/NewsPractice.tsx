@@ -211,7 +211,7 @@ export default function NewsPractice() {
   const notifyPointsAward = useCallback(
     (result: PointsAwardResult) => {
       if (!result.granted) return;
-      showToast(`+${result.points} points ${result.transaction?.title ?? "Reward earned"}.`, "success");
+      showToast(`+${result.points} points ${result.transaction?.title ?? "Reward earned"}`, "success");
     },
     [showToast],
   );
@@ -797,7 +797,7 @@ export default function NewsPractice() {
 
         {/* Sentence card */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-slate-700">
-          <p className="text-base text-gray-900 dark:text-gray-100 leading-relaxed font-serif">
+          <p className="text-base text-gray-900 dark:text-gray-100 leading-relaxed">
             {q.sentence.split("___").map((part, i, arr) => (
               <span key={i}>
                 {part}
@@ -865,7 +865,6 @@ export default function NewsPractice() {
             >
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">Explanation</span>
-                <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">{correct ? "Correct" : "Try again"}</span>
               </div>
               <p
                 className={`text-sm font-semibold mb-1 ${correct ? "text-emerald-700 dark:text-emerald-400" : "text-amber-700 dark:text-amber-400"}`}
@@ -969,9 +968,7 @@ export default function NewsPractice() {
 
         {/* Source text */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-slate-700">
-          <p
-            className={`text-base leading-relaxed ${isEn2Cn ? "font-serif italic text-gray-800 dark:text-gray-100" : "text-gray-800 dark:text-gray-100"}`}
-          >
+          <p className={`text-base leading-relaxed ${isEn2Cn ? "italic text-gray-800 dark:text-gray-100" : "text-gray-800 dark:text-gray-100"}`}>
             {q.sourceText}
           </p>
         </div>

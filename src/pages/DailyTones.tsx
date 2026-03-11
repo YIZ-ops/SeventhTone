@@ -400,7 +400,7 @@ export default function DailyTones() {
                     {items[activeSlide]?.name}
                   </h2>
                   {items[activeSlide]?.summary && (
-                    <p className="text-white/70 text-sm md:text-base leading-relaxed font-serif italic">{items[activeSlide].summary}</p>
+                    <p className="text-white/70 text-sm md:text-base leading-relaxed italic">{items[activeSlide].summary}</p>
                   )}
                 </Link>
               </motion.div>

@@ -149,7 +149,7 @@ export default function SettingsPage() {
       <div className="space-y-6">
         <section className="rounded-2xl border border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
           <p className="text-[11px] uppercase tracking-[0.2em] text-brand dark:text-emerald-400 font-bold mb-2">Appearance</p>
-          <h2 className="text-2xl font-serif font-bold text-gray-900 dark:text-gray-100">Theme</h2>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Theme</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-5">Switch between light and dark reading environments.</p>
           <div className="flex flex-col sm:flex-row gap-3">
             <button
@@ -165,7 +165,7 @@ export default function SettingsPage() {
 
         <section className="rounded-2xl border border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
           <p className="text-[11px] uppercase tracking-[0.2em] text-brand dark:text-emerald-400 font-bold mb-2">Typography</p>
-          <h2 className="text-2xl font-serif font-bold text-gray-900 dark:text-gray-100">News Font Size</h2>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">News Font Size</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-5">Tune news font size.</p>
           <div className="grid grid-cols-3 gap-3">
             {fontOptions.map((option) => (
@@ -179,7 +179,7 @@ export default function SettingsPage() {
                     : "border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/60 text-gray-600 dark:text-gray-300"
                 }`}
               >
-                <p className={`font-serif font-bold ${option.previewClassName}`}>A</p>
+                <p className={`font-bold ${option.previewClassName}`}>A</p>
                 <p className="text-sm mt-2 font-semibold">{option.label}</p>
               </button>
             ))}
@@ -188,7 +188,7 @@ export default function SettingsPage() {
 
         <section className="rounded-2xl border border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
           <p className="text-[11px] uppercase tracking-[0.2em] text-brand dark:text-emerald-400 font-bold mb-2">Backup</p>
-          <h2 className="text-2xl font-serif font-bold text-gray-900 dark:text-gray-100">Local Data Export and Import</h2>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Local Data Export and Import</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-5">
             Create a local backup file or restore one when you switch devices or reinstall. Points data is included automatically.
           </p>

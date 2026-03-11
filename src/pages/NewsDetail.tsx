@@ -17,24 +17,20 @@ import {
 } from "../api/api";
 import { NewsDetail, Sentence } from "../types";
 import DOMPurify from "dompurify";
-import html2canvas from "html2canvas-pro";
 import Mark from "mark.js";
 import { ChevronLeft, ChevronRight, Loader2, Clock, Bookmark, BookmarkCheck, BookmarkPlus, X, Share2, Volume2, Brain } from "lucide-react";
 import BookmarkModal from "../components/BookmarkModal";
 import SentenceSaveModal from "../components/SentenceSaveModal";
 import SentenceDetailModal from "../components/SentenceDetailModal";
+import ShareCardModal from "../components/ShareCardModal";
 import { request } from "../utils/request";
 import { addReadingSession } from "../api/localData";
 import { Capacitor } from "@capacitor/core";
 import { App as CapacitorApp } from "@capacitor/app";
-import { Directory, Filesystem } from "@capacitor/filesystem";
-import { Share } from "@capacitor/share";
 import TextSelectionHighlight from "../plugins/textSelectionHighlight";
 import { useTheme } from "../contexts/ThemeContext";
 // import { awardNewsReadingPoints } from "../api/points";
 import { useBottomToast } from "../utils/toast";
-
-const SIXTH_TONE_WEB = "https://www.sixthtone.com";
 
 interface DictPhrase {
   p_cn: string;
@@ -85,95 +81,15 @@ interface DictApiResponse {
 
 const DICT_API_BASE = "https://v2.xxapi.cn/api/englishwords";
 
-/**
- * Explicit font stack for the share card.
- * html2canvas resolves fonts at render-time; without a declared family it falls
- * back to its own default which differs across platforms and causes glyph-width
- * mismatches ("@" gets extra gaps, "." gets swallowed, etc.).
- */
-const SHARE_FONT = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
-
-/**
- * Minimal HTML cleaning for the share card.
- *
- * Key principles:
- *  1. Keep the original HTML structure – the browser handles word spacing.
- *  2. Use **px** for font-size AND line-height (never rem / unitless multiplier)
- *     so html2canvas calculates identical metrics regardless of root font-size.
- *  3. Declare font-family on every element so html2canvas doesn't fall back to
- *     a mismatched default font stack.
- */
-function buildShareContentHtml(html: string): string {
-  const temp = document.createElement("div");
-  temp.innerHTML = html;
-
-  // Remove non-text elements
-  temp
-    .querySelectorAll("img, figure, figcaption, video, audio, iframe, table, script, style, noscript, svg, picture, source")
-    .forEach((n) => n.remove());
-
-  // Strip class/style so Tailwind / dark-mode classes don't leak in
-  temp.querySelectorAll("*").forEach((el) => {
-    el.removeAttribute("class");
-    el.removeAttribute("style");
-  });
-
-  // Block-level styles (font-size + line-height in px, explicit font-family)
-  const font = `font-family:${SHARE_FONT};`;
-  const pStyle = `${font}font-size:22px;line-height:39px;color:#1e293b;margin:18px 0 0;letter-spacing:0px;`;
-  temp.querySelectorAll("p").forEach((el) => el.setAttribute("style", pStyle));
-  temp
-    .querySelectorAll("h2")
-    .forEach((el) => el.setAttribute("style", `${font}font-size:28px;line-height:40px;font-weight:700;color:#1e293b;margin:18px 0 0;`));
-  temp
-    .querySelectorAll("h3, h4")
-    .forEach((el) => el.setAttribute("style", `${font}font-size:24px;line-height:35px;font-weight:700;color:#1e293b;margin:18px 0 0;`));
-  temp
-    .querySelectorAll("blockquote")
-    .forEach((el) =>
-      el.setAttribute(
-        "style",
-        `${font}font-size:22px;line-height:39px;color:#334155;margin:18px 0 0;padding-left:18px;border-left:4px solid rgba(16,185,129,0.28);`,
-      ),
-    );
-  temp.querySelectorAll("ul, ol").forEach((el) => el.setAttribute("style", `${font}margin:18px 0 0;padding-left:24px;`));
-  temp.querySelectorAll("li").forEach((el) => el.setAttribute("style", `${font}font-size:22px;line-height:39px;color:#1e293b;`));
-
-  // Inline elements – inherit size/height, but set font-family explicitly
-  temp.querySelectorAll("a").forEach((el) => el.setAttribute("style", `${font}color:#059669;text-decoration:none;`));
-  temp.querySelectorAll("strong, b").forEach((el) => el.setAttribute("style", `${font}font-weight:700;`));
-  temp.querySelectorAll("em, i").forEach((el) => el.setAttribute("style", `${font}font-style:italic;`));
-  temp.querySelectorAll("span").forEach((el) => el.setAttribute("style", `${font}`));
-
-  // Zero-out margin on the very first visible block
-  const first = temp.querySelector("p, h2, h3, h4, blockquote, ul, ol");
-  if (first) {
-    const s = first.getAttribute("style") || "";
-    first.setAttribute("style", s.replace(/margin:\s*18px 0 0/, "margin:0"));
-  }
-
-  return temp.innerHTML;
-}
-
 function normalizeTextWithMap(text: string) {
   let normalized = "";
   const normalizedToRaw: number[] = [];
-  let pendingSpace = false;
 
   for (let index = 0; index < text.length; index += 1) {
     const char = text[index];
 
     if (/\s/.test(char)) {
-      if (normalized.length > 0) {
-        pendingSpace = true;
-      }
       continue;
-    }
-
-    if (pendingSpace) {
-      normalized += " ";
-      normalizedToRaw.push(index);
-      pendingSpace = false;
     }
 
     normalized += char;
@@ -254,7 +170,7 @@ export default function NewsDetailView() {
 
   const [scrollProgress, setScrollProgress] = useState(0);
   const [showTopBar, setShowTopBar] = useState(false);
-  const [isSharing, setIsSharing] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   const [sentences, setSentences] = useState<Sentence[]>([]);
   // activeSentence is set directly in handleMarkClick (not via an intermediate
@@ -266,7 +182,6 @@ export default function NewsDetailView() {
   const [pendingSentenceText, setPendingSentenceText] = useState<string | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const dictAudioRef = useRef<HTMLAudioElement>(null);
-  const shareCardRef = useRef<HTMLDivElement>(null);
 
   // Dictionary lookup popup (click word to show definition) declared early so useEffects below can reference it
   const [dictPopup, setDictPopup] = useState<{ x: number; y: number; word: string } | null>(null);
@@ -546,64 +461,10 @@ export default function NewsDetailView() {
     [news],
   );
 
-  const handleShare = useCallback(async () => {
-    if (!news || !shareCardRef.current || isSharing) return;
-    const authorLabel = news.authorList?.map((a) => a.name).join(", ") || "Seventh Tone";
-    const fileName = `seventh-tone-news-${news.contId}.jpg`;
-
-    try {
-      setIsSharing(true);
-      const canvas = await html2canvas(shareCardRef.current, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: "#f8fafc",
-        logging: false,
-      });
-
-      if (Capacitor.isNativePlatform()) {
-        const base64 = canvas.toDataURL("image/jpeg", 0.95).split(",")[1];
-        const result = await Filesystem.writeFile({
-          path: fileName,
-          data: base64,
-          directory: Directory.Cache,
-        });
-
-        await Share.share({
-          title: news.name,
-          text: `${news.name} · ${authorLabel}`,
-          files: [result.uri],
-          dialogTitle: "Share news image",
-        });
-      } else {
-        const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob((value) => resolve(value), "image/jpeg", 0.95));
-        if (!blob) throw new Error("Failed to create image blob.");
-
-        const file = new File([blob], fileName, { type: "image/jpeg" });
-        if (typeof navigator !== "undefined" && navigator.canShare?.({ files: [file] })) {
-          await navigator.share({
-            files: [file],
-            title: news.name,
-            text: `${news.name} · ${authorLabel}`,
-          });
-        } else {
-          const objectUrl = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = objectUrl;
-          link.download = fileName;
-          link.style.display = "none";
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          window.setTimeout(() => URL.revokeObjectURL(objectUrl), 3000);
-        }
-      }
-    } catch {
-      // 用户取消或出错，静默忽略
-    } finally {
-      setIsSharing(false);
-    }
-  }, [news, isSharing]);
+  const handleShare = useCallback(() => {
+    if (!news) return;
+    setShowShareModal(true);
+  }, [news]);
 
   const toggleBookmark = () => {
     if (isBookmarked && news) {
@@ -670,11 +531,6 @@ export default function NewsDetailView() {
     }
     return tmp.innerHTML;
   }, [sanitizedContent, sentences]);
-
-  const shareContentHtml = useMemo(() => {
-    if (!sanitizedContent) return "";
-    return buildShareContentHtml(sanitizedContent);
-  }, [sanitizedContent]);
 
   const handleMarkClick = useCallback(
     (e: MouseEvent<HTMLElement>) => {
@@ -828,7 +684,7 @@ export default function NewsDetailView() {
               }`}
               aria-label="Share news"
             >
-              {isSharing ? <Loader2 size={20} className="animate-spin" /> : <Share2 size={20} />}
+              <Share2 size={20} />
             </button>
             <button
               onClick={toggleBookmark}
@@ -876,7 +732,7 @@ export default function NewsDetailView() {
               </h1>
 
               <p
-                className={`${newsScaleClasses[fontScale].summary} text-gray-600 dark:text-gray-500 font-serif italic mb-8 leading-relaxed cursor-text`}
+                className={`${newsScaleClasses[fontScale].summary} text-gray-600 dark:text-gray-500 italic mb-8 leading-relaxed cursor-text`}
                 onDoubleClick={(e) => {
                   if (!(e.target as HTMLElement).closest("a")) handleContentDblClick(e);
                 }}
@@ -910,7 +766,7 @@ export default function NewsDetailView() {
             {/* Content */}
             <div
               ref={contentRef}
-              className={`prose ${newsScaleClasses[fontScale].prose} prose-emerald max-w-none overflow-x-hidden break-words prose-p:font-serif prose-p:leading-relaxed prose-p:text-gray-800 dark:prose-p:text-gray-200 prose-a:text-emerald-600 dark:prose-a:text-emerald-400 prose-img:rounded-xl prose-img:max-w-full prose-img:h-auto prose-pre:max-w-full prose-pre:overflow-x-auto prose-table:block prose-table:max-w-full prose-table:overflow-x-auto [&_iframe]:max-w-full [&_video]:max-w-full [&_svg]:max-w-full [&_*]:break-words select-text`}
+              className={`prose ${newsScaleClasses[fontScale].prose} prose-emerald max-w-none overflow-x-hidden break-words prose-p:leading-relaxed prose-p:text-gray-800 dark:prose-p:text-gray-200 prose-a:text-emerald-600 dark:prose-a:text-emerald-400 prose-img:rounded-xl prose-img:max-w-full prose-img:h-auto prose-pre:max-w-full prose-pre:overflow-x-auto prose-table:block prose-table:max-w-full prose-table:overflow-x-auto [&_iframe]:max-w-full [&_video]:max-w-full [&_svg]:max-w-full [&_*]:break-words select-text`}
               dangerouslySetInnerHTML={{ __html: highlightedContent }}
               onClick={handleMarkClick}
               onDoubleClick={handleContentDblClick}
@@ -945,14 +801,6 @@ export default function NewsDetailView() {
                       <p className="mt-2 text-[13px] sm:text-[14px] text-gray-700 dark:text-gray-400">
                         Short AI exercises built from this article to lock in vocabulary and key points.
                       </p>
-                      <div className="mt-3 flex flex-wrap justify-center gap-2 text-[12px] text-gray-700 dark:text-gray-400">
-                        <span className="px-2.5 py-1 rounded-full bg-white/90 ring-1 ring-emerald-200 dark:bg-slate-800/70 dark:ring-emerald-500/30">
-                          Vocabulary boost
-                        </span>
-                        <span className="px-2.5 py-1 rounded-full bg-white/90 ring-1 ring-emerald-200 dark:bg-slate-800/70 dark:ring-emerald-500/30">
-                          Key points check
-                        </span>
-                      </div>
                     </div>
                   </div>
                   <div className="flex items-center justify-center w-full sm:w-auto gap-3">
@@ -1179,110 +1027,7 @@ export default function NewsDetailView() {
         />
       )}
 
-      {news && (
-        <div
-          aria-hidden="true"
-          style={{
-            position: "fixed",
-            left: "-10000px",
-            top: 0,
-            width: "720px",
-            pointerEvents: "none",
-            zIndex: -1,
-          }}
-        >
-          <div
-            ref={shareCardRef}
-            style={{
-              background: "linear-gradient(180deg, #f8fafc 0%, #ffffff 100%)",
-              fontFamily: SHARE_FONT,
-              color: "#0f172a",
-              borderRadius: "32px",
-              overflow: "hidden",
-              boxShadow: "0 24px 80px rgba(15, 23, 42, 0.16)",
-              border: "1px solid rgba(148, 163, 184, 0.18)",
-            }}
-          >
-            <div style={{ padding: "32px 40px 36px" }}>
-              <div
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  padding: "8px 14px",
-                  borderRadius: "999px",
-                  backgroundColor: "rgba(16, 185, 129, 0.1)",
-                  color: "#047857",
-                  fontFamily: SHARE_FONT,
-                  fontSize: "13px",
-                  lineHeight: "20px",
-                  fontWeight: 700,
-                  letterSpacing: "0.16em",
-                  textTransform: "uppercase",
-                }}
-              >
-                <span style={{ width: "8px", height: "8px", borderRadius: "999px", backgroundColor: "#10b981" }} />
-                Seventh Tone
-              </div>
-
-              <h1 style={{ fontFamily: SHARE_FONT, fontSize: "42px", lineHeight: "50px", fontWeight: 700, margin: "20px 0 16px" }}>{news.name}</h1>
-
-              <div
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: "12px",
-                  color: "#475569",
-                  fontFamily: SHARE_FONT,
-                  fontSize: "18px",
-                  lineHeight: "28px",
-                  marginBottom: "20px",
-                }}
-              >
-                <span>{news.authorList?.map((a) => a.name).join(", ") || "Seventh Tone"}</span>
-                <span>•</span>
-                <span>{news.pubTime}</span>
-              </div>
-
-              <p style={{ fontFamily: SHARE_FONT, fontSize: "24px", lineHeight: "41px", color: "#334155", margin: 0 }}>{news.summary}</p>
-
-              {shareContentHtml && (
-                <div
-                  style={{
-                    marginTop: "28px",
-                    padding: "24px 26px",
-                    borderRadius: "24px",
-                    backgroundColor: "#f8fafc",
-                    border: "1px solid rgba(148, 163, 184, 0.18)",
-                  }}
-                  dangerouslySetInnerHTML={{ __html: shareContentHtml }}
-                />
-              )}
-
-              <div
-                style={{
-                  marginTop: "30px",
-                  paddingTop: "22px",
-                  borderTop: "1px solid rgba(148, 163, 184, 0.2)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: "16px",
-                  fontFamily: SHARE_FONT,
-                }}
-              >
-                <div>
-                  <div style={{ fontSize: "18px", lineHeight: "26px", fontWeight: 700, color: "#0f172a" }}>Seventh Tone</div>
-                  <div style={{ fontSize: "16px", lineHeight: "24px", color: "#64748b", marginTop: "6px" }}>Read China with context</div>
-                </div>
-                <div
-                  style={{ fontSize: "16px", lineHeight: "24px", color: "#64748b", textAlign: "right" }}
-                >{`${SIXTH_TONE_WEB}/news/${news.contId}`}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {showShareModal && news && <ShareCardModal news={news} onClose={() => setShowShareModal(false)} />}
     </div>
   );
 }

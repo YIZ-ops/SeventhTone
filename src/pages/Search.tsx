@@ -201,7 +201,7 @@ export default function Search() {
                       </span>
                     )}
                     <h3
-                      className="text-base font-serif font-bold text-gray-900 dark:text-gray-100 leading-snug group-hover:text-brand dark:group-hover:text-emerald-400 transition-colors [&_font]:text-brand"
+                      className="text-base font-bold text-gray-900 dark:text-gray-100 leading-snug group-hover:text-brand dark:group-hover:text-emerald-400 transition-colors [&_font]:text-brand"
                       dangerouslySetInnerHTML={{ __html: safeTitle }}
                     />
                     {(item.pubTime || item.pubTimeLong) && (
@@ -213,7 +213,7 @@ export default function Search() {
                 {safeSummary && (
                   <div className="px-4 pb-4 pt-0">
                     <p
-                      className="text-gray-500 dark:text-gray-400 leading-relaxed line-clamp-2 [&_font]:text-brand dark:[&_font]:text-emerald-400 text-sm md:text-base italic font-serif"
+                      className="text-gray-500 dark:text-gray-400 leading-relaxed line-clamp-2 [&_font]:text-brand dark:[&_font]:text-emerald-400 text-sm md:text-base italic"
                       dangerouslySetInnerHTML={{ __html: safeSummary }}
                     />
                   </div>

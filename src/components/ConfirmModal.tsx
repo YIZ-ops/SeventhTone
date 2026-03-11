@@ -56,7 +56,7 @@ export default function ConfirmModal({ open, onClose, onConfirm, title, message,
               <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gray-100 dark:bg-slate-700 mb-5">
                 <AlertCircle size={28} className={variant === "danger" ? "text-red-500" : "text-gray-600 dark:text-gray-400"} />
               </div>
-              <h3 className="text-lg font-serif font-bold text-gray-900 dark:text-gray-100 mb-2">{title}</h3>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">{title}</h3>
               <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{message}</p>
             </div>
             <div className="flex border-t border-gray-100 dark:border-slate-600">

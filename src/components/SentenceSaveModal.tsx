@@ -42,6 +42,10 @@ export default function SentenceSaveModal({ selectedText, newsTitle, onClose, on
     onClose();
   };
 
+  if (showQuoteModal) {
+    return <QuoteModal text={selectedText} newsTitle={newsTitle} author="Seventh Tone" onClose={() => setShowQuoteModal(false)} />;
+  }
+
   return (
     <div
       data-popup
@@ -56,12 +60,22 @@ export default function SentenceSaveModal({ selectedText, newsTitle, onClose, on
       >
         <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-slate-600">
           <h3 className="font-semibold text-gray-900 dark:text-gray-100">Save Sentence</h3>
-          <button
-            onClick={onClose}
-            className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-500 rounded-full hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors"
-          >
-            <X size={20} />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setShowQuoteModal(true)}
+              className="p-2 text-gray-400 hover:text-brand dark:hover:text-emerald-400 rounded-full hover:bg-brand/5 dark:hover:bg-emerald-500/10 transition-colors"
+              aria-label="Generate quote card"
+            >
+              <ImageIcon size={18} />
+            </button>
+            <button
+              onClick={onClose}
+              className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-500 rounded-full hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors"
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
@@ -74,24 +88,6 @@ export default function SentenceSaveModal({ selectedText, newsTitle, onClose, on
               {thought.trim() && <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 italic">{thought.trim()}</p>}
             </div>
           </div>
-
-          <button
-            type="button"
-            onClick={() => setShowQuoteModal(true)}
-            className="group w-full rounded-2xl border border-emerald-100/80 dark:border-emerald-500/20 bg-gradient-to-r from-emerald-50/90 via-white to-white dark:from-emerald-500/10 dark:via-slate-800 dark:to-slate-800 px-4 py-3 text-left shadow-sm hover:shadow-md hover:border-brand/30 dark:hover:border-emerald-400/40 transition-all"
-          >
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white dark:bg-slate-700 text-brand dark:text-emerald-400 shadow-sm ring-1 ring-emerald-100 dark:ring-emerald-500/20">
-                <ImageIcon size={18} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Generate quote card</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-                  Quickly generate a beautiful quote card from this highlighted text for easy saving or sharing.
-                </p>
-              </div>
-            </div>
-          </button>
 
           <div>
             <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1.5">
@@ -176,10 +172,6 @@ export default function SentenceSaveModal({ selectedText, newsTitle, onClose, on
           </div>
         </div>
       </div>
-
-      {showQuoteModal && (
-        <QuoteModal text={formattedQuoteText} newsTitle={newsTitle} author="Seventh Tone" onClose={() => setShowQuoteModal(false)} />
-      )}
     </div>
   );
 }
