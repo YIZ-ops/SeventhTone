@@ -3,6 +3,7 @@ import { X, Pencil, Trash2, Check, Tag, Image as ImageIcon } from "lucide-react"
 import { Sentence } from "../types";
 import { getSentenceCategories } from "../api/api";
 import QuoteModal from "./QuoteModal";
+import { formatQuoteText } from "../utils/quoteText";
 
 interface Props {
   sentence: Sentence;
@@ -21,6 +22,7 @@ export default function SentenceDetailModal({ sentence, onClose, onDelete, onSav
   const [isNewCategory, setIsNewCategory] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showQuoteModal, setShowQuoteModal] = useState(false);
+  const formattedQuoteText = formatQuoteText(sentence.text);
 
   const justOpenedRef = useRef(false);
   useEffect(() => {
@@ -95,7 +97,7 @@ export default function SentenceDetailModal({ sentence, onClose, onDelete, onSav
         <div className="px-4 py-4 space-y-4 max-h-[70vh] overflow-y-auto">
           {/* Quote */}
           <div className="relative pl-4 border-l-2 border-brand/40 dark:border-emerald-500/40">
-            <p className="text-sm text-gray-700 dark:text-gray-200 font-serif italic leading-relaxed line-clamp-4">{sentence.text}</p>
+            <p className="text-sm text-gray-700 dark:text-gray-200 font-serif italic leading-relaxed line-clamp-4">{formattedQuoteText}</p>
           </div>
 
           {!isEditing && (
@@ -110,7 +112,9 @@ export default function SentenceDetailModal({ sentence, onClose, onDelete, onSav
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Generate quote card</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">Quickly generate a beautiful quote card from this highlighted text for easy saving or sharing.</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                    Quickly generate a beautiful quote card from this highlighted text for easy saving or sharing.
+                  </p>
                 </div>
               </div>
             </button>
@@ -272,7 +276,7 @@ export default function SentenceDetailModal({ sentence, onClose, onDelete, onSav
 
       {showQuoteModal && (
         <QuoteModal
-          text={sentence.text}
+          text={formattedQuoteText}
           newsTitle={sentence.newsName || "Unknown news"}
           author="Seventh Tone"
           onClose={() => setShowQuoteModal(false)}

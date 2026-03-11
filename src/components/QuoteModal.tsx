@@ -5,6 +5,7 @@ import { X, Download, Loader2, Check } from "lucide-react";
 import { motion } from "motion/react";
 import { saveImageToAlbum } from "../utils/mediaSave";
 import { useBottomToast } from "../utils/toast";
+import { formatQuoteText } from "../utils/quoteText";
 
 interface QuoteModalProps {
   text: string;
@@ -19,6 +20,7 @@ export default function QuoteModal({ text, newsTitle, author, onClose }: QuoteMo
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const { showToast } = useBottomToast();
+  const formattedText = formatQuoteText(text);
 
   const saveToGallery = async (canvas: HTMLCanvasElement, fileName: string) => {
     const fileBase = fileName.replace(/\.(png|jpg|jpeg)$/i, "");
@@ -136,7 +138,7 @@ export default function QuoteModal({ text, newsTitle, author, onClose }: QuoteMo
                 <span className="text-4xl absolute -top-4 -left-4 font-serif" style={{ color: "rgba(16, 185, 129, 0.2)" }}>
                   &ldquo;
                 </span>
-                {text}
+                {formattedText}
                 <span className="text-4xl absolute -bottom-6 -right-2 font-serif" style={{ color: "rgba(16, 185, 129, 0.2)" }}>
                   &rdquo;
                 </span>

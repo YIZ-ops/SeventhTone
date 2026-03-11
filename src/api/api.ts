@@ -1,6 +1,7 @@
 import { request } from "../utils/request";
 import { Capacitor, CapacitorHttp } from "@capacitor/core";
 import { NewsListResponse, NewsItem, Bookmark, Sentence, WebNode, Category, SearchResponse, VocabWord } from "../types";
+import { formatQuoteText } from "../utils/quoteText";
 
 const BASE_URL = "https://api.sixthtone.com";
 const SIXTH_TONE_WEB_BASE = "https://www.sixthtone.com";
@@ -408,6 +409,7 @@ export const addSentence = (
   thought?: string,
 ) => {
   try {
+    const normalizedText = formatQuoteText(text);
     const allSentencesStr = localStorage.getItem(HIGHLIGHTS_KEY);
     const allSentences = allSentencesStr ? JSON.parse(allSentencesStr) : {};
     const newsSentences: Sentence[] = allSentences[contId] || [];
@@ -419,7 +421,7 @@ export const addSentence = (
     const newSentence: Sentence = {
       id: Math.random().toString(36).substring(2, 9),
       contId,
-      text,
+      text: normalizedText,
       newsName,
       category: category || "Sentences",
       thought: thought?.trim() || undefined,

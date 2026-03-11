@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { X, Plus, Image as ImageIcon } from "lucide-react";
 import { getSentenceCategories } from "../api/api";
 import QuoteModal from "./QuoteModal";
+import { formatQuoteText } from "../utils/quoteText";
 
 interface Props {
   selectedText: string;
@@ -17,6 +18,7 @@ export default function SentenceSaveModal({ selectedText, newsTitle, onClose, on
   const [isNewCategory, setIsNewCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [showQuoteModal, setShowQuoteModal] = useState(false);
+  const formattedQuoteText = formatQuoteText(selectedText);
 
   // Guard: prevent the same tap that opened this modal from immediately closing it
   const justOpenedRef = useRef(false);
@@ -67,7 +69,7 @@ export default function SentenceSaveModal({ selectedText, newsTitle, onClose, on
             <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1.5">Quote</label>
             <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 p-3">
               <p className="text-sm text-gray-700 dark:text-gray-200 font-serif italic line-clamp-4 bg-gray-50 dark:bg-slate-700/50 rounded-lg p-3">
-                &ldquo;{selectedText}&rdquo;
+                &ldquo;{formattedQuoteText}&rdquo;
               </p>
               {thought.trim() && <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 italic">{thought.trim()}</p>}
             </div>
@@ -175,7 +177,9 @@ export default function SentenceSaveModal({ selectedText, newsTitle, onClose, on
         </div>
       </div>
 
-      {showQuoteModal && <QuoteModal text={selectedText} newsTitle={newsTitle} author="Seventh Tone" onClose={() => setShowQuoteModal(false)} />}
+      {showQuoteModal && (
+        <QuoteModal text={formattedQuoteText} newsTitle={newsTitle} author="Seventh Tone" onClose={() => setShowQuoteModal(false)} />
+      )}
     </div>
   );
 }
