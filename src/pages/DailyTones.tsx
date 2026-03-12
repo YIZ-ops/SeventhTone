@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
 import { App as CapacitorApp } from "@capacitor/app";
 import { ChevronLeft, ChevronRight, Download, ImageOff, Loader2, Calendar as CalendarIcon, X } from "lucide-react";
-import { getDailyTonesByDate, getDailyTonesCalendar } from "../api/api";
+import { getDailyTonesByDate, getDailyTonesCalendar } from "../api/dailyTones";
 import { NewsItem } from "../types";
 import { motion, AnimatePresence } from "motion/react";
 import { Media } from "@capacitor-community/media";

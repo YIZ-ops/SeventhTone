@@ -73,6 +73,16 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    document.documentElement.classList.add("hide-scrollbar");
+    document.body.classList.add("hide-scrollbar");
+
+    return () => {
+      document.documentElement.classList.remove("hide-scrollbar");
+      document.body.classList.remove("hide-scrollbar");
+    };
+  }, []);
+
+  useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
     StatusBar.setStyle({ style: theme === "dark" ? Style.Dark : Style.Light }).catch(() => {});
   }, [theme]);

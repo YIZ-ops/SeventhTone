@@ -15,7 +15,7 @@
 
 ## Overview
 
-Seventh Tone News Reader is a cross-platform news reading application built for English learners. It aggregates curated English articles from Sixth Tone and enhances the reading experience with AI-powered exercises, an integrated dictionary, sentence saving, vocabulary tracking, and rich reading analytics — all wrapped in a sleek, mobile-first interface deployable to both web and Android via Capacitor.
+Seventh Tone News Reader is a cross-platform news reading application built for English learners. It aggregates curated English news from Sixth Tone and enhances the reading experience with AI-powered exercises, an integrated dictionary, sentence saving, vocabulary tracking, and rich reading analytics — all wrapped in a sleek, mobile-first interface deployable to both web and Android via Capacitor.
 
 ## Table of Contents
 
@@ -35,7 +35,7 @@ Seventh Tone News Reader is a cross-platform news reading application built for 
 - **Infinite scroll** — Seamless pagination with IntersectionObserver; pull-to-refresh on mobile.
 - **Full-text search** — Real-time keyword search with highlighted results and infinite loading.
 - **Daily Tones** — A full-screen immersive carousel of daily curated picks with calendar-based date navigation.
-- **List caching** — Previously loaded article lists are cached for instant back-navigation.
+- **List caching** — Previously loaded news lists are cached for instant back-navigation.
 
 ### 📖 Immersive Reading
 
@@ -142,13 +142,12 @@ npx cap open android
 
 ## Configuration
 
-| Variable            | Location         | Description                                     |
-| ------------------- | ---------------- | ----------------------------------------------- |
-| `GEMINI_API_KEY`    | `.env`           | API key exposed to the client via Vite `define` |
-| `LLM_CONFIG.apiKey` | `src/api/llm.ts` | SiliconFlow API key for AI exercises            |
-| `ACTIVE_MODEL`      | `src/api/llm.ts` | Active LLM model (default: `Qwen2.5-7B`)        |
-| `BASE_URL`          | `src/api/api.ts` | Sixth Tone API base URL                         |
-| `PORT`              | `server.ts`      | Dev server port (default: `3000`)               |
+| Variable                       | Location         | Description                                     |
+| ------------------------------ | ---------------- | ----------------------------------------------- |
+| `VITE_SILICONFLOW_API_KEY`     | `.env`           | SiliconFlow API key for AI exercises            |
+| `ACTIVE_MODEL`                 | `src/api/llm.ts` | Active LLM model (default: `Qwen2.5-7B`)        |
+| `BASE_URL`                     | `src/api/api.ts` | Sixth Tone API base URL                         |
+| `PORT`                         | `server.ts`      | Dev server port (default: `3000`)               |
 
 ## Project Structure
 

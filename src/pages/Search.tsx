@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
 import { App as CapacitorApp } from "@capacitor/app";
 import DOMPurify from "dompurify";
-import { searchNews } from "../api/api";
+import { searchNews } from "../api/search";
 import type { SearchResultItem } from "../types";
 import { Search as SearchIcon, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";

@@ -33,10 +33,12 @@
     padding-right: env(safe-area-inset-right, 0px);
   }
 
-  .hide-scrollbar::-webkit-scrollbar {
+  .hide-scrollbar::-webkit-scrollbar,
+  .hide-scrollbar *::-webkit-scrollbar {
     display: none;
   }
-  .hide-scrollbar {
+  .hide-scrollbar,
+  .hide-scrollbar * {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }

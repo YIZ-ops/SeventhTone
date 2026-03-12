@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { X, Pencil, Trash2, Check, Tag, Image as ImageIcon } from "lucide-react";
 import { Sentence } from "../types";
-import { getSentenceCategories } from "../api/api";
+import { getSentenceCategories } from "../api/sentences";
 import QuoteModal from "./QuoteModal";
 import { formatQuoteText } from "../utils/quoteText";
 

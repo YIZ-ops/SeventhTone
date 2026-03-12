@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { X, Plus, Image as ImageIcon } from "lucide-react";
-import { getSentenceCategories } from "../api/api";
+import { getSentenceCategories } from "../api/sentences";
 import QuoteModal from "./QuoteModal";
 import { formatQuoteText } from "../utils/quoteText";
 

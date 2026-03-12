@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { X, Plus } from "lucide-react";
-import { getBookmarkCategories } from "../api/api";
+import { getBookmarkCategories } from "../api/bookmarks";
 
 interface Props {
   onClose: () => void;

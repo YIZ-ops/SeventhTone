@@ -2,8 +2,8 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
 import { App as CapacitorApp } from "@capacitor/app";
-import { getHistoryEntriesToday, clearHistory } from "../api/api";
-import type { HistoryEntry } from "../api/api";
+import { getHistoryEntriesToday, clearHistory } from "../api/history";
+import type { HistoryEntry } from "../api/history";
 import { Trash2, Clock } from "lucide-react";
 import { motion } from "motion/react";
 

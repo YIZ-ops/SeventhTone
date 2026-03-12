@@ -2,6 +2,7 @@ package com.example.myapp;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.webkit.WebView;
 
 import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.PluginHandle;
@@ -20,6 +21,14 @@ public class MainActivity extends BridgeActivity {
     protected void onCreate(Bundle savedInstanceState) {
         registerPlugin(TextSelectionHighlightPlugin.class);
         super.onCreate(savedInstanceState);
+
+        // 隐藏 WebView 原生滚动条
+        WebView webView = getBridge().getWebView();
+        if (webView != null) {
+            webView.setVerticalScrollBarEnabled(false);
+            webView.setHorizontalScrollBarEnabled(false);
+        }
+
         // 冷启动时 App 尚未运行，Bridge 在 super.onCreate 之后就绪
         handleProcessTextIntent(getIntent());
     }

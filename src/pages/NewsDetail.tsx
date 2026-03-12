@@ -1,20 +1,10 @@
 ﻿import { useEffect, useState, useMemo, useRef, useCallback, type MouseEvent } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import {
-  getNewsDetail,
-  addHistory,
-  addBookmark,
-  getBookmarks,
-  removeBookmark,
-  getSentences,
-  addSentence,
-  removeSentence,
-  updateSentence,
-  addVocab,
-  isInVocab,
-  getVocab,
-  removeVocab,
-} from "../api/api";
+import { getNewsDetail } from "../api/news";
+import { addHistory } from "../api/history";
+import { addBookmark, getBookmarks, removeBookmark } from "../api/bookmarks";
+import { getSentences, addSentence, removeSentence, updateSentence } from "../api/sentences";
+import { addVocab, isInVocab, getVocab, removeVocab } from "../api/vocab";
 import { NewsDetail, Sentence } from "../types";
 import DOMPurify from "dompurify";
 import Mark from "mark.js";
@@ -654,7 +644,7 @@ export default function NewsDetailView() {
   }
 
   return (
-    <div className={`bg-white dark:bg-slate-900 min-h-screen pb-32 overflow-x-hidden ${news?.headPic ? "pt-0" : "pt-14"}`}>
+    <div className={`bg-white dark:bg-slate-900 min-h-screen pb-safe-or-4 overflow-x-hidden ${news?.headPic ? "pt-0" : "pt-14"}`}>
       {/* Progress Bar */}
       <div className="fixed top-0 left-0 w-full h-1 z-[60] pointer-events-none">
         <div className="h-full bg-brand transition-all duration-300" style={{ width: `${scrollProgress}%` }} />
@@ -812,7 +802,7 @@ export default function NewsDetailView() {
                         Test Your Understanding
                       </h4>
                       <p className="mt-2 text-[13px] sm:text-[14px] text-gray-700 dark:text-gray-400">
-                        Short AI exercises built from this article to lock in vocabulary and key points.
+                        Short AI exercises built from this news to lock in vocabulary and key points.
                       </p>
                     </div>
                   </div>

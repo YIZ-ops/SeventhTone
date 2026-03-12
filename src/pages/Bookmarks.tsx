@@ -2,20 +2,9 @@ import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
 import { App as CapacitorApp } from "@capacitor/app";
-import {
-  getBookmarks,
-  getBookmarkCategories,
-  removeBookmark,
-  getAllSentences,
-  getSentenceCategories,
-  removeSentence,
-  deleteBookmarkCategory,
-  deleteSentenceCategory,
-  renameBookmarkCategory,
-  renameSentenceCategory,
-  getVocab,
-  removeVocab,
-} from "../api/api";
+import { getBookmarks, getBookmarkCategories, removeBookmark, deleteBookmarkCategory, renameBookmarkCategory } from "../api/bookmarks";
+import { getAllSentences, getSentenceCategories, removeSentence, deleteSentenceCategory, renameSentenceCategory } from "../api/sentences";
+import { getVocab, removeVocab } from "../api/vocab";
 import { Bookmark, Sentence, VocabWord } from "../types";
 import { Bookmark as BookmarkIcon, Trash2, Highlighter, Image as ImageIcon, ChevronLeft, BookOpen, Pencil, Check, X } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";

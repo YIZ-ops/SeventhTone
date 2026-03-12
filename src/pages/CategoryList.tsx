@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { getCategories } from "../api/api";
+import { getCategories } from "../api/categories";
 import type { Category } from "../types";
 import { motion } from "motion/react";
 import { ArrowRight, Loader2 } from "lucide-react";

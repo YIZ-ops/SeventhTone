@@ -6,10 +6,8 @@
 // ─── Model registry ──────────────────────────────────────────────────────────
 export const LLM_MODELS = {
   "Qwen2.5-7B": "Qwen/Qwen2.5-7B-Instruct", // fast & cheap — default
-  "Qwen2.5-72B": "Qwen/Qwen2.5-72B-Instruct", // higher quality
+  "Qwen2.5-72B": "Qwen/Qwen2.5-72B-Instruct",
   "DeepSeek-V2.5": "deepseek-ai/DeepSeek-V2.5",
-  "GLM-4-9B": "THUDM/glm-4-9b-chat",
-  "DeepSeek-R1-Distill-Qwen-14B": "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B",
 } as const;
 
 type LLMModelKey = keyof typeof LLM_MODELS;
@@ -19,7 +17,7 @@ const ACTIVE_MODEL: LLMModelKey = "Qwen2.5-7B";
 
 export const LLM_CONFIG = {
   baseURL: "https://api.siliconflow.cn/v1",
-  apiKey: "sk-kkvbnpzoblxglnnxdeokaupyxbxclqwbvtfitzxwvdeifetg",
+  apiKey: import.meta.env.VITE_SILICONFLOW_API_KEY as string | undefined,
   model: LLM_MODELS[ACTIVE_MODEL],
 } as const;
 
@@ -82,6 +80,9 @@ export function prepareNewsText(html: string, maxChars = 2000): string {
 }
 
 async function chatCompletion(messages: { role: "user" | "system"; content: string }[], jsonMode = false): Promise<string> {
+  if (!LLM_CONFIG.apiKey) {
+    throw new Error("Missing VITE_SILICONFLOW_API_KEY");
+  }
   const body: Record<string, unknown> = {
     model: LLM_CONFIG.model,
     messages,
