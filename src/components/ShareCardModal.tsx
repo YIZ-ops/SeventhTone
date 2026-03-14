@@ -9,6 +9,8 @@ import DOMPurify from "dompurify";
 
 const SHARE_FONT = APP_FONT_SANS;
 const SHARE_TITLE_FONT = APP_FONT_SERIF;
+const SHARE_IMAGE_WIDTH = 960;
+const MAX_SHARE_BLOCKS = 14;
 
 // html2canvas 兼容样式 - 使用 px 单位，避免不支持的 CSS 属性
 const CARD_CONTAINER_STYLE: React.CSSProperties = {
@@ -18,7 +20,7 @@ const CARD_CONTAINER_STYLE: React.CSSProperties = {
   borderRadius: "32px",
   overflow: "hidden",
   border: "1px solid rgba(148, 163, 184, 0.18)",
-  width: "720px",
+  width: `${SHARE_IMAGE_WIDTH}px`,
 };
 
 const CARD_CONTENT_STYLE: React.CSSProperties = {
@@ -87,7 +89,6 @@ const CONTENT_BOX_STYLE: React.CSSProperties = {
   border: "1px solid rgba(148, 163, 184, 0.18)",
 };
 
-
 /**
  * 为分享卡片清理 HTML 内容
  * 使用 px 单位并显式声明字体，确保 html2canvas 渲染一致
@@ -153,6 +154,20 @@ function buildShareContentHtml(html: string): string {
     first.setAttribute("style", s.replace(/margin:\s*18px 0 0/, "margin:0"));
   }
 
+  // 超长内容会导致导出图片过高，系统分享时容易二次缩放变糊。
+  // 这里限制正文块数量，超出时追加提示，保证清晰度和稳定性。
+  const blocks = Array.from(temp.querySelectorAll("p, h2, h3, h4, blockquote, ul, ol"));
+  if (blocks.length > MAX_SHARE_BLOCKS) {
+    blocks.slice(MAX_SHARE_BLOCKS).forEach((el) => el.remove());
+    const more = document.createElement("p");
+    more.textContent = "Read more in Seventh Tone app";
+    more.setAttribute(
+      "style",
+      `font-family:${SHARE_FONT};font-size:16px;line-height:24px;color:#64748b;margin:18px 0 0;font-weight:600;letter-spacing:0px;`,
+    );
+    temp.appendChild(more);
+  }
+
   return temp.innerHTML;
 }
 
@@ -204,7 +219,7 @@ export default function ShareCardModal({ news, onClose }: ShareCardModalProps) {
 
   const handleDownload = async () => {
     if (!cardRef.current) return;
-    const fileName = `seventh-tone-news-${news.contId}.jpg`;
+    const fileName = `seventh-tone-news-${news.contId}.png`;
 
     setIsGenerating(true);
     setSaved(false);
@@ -213,8 +228,11 @@ export default function ShareCardModal({ news, onClose }: ShareCardModalProps) {
       await ensureFontsReady();
       await waitForLayoutSettled();
 
+      const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+      const captureScale = Math.min(3, Math.max(2, dpr * 1.8));
+
       const canvas = await html2canvas(cardRef.current, {
-        scale: 2,
+        scale: captureScale,
         useCORS: true,
         allowTaint: true,
         backgroundColor: "#f8fafc",
@@ -222,7 +240,7 @@ export default function ShareCardModal({ news, onClose }: ShareCardModalProps) {
       });
 
       if (Capacitor.isNativePlatform()) {
-        const base64 = canvas.toDataURL("image/jpeg", 0.95).split(",")[1];
+        const base64 = canvas.toDataURL("image/png").split(",")[1];
         const result = await Filesystem.writeFile({
           path: fileName,
           data: base64,
@@ -231,20 +249,20 @@ export default function ShareCardModal({ news, onClose }: ShareCardModalProps) {
 
         await Share.share({
           title: news.name,
-          text: `${news.name} · ${authorLabel}`,
+          text: news.name,
           files: [result.uri],
           dialogTitle: "Share news image",
         });
       } else {
-        const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob((value) => resolve(value), "image/jpeg", 0.95));
-        if (!blob) throw new Error("Failed to create image blob.");
+        const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob((value) => resolve(value), "image/png"));
+        if (!blob) throw new Error("Failed to create image blob");
 
-        const file = new File([blob], fileName, { type: "image/jpeg" });
+        const file = new File([blob], fileName, { type: "image/png" });
         if (typeof navigator !== "undefined" && navigator.canShare?.({ files: [file] })) {
           await navigator.share({
             files: [file],
             title: news.name,
-            text: `${news.name} · ${authorLabel}`,
+            text: news.name,
           });
         } else {
           const objectUrl = URL.createObjectURL(blob);
@@ -260,7 +278,7 @@ export default function ShareCardModal({ news, onClose }: ShareCardModalProps) {
       }
 
       setSaved(true);
-      showToast(Capacitor.isNativePlatform() ? "Shared successfully." : "Download started.", "success");
+      showToast(Capacitor.isNativePlatform() ? "Shared successfully" : "Download started", "success");
       setTimeout(() => {
         setSaved(false);
         onClose();
@@ -309,14 +327,12 @@ export default function ShareCardModal({ news, onClose }: ShareCardModalProps) {
 
             <div style={META_STYLE}>
               <span>{authorLabel}</span>
-              <span>•</span>
               <span>{news.pubTime}</span>
             </div>
 
             <p style={SUMMARY_STYLE}>{news.summary}</p>
 
             {shareContentHtml && <div style={CONTENT_BOX_STYLE} dangerouslySetInnerHTML={{ __html: shareContentHtml }} />}
-
           </div>
         </div>
       </div>

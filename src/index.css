@@ -70,7 +70,12 @@ mark.news-sentence {
   border-radius: 2px;
   cursor: pointer;
   padding: 2px 0;
+  color: inherit;
   transition: background 0.15s ease;
+}
+
+.dark mark.news-sentence {
+  color: #e2e8f0;
 }
 
 mark.news-sentence:hover {

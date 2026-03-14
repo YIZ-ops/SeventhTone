@@ -296,14 +296,19 @@ export default function NewsList() {
             >
               {displayMeta?.title || (isTopicMode ? "Topic" : "")}
             </h1>
+            {displayMeta?.description && (
+              <p
+                className={`mt-3 max-w-2xl text-sm md:text-base italic leading-relaxed ${
+                  displayMeta?.tonePic ? "text-white/90 drop-shadow-sm" : "text-gray-500 dark:text-gray-400"
+                }`}
+              >
+                {displayMeta.description}
+              </p>
+            )}
           </div>
         </div>
 
-        <div className="max-w-4xl mx-auto px-4 mt-8">
-          {displayMeta?.description && (
-            <p className="text-gray-500 dark:text-gray-400 leading-relaxed max-w-2xl text-sm md:text-base italic mb-6">{displayMeta.description}</p>
-          )}
-
+        <div className="max-w-4xl mx-auto px-4 mt-4">
           {error && (
             <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-6 rounded-2xl mb-10 text-sm flex items-center justify-between">
               <span>{error}</span>
