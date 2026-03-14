@@ -1,4 +1,4 @@
-import { useEffect, useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import { ChevronRight, Clock3, Info, Settings, Star } from "lucide-react";
@@ -21,6 +21,10 @@ function formatDuration(ms: number) {
   if (hours === 0) return `${minutes} min`;
   if (minutes === 0) return `${hours} hr`;
   return `${hours} hr ${minutes} min`;
+}
+
+function formatMonthYear(date: Date) {
+  return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 }
 
 function buildCalendar(year: number, month: number, readingDays: string[]) {
@@ -46,22 +50,9 @@ function buildCalendar(year: number, month: number, readingDays: string[]) {
   return cells;
 }
 
-function MyHeader({ title, subtitle }: { title: string; subtitle: string }) {
-  return (
-    <div className="mb-6">
-      <div className="flex items-center gap-2 mb-3">
-        <span className="h-px w-6 bg-brand dark:bg-emerald-400" />
-        <span className="text-[10px] font-extrabold tracking-[0.3em] text-brand dark:text-emerald-400 uppercase">Profile</span>
-      </div>
-      <h1 className="text-4xl md:text-5xl font-serif font-bold text-gray-900 dark:text-gray-100 tracking-tight">{title}</h1>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{subtitle}</p>
-    </div>
-  );
-}
-
 function MySubpage({ children }: { children: ReactNode }) {
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-4xl mx-auto px-4 pt-4 pb-32">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-4xl mx-auto px-4 pt-4 pb-24">
       {children}
     </motion.div>
   );
@@ -72,11 +63,16 @@ export default function My() {
   const location = useLocation();
   const stats = getReadingStats();
   const pointsSummary = getPointsSummary();
-  const calendarDate = useMemo(() => new Date(), []);
+  const [calendarDate, setCalendarDate] = useState(() => new Date());
   const calendarCells = useMemo(
     () => buildCalendar(calendarDate.getFullYear(), calendarDate.getMonth(), stats.readingDays),
     [calendarDate, stats.readingDays],
   );
+  const totalReadingDays = stats.readingDays.length;
+
+  const shiftCalendarMonth = (delta: number) => {
+    setCalendarDate((prev) => new Date(prev.getFullYear(), prev.getMonth() + delta, 1));
+  };
 
   const section: MySection =
     location.pathname === "/me/points"
@@ -146,8 +142,15 @@ export default function My() {
   }
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-4xl mx-auto px-4 py-8 pb-32">
-      <MyHeader title="My" subtitle="Your reading data, shortcuts, and personal learning settings." />
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-4xl mx-auto px-4 py-8 pb-16">
+      {/* Page header */}
+      <div className="mb-6">
+        <div className="flex items-center space-x-2 mb-3">
+          <span className="h-px w-6 bg-brand dark:bg-emerald-400" />
+          <span className="text-[10px] font-extrabold tracking-[0.3em] text-brand dark:text-emerald-400 uppercase">PROFILE</span>
+        </div>
+        <h1 className="text-4xl md:text-5xl font-serif font-bold text-gray-900 dark:text-gray-100 tracking-tight">My</h1>
+      </div>
 
       <div className="space-y-6">
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -174,18 +177,30 @@ export default function My() {
         </div>
 
         <section className="rounded-2xl border border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm">
-          <div className="flex items-start justify-between gap-4 mb-6">
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.2em] text-brand dark:text-emerald-400 font-bold mb-2">Reading Streak</p>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                {stats.currentStreak} day{stats.currentStreak === 1 ? "" : "s"}
-              </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Keep your streak active by opening at least one news each day.</p>
-            </div>
+          <div className="flex items-center justify-center gap-4 mb-4">
+            <button
+              type="button"
+              onClick={() => shiftCalendarMonth(-1)}
+              className="p-1 text-gray-500 dark:text-gray-400 hover:text-brand dark:hover:text-emerald-400 transition-colors"
+              aria-label="Previous month"
+            >
+              <ChevronRight size={18} className="rotate-180" />
+            </button>
+            <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 tracking-wide min-w-[140px] text-center">
+              {formatMonthYear(calendarDate)}
+            </span>
+            <button
+              type="button"
+              onClick={() => shiftCalendarMonth(1)}
+              className="p-1 text-gray-500 dark:text-gray-400 hover:text-brand dark:hover:text-emerald-400 transition-colors"
+              aria-label="Next month"
+            >
+              <ChevronRight size={18} />
+            </button>
           </div>
 
           <div className="grid grid-cols-7 gap-2 text-center text-xs text-gray-400 dark:text-gray-500 mb-3">
-            {["S", "M", "T", "W", "T", "F", "S"].map((day, index) => (
+            {["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"].map((day, index) => (
               <span key={`${day}-${index}`}>{day}</span>
             ))}
           </div>
@@ -207,61 +222,70 @@ export default function My() {
               </div>
             ))}
           </div>
+
+          <div className="grid grid-cols-2 gap-3 mt-4">
+            <div className="rounded-xl border border-gray-100 dark:border-slate-700 bg-gray-50/80 dark:bg-slate-900/40 p-3">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-brand dark:text-emerald-400 font-bold mb-1">Reading Streak</p>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                {stats.currentStreak} day{stats.currentStreak === 1 ? "" : "s"}
+              </h2>
+            </div>
+            <div className="rounded-xl border border-gray-100 dark:border-slate-700 bg-gray-50/80 dark:bg-slate-900/40 p-3">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-brand dark:text-emerald-400 font-bold mb-1">Total Days</p>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                {totalReadingDays} day{totalReadingDays === 1 ? "" : "s"}
+              </h2>
+            </div>
+          </div>
         </section>
 
         <div className="grid gap-4">
-          <Link
-            to="/me/points"
-            className="group flex items-center gap-4 rounded-2xl border border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 px-5 py-5 shadow-sm hover:bg-gray-50 dark:hover:bg-slate-700/60 transition-colors"
-          >
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300">
-              <Star size={20} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-3">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Points</h3>
-                <span className="inline-flex items-center rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
-                  {pointsSummary.totalPoints} pts
-                </span>
-              </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Track rewards from practice and view your points history.</p>
-            </div>
-            <ChevronRight
-              size={18}
-              className="shrink-0 text-gray-400 dark:text-gray-500 group-hover:text-brand dark:group-hover:text-emerald-300 transition-colors"
-            />
-          </Link>
-
           {[
+            {
+              to: "/me/points",
+              icon: Star,
+              title: "Points",
+              description: "Track rewards from practice and view your points history.",
+              iconClass: "bg-amber-500/10 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300",
+            },
             {
               to: "/me/history",
               icon: Clock3,
               title: "History",
               description: "Review your reading timeline and revisit recent news.",
+              iconClass: "bg-blue-500/10 text-blue-600 dark:bg-blue-500/15 dark:text-blue-300",
             },
             {
               to: "/me/settings",
               icon: Settings,
               title: "Settings",
               description: "Manage dark mode, news font size, and local backup tools.",
+              iconClass: "bg-violet-500/10 text-violet-600 dark:bg-violet-500/15 dark:text-violet-300",
             },
             {
               to: "/me/about",
               icon: Info,
               title: "About",
               description: "Learn what Seventh Tone is built to help you do.",
+              iconClass: "bg-brand/10 text-brand dark:bg-emerald-500/15 dark:text-emerald-300",
             },
-          ].map(({ to, icon: Icon, title, description }) => (
+          ].map(({ to, icon: Icon, title, description, iconClass }) => (
             <Link
-              key={to}
               to={to}
               className="group flex items-center gap-4 rounded-2xl border border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 px-5 py-5 shadow-sm hover:bg-gray-50 dark:hover:bg-slate-700/60 transition-colors"
             >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand/10 text-brand dark:bg-emerald-500/15 dark:text-emerald-300">
-                <Icon size={20} />
-              </div>
               <div className="min-w-0 flex-1">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
+                <div className="flex items-center gap-2">
+                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${iconClass}`}>
+                    <Icon size={18} />
+                  </div>
+                  <h3 className="text-md font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
+                  {to === "/me/points" && (
+                    <span className="inline-flex items-center px-2 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300">
+                      {pointsSummary.totalPoints} pts
+                    </span>
+                  )}
+                </div>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{description}</p>
               </div>
               <ChevronRight

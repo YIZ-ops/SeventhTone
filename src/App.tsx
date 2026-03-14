@@ -24,7 +24,7 @@ function AppContent() {
   const isNewsDetail = location.pathname.startsWith("/news/");
   const isPractice = location.pathname.startsWith("/practice/");
   const isDailyTones = location.pathname === "/daily-tones";
-  const isNewsList = location.pathname.startsWith("/category/");
+  const isNewsList = location.pathname.startsWith("/category/") || location.pathname.startsWith("/topic/");
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-900 text-gray-900 dark:text-gray-100 font-sans">
@@ -33,6 +33,7 @@ function AppContent() {
         <Routes>
           <Route path="/" element={<CategoryList />} />
           <Route path="/category/:id" element={<NewsList />} />
+          <Route path="/topic/:topicId" element={<NewsList />} />
           <Route path="/bookmarks" element={<Bookmarks />} />
           <Route path="/history" element={<Navigate to="/me/history" replace />} />
           <Route path="/daily-tones" element={<DailyTones />} />

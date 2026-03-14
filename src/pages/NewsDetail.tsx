@@ -505,17 +505,63 @@ export default function NewsDetailView() {
     setShowBookmarkModal(false);
   };
 
-  const sanitizedContent = useMemo(() => {
-    if (!news) return "";
-    return DOMPurify.sanitize(news.content, {
-      ADD_ATTR: ["target"],
+  const decoratedContent = useMemo(() => {
+    if (!news?.content) return "";
+    const sanitized = DOMPurify.sanitize(news.content, {
+      ADD_ATTR: ["target", "data-index"],
+      ALLOW_DATA_ATTR: true,
     });
+    const tmp = document.createElement("div");
+    tmp.innerHTML = sanitized;
+
+    const imageList = Array.isArray(news.textImageList) ? news.textImageList : [];
+    tmp.querySelectorAll(".illustrationWrap").forEach((wrap) => {
+      const indexAttr = wrap.getAttribute("data-index");
+      const index = indexAttr ? Number(indexAttr) : NaN;
+      const image = Number.isFinite(index) ? imageList[index] : undefined;
+      if (!image?.url) {
+        wrap.remove();
+        return;
+      }
+      const figure = document.createElement("figure");
+      figure.className = "news-illustration";
+      const img = document.createElement("img");
+      img.src = image.url;
+      img.alt = image.desc || news.name || "illustration";
+      img.loading = "lazy";
+      img.referrerPolicy = "no-referrer";
+      if (image.width) img.width = image.width;
+      if (image.height) img.height = image.height;
+      figure.appendChild(img);
+
+      if (image.desc) {
+        const figcaption = document.createElement("figcaption");
+        figcaption.textContent = image.desc;
+        figure.appendChild(figcaption);
+      }
+
+      wrap.replaceWith(figure);
+    });
+
+    Array.from(tmp.querySelectorAll("strong")).forEach((strong) => {
+      const parent = strong.parentElement;
+      if (!parent || parent.tagName !== "P") return;
+      const parentText = parent.textContent?.trim() || "";
+      const strongText = strong.textContent?.trim() || "";
+      if (!parentText || parentText !== strongText) return;
+      const heading = document.createElement("h3");
+      heading.textContent = strongText;
+      heading.className = "news-subtitle";
+      parent.replaceWith(heading);
+    });
+
+    return tmp.innerHTML;
   }, [news]);
 
   const highlightedContent = useMemo(() => {
-    if (!sanitizedContent || !sentences.length) return sanitizedContent;
+    if (!decoratedContent || !sentences.length) return decoratedContent;
     const tmp = document.createElement("div");
-    tmp.innerHTML = sanitizedContent;
+    tmp.innerHTML = decoratedContent;
     const instance = new Mark(tmp);
     const rawText = tmp.textContent || "";
     const occupiedRanges: Array<{ start: number; end: number }> = [];
@@ -533,7 +579,7 @@ export default function NewsDetailView() {
       });
     }
     return tmp.innerHTML;
-  }, [sanitizedContent, sentences]);
+  }, [decoratedContent, sentences]);
 
   const handleMarkClick = useCallback(
     (e: MouseEvent<HTMLElement>) => {
@@ -724,7 +770,7 @@ export default function NewsDetailView() {
         <article className="max-w-3xl mx-auto px-4 pb-16 select-text relative">
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-lg shadow-black/5 p-4 sm:p-4">
             {/* Header：标题和 summary 支持点击查词 */}
-            <header className="mb-8">
+            <header className="mb-6">
               <h1
                 className={`${newsScaleClasses[fontScale].title} font-serif font-bold text-gray-900 dark:text-gray-100 leading-tight mb-6 cursor-text`}
                 onDoubleClick={(e) => {
@@ -735,13 +781,39 @@ export default function NewsDetailView() {
               </h1>
 
               <p
-                className={`${newsScaleClasses[fontScale].summary} text-gray-600 dark:text-gray-500 italic mb-8 leading-relaxed cursor-text`}
+                className={`${newsScaleClasses[fontScale].summary} text-gray-600 dark:text-gray-500 italic mb-4 leading-relaxed cursor-text`}
                 onDoubleClick={(e) => {
                   if (!(e.target as HTMLElement).closest("a")) handleContentDblClick(e);
                 }}
               >
                 {news.summary}
               </p>
+
+              {news.topicList && news.topicList.length > 0 && (
+                <section className="mb-8">
+                  <div className="flex flex-wrap gap-2">
+                    {news.topicList.map((topic) => (
+                      <button
+                        key={topic.topicId}
+                        type="button"
+                        onClick={() =>
+                          navigate(`/topic/${topic.topicId}`, {
+                            state: {
+                              topicName: topic.name,
+                              topicDesc: topic.des,
+                              topicBg: topic.bgImageUrl,
+                            },
+                          })
+                        }
+                        className="px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-300 dark:hover:bg-emerald-500/20 transition-colors"
+                        title={topic.des || topic.name}
+                      >
+                        #{topic.name}
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              )}
 
               <div className="flex items-center justify-between py-4 border-y border-gray-100 dark:border-slate-700">
                 <div className="flex items-center space-x-3">
@@ -769,14 +841,14 @@ export default function NewsDetailView() {
             {/* Content */}
             <div
               ref={contentRef}
-              className={`prose ${newsScaleClasses[fontScale].prose} prose-emerald max-w-none overflow-x-hidden break-words prose-p:leading-relaxed prose-p:text-gray-800 dark:prose-p:text-gray-200 prose-a:text-emerald-600 dark:prose-a:text-emerald-400 prose-img:rounded-xl prose-img:max-w-full prose-img:h-auto prose-pre:max-w-full prose-pre:overflow-x-auto prose-table:block prose-table:max-w-full prose-table:overflow-x-auto [&_iframe]:max-w-full [&_video]:max-w-full [&_svg]:max-w-full [&_*]:break-words select-text`}
+              className={`prose ${newsScaleClasses[fontScale].prose} prose-emerald max-w-none overflow-x-hidden break-words prose-p:leading-relaxed prose-p:text-gray-800 dark:prose-p:text-gray-200 prose-a:text-emerald-600 dark:prose-a:text-emerald-400 prose-img:rounded-xl prose-img:max-w-full prose-img:h-auto prose-img:mx-auto prose-pre:max-w-full prose-pre:overflow-x-auto prose-table:block prose-table:max-w-full prose-table:overflow-x-auto prose-figure:my-6 prose-figure:text-center prose-figcaption:text-xs prose-figcaption:text-gray-500 dark:prose-figcaption:text-gray-400 prose-h3:mt-8 prose-h3:mb-3 prose-h3:text-lg md:prose-h3:text-xl prose-h3:font-semibold prose-h3:tracking-tight [&_iframe]:max-w-full [&_video]:max-w-full [&_svg]:max-w-full [&_*]:break-words select-text`}
               dangerouslySetInnerHTML={{ __html: highlightedContent }}
               onClick={handleMarkClick}
               onDoubleClick={handleContentDblClick}
             />
 
             {/* AI Practice CTA*/}
-            <div className="mt-14 pt-8 border-t border-gray-100 dark:border-slate-800/60">
+            <div className="mt-8">
               <div className="relative overflow-hidden rounded-2xl border border-emerald-100/70 dark:border-emerald-500/20 bg-gradient-to-br from-emerald-50 via-white to-emerald-100/50 dark:from-slate-900 dark:via-slate-900 dark:to-emerald-900/20 shadow-sm">
                 <div className="absolute -top-12 -right-6 h-28 w-28 rounded-full bg-emerald-200/35 blur-3xl dark:bg-emerald-500/10" />
                 <div className="absolute -bottom-14 -left-10 h-32 w-32 rounded-full bg-teal-200/30 blur-3xl dark:bg-emerald-500/10" />

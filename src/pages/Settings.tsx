@@ -174,7 +174,7 @@ export default function SettingsPage() {
                 type="button"
                 onClick={() => setFontScale(option.value)}
                 className={`rounded-2xl border p-4 text-center transition-all ${
-                  fontScale === option.value
+                  (fontScale ?? "small") === option.value
                     ? "border-gray-900 dark:border-emerald-500 bg-gray-900 dark:bg-emerald-600 text-white"
                     : "border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/60 text-gray-600 dark:text-gray-300"
                 }`}

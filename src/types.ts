@@ -35,12 +35,87 @@ export interface NewsDetail {
   name: string;
   content: string;
   summary: string;
+  contType?: number;
+  forwardType?: number;
   pubTime: string;
+  publishTime?: string;
+  pubTimeLong?: number;
+  updateTime?: string;
   headPic: string;
-  authorList?: {
-    name: string;
-    pic: string;
-  }[];
+  smallPic?: string;
+  bigPic?: string;
+  nodeInfo?: {
+    nodeId?: number;
+    pic?: string;
+    tonePic?: string;
+    logoPic?: string;
+    name?: string;
+    urlName?: string;
+    description?: string;
+    nodeType?: number;
+    nickName?: string;
+    forwardType?: number;
+    isParticular?: boolean;
+  };
+  textImageList?: TextImageListType[];
+  videoList?: unknown[];
+  audioList?: unknown[];
+  quoteList?: unknown[];
+  authorList?: AuthorListType[];
+  topicList?: TopicListType[];
+  relateConts?: unknown[];
+  shareInfo?: ShareInfoType;
+  link?: string;
+}
+
+export interface TextImageListType {
+  url: string;
+  width?: number;
+  height?: number;
+  desc?: string;
+}
+
+export interface TwitterType {
+  link?: string;
+  id?: string;
+}
+
+export interface ContactInfoType {
+  mail?: string;
+  twitter?: TwitterType;
+  faceBook?: string | null;
+  linkedin?: string | null;
+  sinaWeibo?: string | null;
+  weChat?: string | null;
+  google?: string | null;
+}
+
+export interface AuthorListType {
+  userId?: number;
+  userType?: number;
+  authorType?: number;
+  pic: string;
+  name: string;
+  position?: string;
+  desc?: string;
+  shareUrl?: string;
+  contactInfo?: ContactInfoType;
+}
+
+export interface TopicListType {
+  topicId: number;
+  name: string;
+  isHot?: boolean;
+  bgImageUrl?: string;
+  des?: string;
+  firstChar?: string;
+}
+
+export interface ShareInfoType {
+  name?: string;
+  summary?: string;
+  shareUrl?: string;
+  sharePic?: string;
 }
 
 export interface Bookmark {

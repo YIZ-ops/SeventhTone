@@ -24,6 +24,21 @@ export const getNewsList = async (nodeId: string, pageNum: number, pageSize: num
   return res;
 };
 
+export const getNewsListByTopic = async (topicId: string, pageNum: number, pageSize: number = 20) => {
+  const res = await request<NewsListResponse>(`${BASE_URL}/cont/topic/getByTopicId`, {
+    method: "POST",
+    body: JSON.stringify({ topicId, pageNum, pageSize }),
+  });
+
+  if (res?.data?.pageInfo?.list) {
+    res.data.pageInfo.list = res.data.pageInfo.list.filter((item: any) => {
+      return !(item?.name === "MOST READ" && String(item?.cardMode) === "5");
+    });
+  }
+
+  return res;
+};
+
 const getNewsDetailFromSixthToneNative = async (contId: string) => {
   try {
     return await fetchSixthToneDetailByBuildId(contId, DEFAULT_BUILD_ID);

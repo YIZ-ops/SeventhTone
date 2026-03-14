@@ -180,7 +180,7 @@ export default function DailyTones() {
         </div>
 
         <div className="grid grid-cols-7 gap-1 mb-2">
-          {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
+          {["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"].map((day) => (
             <div key={day} className="text-center text-[10px] uppercase tracking-wider text-white/40 font-medium py-1">
               {day}
             </div>
@@ -299,10 +299,10 @@ export default function DailyTones() {
 
     try {
       await saveRemoteImageToAlbum({ imageUrl, fileName: filenameBase });
-      showToast("Saved to photos.", "success");
+      showToast("Saved to photos", "success");
     } catch (error) {
       console.error("Save to album failed:", error);
-      const message = error instanceof Error ? error.message : "Failed to save to album.";
+      const message = error instanceof Error ? error.message : "Failed to save to album";
       setSaveError(message);
       showToast("Save failed. Please allow Photos permission.", "error");
     } finally {
@@ -425,14 +425,12 @@ export default function DailyTones() {
                 <span className="text-xs uppercase tracking-[0.3em] text-white/40">Single tone</span>
               )}
 
-              <div className="flex space-x-3">
+              <div className="flex space-x-1">
                 <button
                   onClick={handleDownloadImage}
                   disabled={isSaving}
-                  className={`w-12 h-12 rounded-full backdrop-blur-md border flex items-center justify-center transition-all ${
-                    isSaving
-                      ? "bg-white/5 border-white/5 text-white/20 cursor-not-allowed"
-                      : "bg-white/10 border-white/20 text-white hover:bg-white/20 hover:scale-105"
+                  className={`w-12 h-12 rounded-full backdrop-blur-md flex items-center justify-center transition-all ${
+                    isSaving ? "text-white/20 cursor-not-allowed" : "text-white hover:scale-105"
                   }`}
                   aria-label="Download image"
                 >
@@ -441,10 +439,8 @@ export default function DailyTones() {
                 <button
                   onClick={() => goToSlide(activeSlide - 1)}
                   disabled={activeSlide === 0 || items.length <= 1}
-                  className={`w-12 h-12 rounded-full backdrop-blur-md border flex items-center justify-center transition-all ${
-                    activeSlide === 0 || items.length <= 1
-                      ? "bg-white/5 border-white/5 text-white/20 cursor-not-allowed"
-                      : "bg-white/10 border-white/20 text-white hover:bg-white/20 hover:scale-105"
+                  className={`w-12 h-12 rounded-full backdrop-blur-md flex items-center justify-center transition-all ${
+                    activeSlide === 0 || items.length <= 1 ? "text-white/20 cursor-not-allowed" : "text-white hover: hover:scale-105"
                   }`}
                 >
                   <ChevronLeft size={20} />
@@ -452,10 +448,8 @@ export default function DailyTones() {
                 <button
                   onClick={() => goToSlide(activeSlide + 1)}
                   disabled={activeSlide === items.length - 1 || items.length <= 1}
-                  className={`w-12 h-12 rounded-full backdrop-blur-md border flex items-center justify-center transition-all ${
-                    activeSlide === items.length - 1 || items.length <= 1
-                      ? "bg-white/5 border-white/5 text-white/20 cursor-not-allowed"
-                      : "bg-white/10 border-white/20 text-white hover:bg-white/20 hover:scale-105"
+                  className={`w-12 h-12 rounded-full backdrop-blur-md flex items-center justify-center transition-all ${
+                    activeSlide === items.length - 1 || items.length <= 1 ? "text-white/20 cursor-not-allowed" : "text-white hover:scale-105"
                   }`}
                 >
                   <ChevronRight size={20} />

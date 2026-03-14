@@ -139,7 +139,7 @@ export default function Search() {
         <h1 className="text-3xl md:text-4xl font-serif font-bold text-gray-900 dark:text-gray-100 tracking-tight">Search</h1>
       </header>
 
-      <form onSubmit={handleSubmit} className="mb-10">
+      <form onSubmit={handleSubmit} className="mb-8">
         <div className="relative">
           <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
           <input
@@ -167,7 +167,7 @@ export default function Search() {
         <p className="text-gray-500 dark:text-gray-400 text-center py-12">No results for &quot;{submitWord}&quot;</p>
       )}
 
-      <div className="grid grid-cols-1 gap-6">
+      <div className="grid grid-cols-1 gap-4">
         {list.map((item, index) => {
           const imgSrc = item.pic || item.appHeadPic;
           const safeTitle = sanitizeSentenceHtml(item.name);
@@ -195,18 +195,22 @@ export default function Search() {
                     )}
                   </div>
                   <div className="flex-1 min-w-0 flex flex-col justify-center">
-                    {item.nodeInfo?.name && (
-                      <span className="inline-block text-[10px] font-bold tracking-wider text-brand dark:text-emerald-400 uppercase mb-1">
-                        {item.nodeInfo.name}
-                      </span>
+                    {(item.nodeInfo?.name || item.pubTime || item.pubTimeLong) && (
+                      <div className="flex items-center justify-between gap-3 mb-1">
+                        <span className="inline-block text-[10px] font-bold tracking-wider text-brand dark:text-emerald-400 uppercase truncate">
+                          {item.nodeInfo?.name || ""}
+                        </span>
+                        {(item.pubTime || item.pubTimeLong) && (
+                          <span className="text-[10px] font-medium text-gray-400 dark:text-gray-500 whitespace-nowrap">
+                            {formatNewsTime(item.pubTime, item.pubTimeLong)}
+                          </span>
+                        )}
+                      </div>
                     )}
                     <h3
                       className="text-base font-bold text-gray-900 dark:text-gray-100 leading-snug group-hover:text-brand dark:group-hover:text-emerald-400 transition-colors [&_font]:text-brand"
                       dangerouslySetInnerHTML={{ __html: safeTitle }}
                     />
-                    {(item.pubTime || item.pubTimeLong) && (
-                      <span className="text-xs text-gray-400 dark:text-gray-500 mt-2">{formatNewsTime(item.pubTime, item.pubTimeLong)}</span>
-                    )}
                   </div>
                 </div>
                 {/* summary 下方整行 */}

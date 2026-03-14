@@ -64,7 +64,6 @@ export default function History() {
                     <span>{formatTime(entry.readAt)}</span>
                     {entry.news.userInfo && (
                       <>
-                        <span className="text-[11px] text-gray-400 dark:text-gray-500 truncate">·</span>
                         <span>{entry.news.userInfo.name}</span>
                       </>
                     )}

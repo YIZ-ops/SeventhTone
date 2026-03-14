@@ -1,23 +1,25 @@
-import { Info } from "lucide-react";
-
 export default function AboutPage() {
   return (
-    <section className="rounded-2xl border border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm space-y-8">
+    <section className="rounded-2xl border border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm space-y-4">
       {/* Header Section */}
       <div className="space-y-4">
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand/10 text-brand dark:bg-emerald-500/15 dark:text-emerald-400">
-          <Info size={22} strokeWidth={2.5} />
-        </div>
-        <div className="space-y-2">
-          <p className="text-[10px] uppercase tracking-[0.3em] text-brand/80 dark:text-emerald-500 font-bold">About Seventh Tone</p>
-          <h2 className="text-3xl font-serif font-bold tracking-tight text-gray-900 dark:text-white leading-tight">
-            Elevating English reading <br /> into a deliberate practice.
-          </h2>
+        <h2 className="text-3xl font-serif font-bold tracking-tight text-gray-900 dark:text-white leading-tight">
+          Elevating English reading into a deliberate practice
+        </h2>
+        <div className="flex gap-2 dark: flex-wrap">
+          {["Stay focused", "Read deeper", "Learn steadily"].map((tag) => (
+            <span
+              key={tag}
+              className="inline-block bg-brand/10 dark:bg-emerald-900/30 text-brand dark:text-emerald-400 text-xs font-semibold px-2 py-0.5 rounded-full"
+            >
+              {tag}
+            </span>
+          ))}
         </div>
       </div>
 
       {/* Mission Statement */}
-      <div className="space-y-4 text-gray-600 dark:text-gray-400 text-[15px] leading-relaxed max-w-2xl">
+      <div className="space-y-3 text-gray-600 dark:text-gray-400 text-[15px] leading-relaxed max-w-2xl">
         <p>
           <span className="font-semibold text-gray-900 dark:text-gray-200">Seventh Tone</span> is a refined news-reading ecosystem engineered for deep
           language acquisition. We bridge the gap between passive consumption and active mastery by streamlining the transition from discovery to
@@ -43,11 +45,6 @@ export default function AboutPage() {
           </div>
         ))}
       </div>
-
-      {/* Footer Tagline */}
-      <p className="text-sm font-medium text-brand dark:text-emerald-500 pt-2 border-t border-gray-100 dark:border-slate-800">
-        Stay focused. Read deeper. Learn steadily.
-      </p>
     </section>
   );
 }

@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
 import { App as CapacitorApp } from "@capacitor/app";
 import { Loader2 } from "lucide-react";
 import { motion } from "motion/react";
 import { getCategories } from "../api/categories";
-import { getNewsList } from "../api/news";
+import { getNewsList, getNewsListByTopic } from "../api/news";
 import NewsCard from "../components/NewsCard";
 import { getNewsListCache, setNewsListCache } from "../store/newsListCache";
 import { Category, NewsItem } from "../types";
@@ -15,11 +15,16 @@ const PULL_MAX = 100;
 const SCROLL_HEADER_THRESHOLD = 80;
 
 export default function NewsList() {
-  const { id } = useParams<{ id: string }>();
+  const { id, topicId } = useParams<{ id: string; topicId: string }>();
+  const location = useLocation();
   const navigate = useNavigate();
+  const isTopicMode = Boolean(topicId);
+  const listId = isTopicMode ? topicId : id;
+  const cacheKey = listId ? (isTopicMode ? `topic-${listId}` : listId) : "";
 
   const [category, setCategory] = useState<Category | null>(null);
-  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [topicMeta, setTopicMeta] = useState<{ title: string; description?: string; tonePic?: string } | null>(null);
+  const [categoriesLoading, setCategoriesLoading] = useState(!isTopicMode);
   const [news, setNews] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
@@ -55,14 +60,14 @@ export default function NewsList() {
 
   const fetchNews = useCallback(
     async (pageNum: number, isLoadMore = false) => {
-      if (!id || loadingGuardRef.current) return;
+      if (!listId || loadingGuardRef.current) return;
 
       loadingGuardRef.current = true;
       setLoading(true);
       setError(null);
 
       try {
-        const res = await getNewsList(id, pageNum);
+        const res = isTopicMode ? await getNewsListByTopic(listId, pageNum) : await getNewsList(listId, pageNum);
         if (res.code !== 200 || !res.data?.pageInfo) {
           throw new Error("Failed to fetch news");
         }
@@ -81,21 +86,40 @@ export default function NewsList() {
         setRefreshing(false);
       }
     },
-    [id],
+    [isTopicMode, listId],
   );
 
   useEffect(() => {
-    if (id && news.length > 0) {
-      setNewsListCache(id, { news, page, hasMore });
+    if (cacheKey && news.length > 0) {
+      setNewsListCache(cacheKey, { news, page, hasMore });
     }
-  }, [hasMore, id, news, page]);
+  }, [cacheKey, hasMore, news, page]);
 
   useEffect(() => {
+    if (isTopicMode) {
+      setCategoriesLoading(false);
+      return;
+    }
+    setCategoriesLoading(true);
     if (!id) return;
     getCategories()
       .then((list) => setCategory(list.find((c) => c.id === id) ?? null))
       .finally(() => setCategoriesLoading(false));
-  }, [id]);
+  }, [id, isTopicMode]);
+
+  useEffect(() => {
+    if (!isTopicMode) {
+      setTopicMeta(null);
+      return;
+    }
+    const state = (location.state as { topicName?: string; topicDesc?: string; topicBg?: string } | null) ?? null;
+    const title = state?.topicName || (topicId ? `Topic ${topicId}` : "Topic");
+    setTopicMeta({
+      title,
+      description: state?.topicDesc,
+      tonePic: state?.topicBg,
+    });
+  }, [isTopicMode, location.state, topicId]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -107,8 +131,8 @@ export default function NewsList() {
   }, []);
 
   useEffect(() => {
-    if (!id) return;
-    const cached = getNewsListCache(id);
+    if (!listId) return;
+    const cached = cacheKey ? getNewsListCache(cacheKey) : null;
     if (cached && cached.news.length > 0) {
       setNews(cached.news);
       setPage(cached.page);
@@ -120,7 +144,7 @@ export default function NewsList() {
     setPage(1);
     setHasMore(true);
     fetchNews(1);
-  }, [fetchNews, id]);
+  }, [cacheKey, fetchNews, listId]);
 
   useEffect(() => {
     hasMoreRef.current = hasMore;
@@ -152,10 +176,10 @@ export default function NewsList() {
   }, [fetchNews, hasMore, news.length]);
 
   const onPullRefresh = useCallback(() => {
-    if (!id || loadingGuardRef.current) return;
+    if (!listId || loadingGuardRef.current) return;
     setRefreshing(true);
     fetchNews(1);
-  }, [fetchNews, id]);
+  }, [fetchNews, listId]);
 
   useEffect(() => {
     const startY = { current: 0 };
@@ -194,6 +218,8 @@ export default function NewsList() {
     };
   }, [onPullRefresh]);
 
+  const displayMeta = isTopicMode ? topicMeta : category;
+
   if (categoriesLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-slate-900 p-4">
@@ -202,7 +228,7 @@ export default function NewsList() {
     );
   }
 
-  if (!category) {
+  if (!isTopicMode && !category) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-slate-900 p-4">
         <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm text-center max-w-md w-full">
@@ -250,32 +276,32 @@ export default function NewsList() {
         </div>
 
         <div
-          className={`relative w-[100vw] left-1/2 -translate-x-1/2 min-h-[200px] md:min-h-[240px] flex flex-col justify-end px-4 pt-safe pt-12 pb-8 md:px-10 overflow-hidden ${!category.tonePic ? "bg-gray-100 dark:bg-slate-800" : ""}`}
+          className={`relative w-[100vw] left-1/2 -translate-x-1/2 min-h-[200px] md:min-h-[240px] flex flex-col justify-end px-4 pt-safe pt-12 pb-8 md:px-10 overflow-hidden ${!displayMeta?.tonePic ? "bg-gray-100 dark:bg-slate-800" : ""}`}
         >
-          {category.tonePic && (
+          {displayMeta?.tonePic && (
             <>
-              <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${category.tonePic})` }} />
+              <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${displayMeta.tonePic})` }} />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
             </>
           )}
           <div className="relative z-10 max-w-4xl mx-auto w-full">
-            <span className={`inline-block h-px w-6 mb-3 ${category.tonePic ? "bg-white/80" : "bg-brand"}`} />
+            <span className={`inline-block h-px w-6 mb-3 ${displayMeta?.tonePic ? "bg-white/80" : "bg-brand"}`} />
             <span
-              className={`block text-[10px] font-bold tracking-[0.3em] uppercase mb-2 ${category.tonePic ? "text-white/90" : "text-gray-500 dark:text-gray-400"}`}
+              className={`block text-[10px] font-bold tracking-[0.3em] uppercase mb-2 ${displayMeta?.tonePic ? "text-white/90" : "text-gray-500 dark:text-gray-400"}`}
             >
-              Section
+              {isTopicMode ? "Topic" : "Section"}
             </span>
             <h1
-              className={`text-3xl md:text-5xl font-serif font-bold tracking-tight uppercase ${category.tonePic ? "text-white drop-shadow-md" : "text-gray-900 dark:text-gray-100"}`}
+              className={`text-3xl md:text-5xl font-serif font-bold tracking-tight uppercase ${displayMeta?.tonePic ? "text-white drop-shadow-md" : "text-gray-900 dark:text-gray-100"}`}
             >
-              {category.title}
+              {displayMeta?.title || (isTopicMode ? "Topic" : "")}
             </h1>
           </div>
         </div>
 
         <div className="max-w-4xl mx-auto px-4 mt-8">
-          {category.description && (
-            <p className="text-gray-500 dark:text-gray-400 leading-relaxed max-w-2xl text-sm md:text-base italic mb-10">{category.description}</p>
+          {displayMeta?.description && (
+            <p className="text-gray-500 dark:text-gray-400 leading-relaxed max-w-2xl text-sm md:text-base italic mb-6">{displayMeta.description}</p>
           )}
 
           {error && (
@@ -290,7 +316,7 @@ export default function NewsList() {
             </div>
           )}
 
-          <div className="grid grid-cols-1 gap-10">
+          <div className="grid grid-cols-1 gap-4">
             {news.map((item, index) => (
               <motion.div
                 key={`${item.contId}-${index}`}
@@ -312,7 +338,7 @@ export default function NewsList() {
           {hasMore && news.length > 0 && <div ref={sentinelRef} className="h-1" />}
 
           {!loading && !hasMore && news.length > 0 && (
-            <p className="text-center text-gray-500 dark:text-gray-400 mt-8 text-sm">You've reached the end.</p>
+            <p className="text-center text-gray-500 dark:text-gray-400 mt-8 text-sm">You've reached the end</p>
           )}
         </div>
       </motion.div>
