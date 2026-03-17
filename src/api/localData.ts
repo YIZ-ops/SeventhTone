@@ -1,8 +1,19 @@
-﻿import type { HistoryEntry } from "./api";
+import type { HistoryEntry } from "./history";
 import type { NewsItem } from "../types";
 
-const HISTORY_KEY = "sixthtone_reading_history";
-const READING_SESSIONS_KEY = "seventh-tone-reading-sessions";
+const HISTORY_KEY = "seventhtone_reading_history";
+const READING_SESSIONS_KEY = "seventhtone_reading_sessions";
+const SUPPORTED_STORAGE_KEYS = [
+  "seventhtone_theme",
+  "seventhtone_font_scale",
+  "seventhtone_reading_sessions",
+  "seventhtone_points_ledger",
+  "seventhtone_bookmarks",
+  "seventhtone_categories_cache",
+  "seventhtone_reading_history",
+  "seventhtone_sentences",
+  "seventhtone_vocabulary",
+] as const;
 
 export interface ReadingSession {
   contId: number;
@@ -23,6 +34,29 @@ export interface ReadingStats {
   totalDurationMs: number;
   readingDays: string[];
   currentStreak: number;
+}
+
+function isSupportedStorageKey(key: string): key is (typeof SUPPORTED_STORAGE_KEYS)[number] {
+  return (SUPPORTED_STORAGE_KEYS as readonly string[]).includes(key);
+}
+
+function readManagedStorageSnapshot(): Record<string, string> {
+  const storage: Record<string, string> = {};
+  for (const key of SUPPORTED_STORAGE_KEYS) {
+    const value = localStorage.getItem(key);
+    if (value != null) storage[key] = value;
+  }
+  return storage;
+}
+
+function restoreManagedStorageSnapshot(snapshot: Record<string, string>) {
+  for (const key of SUPPORTED_STORAGE_KEYS) {
+    localStorage.removeItem(key);
+  }
+
+  for (const [key, value] of Object.entries(snapshot)) {
+    localStorage.setItem(key, value);
+  }
 }
 
 function toLocalDayKey(timestamp: number): string {
@@ -126,18 +160,10 @@ export function getReadingStats(): ReadingStats {
 }
 
 export function exportLocalData(): LocalDataExport {
-  const storage: Record<string, string> = {};
-  for (let i = 0; i < localStorage.length; i += 1) {
-    const key = localStorage.key(i);
-    if (!key) continue;
-    const value = localStorage.getItem(key);
-    if (value != null) storage[key] = value;
-  }
-
   return {
     version: 1,
     exportedAt: new Date().toISOString(),
-    storage,
+    storage: readManagedStorageSnapshot(),
   };
 }
 
@@ -151,10 +177,32 @@ export function importLocalData(payload: unknown) {
     throw new Error("Backup content is not valid local storage data.");
   }
 
-  localStorage.clear();
-  for (const [key, value] of Object.entries(storage as Record<string, unknown>)) {
-    if (typeof value === "string") {
+  const nextEntries = Object.entries(storage as Record<string, unknown>).filter(
+    (entry): entry is [string, string] => typeof entry[0] === "string" && typeof entry[1] === "string" && isSupportedStorageKey(entry[0]),
+  );
+
+  if (nextEntries.length === 0) {
+    throw new Error("Backup file does not contain supported app data.");
+  }
+
+  const currentSnapshot = readManagedStorageSnapshot();
+
+  try {
+    for (const key of SUPPORTED_STORAGE_KEYS) {
+      localStorage.removeItem(key);
+    }
+
+    for (const [key, value] of nextEntries) {
       localStorage.setItem(key, value);
     }
+  } catch (error) {
+    try {
+      restoreManagedStorageSnapshot(currentSnapshot);
+    } catch (restoreError) {
+      console.error("Failed to restore managed local data after import error", restoreError);
+      throw new Error("Import failed, and the original app data could not be fully restored.");
+    }
+
+    throw new Error(error instanceof Error ? `Import failed. Original app data was restored. ${error.message}` : "Import failed. Original app data was restored.");
   }
 }

@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 
-const STORAGE_KEY = "seventh-tone-theme";
-const FONT_SCALE_KEY = "seventh-tone-font-scale";
+const STORAGE_KEY = "seventhtone_theme";
+const FONT_SCALE_KEY = "seventhtone_font_scale";
 
 type Theme = "light" | "dark";
 export type FontScale = "small" | "medium" | "large";

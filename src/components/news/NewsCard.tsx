@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { NewsItem } from "../types";
+import { NewsItem } from "../../types";
 import { formatDistanceToNow } from "date-fns";
 
 import { Key } from "react";

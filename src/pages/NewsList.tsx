@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { Capacitor } from "@capacitor/core";
 import { App as CapacitorApp } from "@capacitor/app";
 import { Loader2 } from "lucide-react";
 import { motion } from "motion/react";
 import { getCategories } from "../api/categories";
 import { getNewsList, getNewsListByTopic } from "../api/news";
-import NewsCard from "../components/NewsCard";
+import NewsCard from "../components/news/NewsCard";
 import { getNewsListCache, setNewsListCache } from "../store/newsListCache";
 import { Category, NewsItem } from "../types";
+import { useAndroidBackHandler } from "../hooks/useAndroidBackHandler";
 
 const PULL_THRESHOLD = 70;
 const PULL_MAX = 100;
@@ -41,22 +41,13 @@ export default function NewsList() {
   const loadingRef = useRef(loading);
   const pageRef = useRef(page);
 
-  useEffect(() => {
-    if (Capacitor.getPlatform() !== "android") return;
-    let listenerHandle: { remove: () => Promise<void> } | null = null;
-    CapacitorApp.addListener("backButton", ({ canGoBack }) => {
-      if (canGoBack) {
-        navigate(-1);
-      } else {
-        CapacitorApp.exitApp();
-      }
-    }).then((h) => {
-      listenerHandle = h;
-    });
-    return () => {
-      listenerHandle?.remove?.();
-    };
-  }, [navigate]);
+  useAndroidBackHandler(({ canGoBack }) => {
+    if (canGoBack) {
+      navigate(-1);
+      return;
+    }
+    CapacitorApp.exitApp();
+  });
 
   const fetchNews = useCallback(
     async (pageNum: number, isLoadMore = false) => {

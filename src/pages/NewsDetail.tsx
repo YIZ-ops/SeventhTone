@@ -1,69 +1,29 @@
-﻿import { useEffect, useState, useMemo, useRef, useCallback, type MouseEvent } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback, type MouseEvent } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getNewsDetail } from "../api/news";
 import { addHistory } from "../api/history";
 import { addBookmark, getBookmarks, removeBookmark } from "../api/bookmarks";
 import { getSentences, addSentence, removeSentence, updateSentence } from "../api/sentences";
-import { addVocab, isInVocab, getVocab, removeVocab } from "../api/vocab";
+import { addVocab, getVocab, removeVocab } from "../api/vocab";
 import { NewsDetail, Sentence } from "../types";
-import DOMPurify from "dompurify";
-import Mark from "mark.js";
-import { ChevronLeft, ChevronRight, Loader2, Clock, Bookmark, BookmarkCheck, BookmarkPlus, X, Share2, Volume2, Brain } from "lucide-react";
-import BookmarkModal from "../components/BookmarkModal";
-import SentenceSaveModal from "../components/SentenceSaveModal";
-import SentenceDetailModal from "../components/SentenceDetailModal";
-import ShareCardModal from "../components/ShareCardModal";
+import { ChevronLeft, ChevronRight, Loader2, Clock, Bookmark, BookmarkCheck, Share2 } from "lucide-react";
+import BookmarkModal from "../components/bookmarks/BookmarkModal";
+import SentenceSaveModal from "../components/news/SentenceSaveModal";
+import SentenceDetailModal from "../components/news/SentenceDetailModal";
+import ShareCardModal from "../components/news/ShareCardModal";
+import NewsDetailDictionarySheet, { type DictData, type DictionaryPopupState } from "../components/news/NewsDetailDictionarySheet";
 import { request } from "../utils/request";
 import { addReadingSession } from "../api/localData";
 import { Capacitor } from "@capacitor/core";
 import { App as CapacitorApp } from "@capacitor/app";
+import { useAndroidBackHandler } from "../hooks/useAndroidBackHandler";
 import TextSelectionHighlight from "../plugins/textSelectionHighlight";
 import { useTheme } from "../contexts/ThemeContext";
 import { getNewsDetailCache, setNewsDetailCache } from "../store/newsDetailCache";
 // import { awardNewsReadingPoints } from "../api/points";
 import { useBottomToast } from "../utils/toast";
+import { decorateNewsContent, getWordAtPoint, highlightSavedSentences } from "../utils/newsDetailContent";
 
-interface DictPhrase {
-  p_cn: string;
-  p_content: string;
-}
-interface DictRelWordHwd {
-  hwd: string;
-  tran: string;
-}
-interface DictRelWord {
-  Hwds: DictRelWordHwd[];
-  Pos: string;
-}
-interface DictSentence {
-  s_cn: string;
-  s_content: string;
-}
-interface DictSynonymHwd {
-  word: string;
-}
-interface DictSynonym {
-  Hwds: DictSynonymHwd[];
-  pos: string;
-  tran: string;
-}
-interface DictTranslation {
-  pos: string;
-  tran_cn: string;
-}
-interface DictData {
-  word: string;
-  bookId?: string;
-  ukphone?: string;
-  ukspeech?: string;
-  usphone?: string;
-  usspeech?: string;
-  phrases?: DictPhrase[];
-  relWords?: DictRelWord[];
-  sentences?: DictSentence[];
-  synonyms?: DictSynonym[];
-  translations?: DictTranslation[];
-}
 interface DictApiResponse {
   code: number;
   msg: string;
@@ -71,81 +31,6 @@ interface DictApiResponse {
 }
 
 const DICT_API_BASE = "https://v2.xxapi.cn/api/englishwords";
-
-function normalizeTextWithMap(text: string) {
-  let normalized = "";
-  const normalizedToRaw: number[] = [];
-
-  for (let index = 0; index < text.length; index += 1) {
-    const char = text[index];
-
-    if (/\s/.test(char)) {
-      continue;
-    }
-
-    normalized += char;
-    normalizedToRaw.push(index);
-  }
-
-  return { normalized, normalizedToRaw };
-}
-
-function findTextRange(rawText: string, needle: string, occupiedRanges: Array<{ start: number; end: number }>) {
-  const haystack = normalizeTextWithMap(rawText);
-  const target = normalizeTextWithMap(needle).normalized;
-  if (!target) return null;
-
-  let fromIndex = 0;
-  while (fromIndex <= haystack.normalized.length - target.length) {
-    const normalizedIndex = haystack.normalized.indexOf(target, fromIndex);
-    if (normalizedIndex === -1) return null;
-
-    const rawStart = haystack.normalizedToRaw[normalizedIndex];
-    const rawEnd = haystack.normalizedToRaw[normalizedIndex + target.length - 1] + 1;
-    const overlaps = occupiedRanges.some((range) => rawStart < range.end && rawEnd > range.start);
-
-    if (!overlaps) {
-      return { start: rawStart, length: rawEnd - rawStart, end: rawEnd };
-    }
-
-    fromIndex = normalizedIndex + target.length;
-  }
-
-  return null;
-}
-
-function getWordAtPoint(clientX: number, clientY: number): { word: string; rect: DOMRect } | null {
-  const doc = document;
-  let range: Range | null = null;
-  if (doc.caretRangeFromPoint) {
-    range = doc.caretRangeFromPoint(clientX, clientY);
-  } else if (doc.caretPositionFromPoint) {
-    const pos = (
-      doc as Document & { caretPositionFromPoint(x: number, y: number): { offsetNode: Node; offset: number } | null }
-    ).caretPositionFromPoint(clientX, clientY);
-    if (!pos) return null;
-    range = doc.createRange();
-    range.setStart(pos.offsetNode, pos.offset);
-    range.setEnd(pos.offsetNode, pos.offset);
-  }
-  if (!range) return null;
-  const node = range.startContainer;
-  if (node.nodeType !== Node.TEXT_NODE) return null;
-  const text = node.textContent || "";
-  const offset = range.startOffset;
-  const before = text.slice(0, offset).match(/([a-zA-Z'-]*)$/);
-  const after = text.slice(offset).match(/^([a-zA-Z'-]*)/);
-  const start = offset - (before ? before[1].length : 0);
-  const end = offset + (after ? after[1].length : 0);
-  const word = text
-    .slice(start, end)
-    .replace(/^[-']+|[-']+$/g, "")
-    .trim();
-  if (!word || word.length < 2) return null;
-  range.setStart(node, start);
-  range.setEnd(node, end);
-  return { word, rect: range.getBoundingClientRect() };
-}
 
 export default function NewsDetailView() {
   const { id } = useParams<{ id: string }>();
@@ -175,7 +60,7 @@ export default function NewsDetailView() {
   const dictAudioRef = useRef<HTMLAudioElement>(null);
 
   // Dictionary lookup popup (click word to show definition) declared early so useEffects below can reference it
-  const [dictPopup, setDictPopup] = useState<{ x: number; y: number; word: string } | null>(null);
+  const [dictPopup, setDictPopup] = useState<DictionaryPopupState | null>(null);
   const [dictData, setDictData] = useState<DictData | null>(null);
   const [dictLoading, setDictLoading] = useState(false);
   const [dictError, setDictError] = useState<string | null>(null);
@@ -388,42 +273,32 @@ export default function NewsDetailView() {
   backStateRef.current = { dictPopup, activeSentence, showSentenceModal, showBookmarkModal };
 
   // Handle the native Android back button via Capacitor.
-  useEffect(() => {
-    if (Capacitor.getPlatform() !== "android") return;
-    let listenerHandle: { remove: () => Promise<void> } | null = null;
-    CapacitorApp.addListener("backButton", (e: { canGoBack: boolean }) => {
-      const s = backStateRef.current;
-      if (s.dictPopup) {
-        setDictPopup(null);
-        return;
-      }
-      if (s.activeSentence) {
-        setActiveSentence(null);
-        return;
-      }
-      if (s.showSentenceModal) {
-        setShowSentenceModal(false);
-        setPendingSentenceText(null);
-        window.getSelection()?.removeAllRanges();
-        return;
-      }
-      if (s.showBookmarkModal) {
-        setShowBookmarkModal(false);
-        return;
-      }
-      if (e.canGoBack) {
-        navigate(-1);
-      } else {
-        CapacitorApp.exitApp();
-      }
-    }).then((h) => {
-      listenerHandle = h;
-    });
-    return () => {
-      listenerHandle?.remove?.();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navigate]);
+  useAndroidBackHandler((e) => {
+    const s = backStateRef.current;
+    if (s.dictPopup) {
+      setDictPopup(null);
+      return;
+    }
+    if (s.activeSentence) {
+      setActiveSentence(null);
+      return;
+    }
+    if (s.showSentenceModal) {
+      setShowSentenceModal(false);
+      setPendingSentenceText(null);
+      window.getSelection()?.removeAllRanges();
+      return;
+    }
+    if (s.showBookmarkModal) {
+      setShowBookmarkModal(false);
+      return;
+    }
+    if (e.canGoBack) {
+      navigate(-1);
+      return;
+    }
+    CapacitorApp.exitApp();
+  });
   // pendingSentenceText: stable copy of selected text so the modal isn't destroyed when
   // selectionPopup is cleared (e.g. by the scroll handler when the mobile keyboard appears).
 
@@ -506,79 +381,12 @@ export default function NewsDetailView() {
   };
 
   const decoratedContent = useMemo(() => {
-    if (!news?.content) return "";
-    const sanitized = DOMPurify.sanitize(news.content, {
-      ADD_ATTR: ["target", "data-index"],
-      ALLOW_DATA_ATTR: true,
-    });
-    const tmp = document.createElement("div");
-    tmp.innerHTML = sanitized;
-
-    const imageList = Array.isArray(news.textImageList) ? news.textImageList : [];
-    tmp.querySelectorAll(".illustrationWrap").forEach((wrap) => {
-      const indexAttr = wrap.getAttribute("data-index");
-      const index = indexAttr ? Number(indexAttr) : NaN;
-      const image = Number.isFinite(index) ? imageList[index] : undefined;
-      if (!image?.url) {
-        wrap.remove();
-        return;
-      }
-      const figure = document.createElement("figure");
-      figure.className = "news-illustration";
-      const img = document.createElement("img");
-      img.src = image.url;
-      img.alt = image.desc || news.name || "illustration";
-      img.loading = "lazy";
-      img.referrerPolicy = "no-referrer";
-      if (image.width) img.width = image.width;
-      if (image.height) img.height = image.height;
-      figure.appendChild(img);
-
-      if (image.desc) {
-        const figcaption = document.createElement("figcaption");
-        figcaption.textContent = image.desc;
-        figure.appendChild(figcaption);
-      }
-
-      wrap.replaceWith(figure);
-    });
-
-    Array.from(tmp.querySelectorAll("strong")).forEach((strong) => {
-      const parent = strong.parentElement;
-      if (!parent || parent.tagName !== "P") return;
-      const parentText = parent.textContent?.trim() || "";
-      const strongText = strong.textContent?.trim() || "";
-      if (!parentText || parentText !== strongText) return;
-      const heading = document.createElement("h3");
-      heading.textContent = strongText;
-      heading.className = "news-subtitle";
-      parent.replaceWith(heading);
-    });
-
-    return tmp.innerHTML;
+    if (!news) return "";
+    return decorateNewsContent(news);
   }, [news]);
 
   const highlightedContent = useMemo(() => {
-    if (!decoratedContent || !sentences.length) return decoratedContent;
-    const tmp = document.createElement("div");
-    tmp.innerHTML = decoratedContent;
-    const instance = new Mark(tmp);
-    const rawText = tmp.textContent || "";
-    const occupiedRanges: Array<{ start: number; end: number }> = [];
-
-    for (const h of sentences) {
-      const range = findTextRange(rawText, h.text, occupiedRanges);
-      if (!range) continue;
-
-      occupiedRanges.push({ start: range.start, end: range.end });
-      instance.markRanges([range], {
-        className: "news-sentence",
-        each: (el) => {
-          el.setAttribute("data-sentence-id", h.id);
-        },
-      });
-    }
-    return tmp.innerHTML;
+    return highlightSavedSentences(decoratedContent, sentences);
   }, [decoratedContent, sentences]);
 
   const handleMarkClick = useCallback(
@@ -858,7 +666,6 @@ export default function NewsDetailView() {
                     navigate(`/practice/${news.contId}`, {
                       state: {
                         title: news.name,
-                        contentHtml: news.content,
                       },
                     })
                   }
@@ -893,191 +700,16 @@ export default function NewsDetailView() {
         </article>
       </div>
 
-      {dictPopup && (
-        <button
-          type="button"
-          data-popup
-          aria-label="Close dictionary"
-          className="fixed inset-0 z-[99] bg-black/30 backdrop-blur-sm cursor-default"
-          onClick={() => setDictPopup(null)}
-        />
-      )}
-      {/* Dictionary popup */}
-      {dictPopup && (
-        <div
-          data-popup
-          className="fixed inset-x-0 bottom-0 z-[100] h-[55vh] min-h-[280px] max-h-[85vh] flex flex-col rounded-t-2xl bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-600 border-b-0 md:left-1/2 md:right-auto md:top-auto md:w-[min(96vw,420px)] md:max-h-[70vh] md:min-h-0 md:rounded-b-2xl md:border-b md:-translate-x-1/2 md:bottom-6"
-        >
-          <audio ref={dictAudioRef} className="hidden" />
-          <div className="flex-shrink-0 flex items-center justify-between gap-2 px-4 py-3 border-b border-gray-100 dark:border-slate-600 bg-gray-50/90 dark:bg-slate-700/50">
-            <span className="font-semibold text-gray-900 dark:text-gray-100 truncate">{dictPopup.word}</span>
-            <div className="flex items-center gap-1 shrink-0">
-              <button
-                type="button"
-                onClick={handleToggleVocab}
-                className={`p-1.5 rounded-full transition-colors ${
-                  wordInVocab
-                    ? "text-emerald-500 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30"
-                    : "text-gray-400 dark:text-gray-500 hover:text-brand dark:hover:text-emerald-400 hover:bg-gray-100 dark:hover:bg-slate-600"
-                }`}
-                aria-label={wordInVocab ? "Remove from vocabulary" : "Add to vocabulary"}
-                title={wordInVocab ? "Remove from vocabulary" : "Add to vocabulary"}
-              >
-                {wordInVocab ? <BookmarkCheck size={18} /> : <BookmarkPlus size={18} />}
-              </button>
-              <button
-                type="button"
-                onClick={() => setDictPopup(null)}
-                className="p-1.5 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-600 hover:text-gray-700 dark:hover:text-gray-100 transition-colors"
-                aria-label="Close"
-              >
-                <X size={18} />
-              </button>
-            </div>
-          </div>
-          <div className="flex-1 overflow-y-auto overscroll-contain p-4">
-            {dictLoading && (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
-              </div>
-            )}
-            {dictError && !dictLoading && <p className="text-gray-500 dark:text-gray-400 text-sm py-6">{dictError}</p>}
-            {dictData && !dictLoading && (
-              <div className="space-y-5 text-sm dark:text-gray-200">
-                {/* Pronunciation */}
-                {(dictData.ukphone || dictData.usphone) && (
-                  <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-                    {dictData.ukphone && (
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">UK</span>
-                        <span className="text-sm text-gray-600 dark:text-gray-500 font-mono">/{dictData.ukphone}/</span>
-                        {dictData.ukspeech && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const el = dictAudioRef.current;
-                              if (el) {
-                                el.src = dictData.ukspeech!;
-                                el.play().catch(() => {});
-                              }
-                            }}
-                            className="p-1 rounded-full text-emerald-500 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors"
-                            aria-label="Play UK pronunciation"
-                          >
-                            <Volume2 size={14} />
-                          </button>
-                        )}
-                      </div>
-                    )}
-                    {dictData.usphone && (
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">US</span>
-                        <span className="text-sm text-gray-600 dark:text-gray-500 font-mono">/{dictData.usphone}/</span>
-                        {dictData.usspeech && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const el = dictAudioRef.current;
-                              if (el) {
-                                el.src = dictData.usspeech!;
-                                el.play().catch(() => {});
-                              }
-                            }}
-                            className="p-1 rounded-full text-emerald-500 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors"
-                            aria-label="Play US pronunciation"
-                          >
-                            <Volume2 size={14} />
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-                {/* Definitions */}
-                {dictData.translations && dictData.translations.length > 0 && (
-                  <section>
-                    <h4 className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-2">Definitions</h4>
-                    <ul className="space-y-1 list-none pl-0">
-                      {dictData.translations.map((t, i) => (
-                        <li key={i} className="text-gray-800 dark:text-gray-200">
-                          <span className="text-gray-500 dark:text-gray-400">{t.pos}.</span> {t.tran_cn}
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
-                )}
-                {/* Phrases */}
-                {dictData.phrases && dictData.phrases.length > 0 && (
-                  <section>
-                    <h4 className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-2">Phrases</h4>
-                    <ul className="space-y-1.5 list-none pl-0">
-                      {dictData.phrases.slice(0, 12).map((p, i) => (
-                        <li key={i} className="text-gray-800 dark:text-gray-200">
-                          <span className="font-medium text-gray-900 dark:text-gray-100">{p.p_content}</span>
-                          <span className="text-gray-500 dark:text-gray-400"> - {p.p_cn}</span>
-                        </li>
-                      ))}
-                      {dictData.phrases.length > 12 && (
-                        <li className="text-gray-400 dark:text-gray-500 text-xs">Total {dictData.phrases.length} phrases</li>
-                      )}
-                    </ul>
-                  </section>
-                )}
-                {/* Related words */}
-                {dictData.relWords && dictData.relWords.length > 0 && (
-                  <section>
-                    <h4 className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-2">Related words</h4>
-                    <div className="space-y-2">
-                      {dictData.relWords.map((g, i) => (
-                        <div key={i}>
-                          <span className="text-gray-500 dark:text-gray-400">{g.Pos}</span>{" "}
-                          {g.Hwds.map((h, j) => (
-                            <span key={j} className="text-gray-800 dark:text-gray-200">
-                              {h.hwd}
-                              <span className="text-gray-500 dark:text-gray-400"> {h.tran}</span>
-                              {j < g.Hwds.length - 1 ? "; " : ""}
-                            </span>
-                          ))}
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                )}
-                {/* Synonyms */}
-                {dictData.synonyms && dictData.synonyms.length > 0 && (
-                  <section>
-                    <h4 className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-2">Synonyms</h4>
-                    <ul className="space-y-1 list-none pl-0">
-                      {dictData.synonyms.map((s, i) => (
-                        <li key={i} className="text-gray-800 dark:text-gray-200">
-                          <span className="text-gray-500 dark:text-gray-400">{s.pos}</span> {s.tran}
-                          {" - "}
-                          {s.Hwds.map((h) => h.word).join(", ")}
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
-                )}
-                {/* Example sentences */}
-                {dictData.sentences && dictData.sentences.length > 0 && (
-                  <section>
-                    <h4 className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-2">Example sentences</h4>
-                    <ul className="space-y-2 list-none pl-0">
-                      {dictData.sentences.slice(0, 5).map((s, i) => (
-                        <li key={i} className="text-gray-800 dark:text-gray-200">
-                          <p className="text-gray-900 dark:text-gray-100">{s.s_content}</p>
-                          <p className="text-gray-500 dark:text-gray-400 italic mt-0.5">{s.s_cn}</p>
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
+      <NewsDetailDictionarySheet
+        popup={dictPopup}
+        audioRef={dictAudioRef}
+        data={dictData}
+        loading={dictLoading}
+        error={dictError}
+        wordInVocab={wordInVocab}
+        onClose={() => setDictPopup(null)}
+        onToggleVocab={handleToggleVocab}
+      />
       {/* Sentence Detail Modal */}
       {activeSentence && (
         <SentenceDetailModal

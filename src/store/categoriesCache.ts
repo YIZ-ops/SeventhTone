@@ -1,32 +1,19 @@
 import type { Category } from "../types";
+import { createExpiringStorageCache } from "./cache";
 
-const CATEGORIES_CACHE_KEY = "sixthtone_categories_cache";
-let memoryCache: Category[] | null = null;
+const CATEGORIES_CACHE_KEY = "seventhtone_categories_cache";
+const CATEGORIES_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 function isCategoryArray(value: unknown): value is Category[] {
   return Array.isArray(value) && value.every((item) => item && typeof item === "object" && "id" in item && "title" in item);
 }
 
-export function getCategoriesCache(): Category[] | null {
-  if (memoryCache && memoryCache.length > 0) return memoryCache;
+const categoriesCache = createExpiringStorageCache<Category[]>(CATEGORIES_CACHE_KEY, CATEGORIES_CACHE_TTL_MS, isCategoryArray);
 
-  try {
-    const raw = localStorage.getItem(CATEGORIES_CACHE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as unknown;
-    if (!isCategoryArray(parsed) || parsed.length === 0) return null;
-    memoryCache = parsed;
-    return parsed;
-  } catch {
-    return null;
-  }
+export function getCategoriesCache(): Category[] | null {
+  return categoriesCache.get();
 }
 
 export function setCategoriesCache(categories: Category[]): void {
-  memoryCache = categories;
-  try {
-    localStorage.setItem(CATEGORIES_CACHE_KEY, JSON.stringify(categories));
-  } catch {
-    // ignore write failures
-  }
+  categoriesCache.set(categories);
 }

@@ -1,7 +1,7 @@
 import type { NewsItem } from "../types";
 
 // Local storage for history (带阅读时间，用于只显示“今天读过”)
-const HISTORY_KEY = "sixthtone_reading_history";
+const HISTORY_KEY = "seventhtone_reading_history";
 
 export interface HistoryEntry {
   news: NewsItem;
@@ -26,7 +26,6 @@ function getHistoryRaw(): HistoryEntry[] {
   }
 }
 
-/** 仅返回今天（本地日期）阅读过的条目（含阅读时间），供 History 页展示 */
 export const getHistoryEntriesToday = (): HistoryEntry[] => {
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
@@ -34,7 +33,6 @@ export const getHistoryEntriesToday = (): HistoryEntry[] => {
   return getHistoryRaw().filter((e) => e.readAt >= startOfToday && e.readAt < startOfTomorrow);
 };
 
-/** 仅返回今天阅读过的新闻列表（兼容用） */
 export const getHistory = (): NewsItem[] => {
   return getHistoryEntriesToday().map((e) => e.news);
 };

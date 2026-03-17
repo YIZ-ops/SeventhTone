@@ -1,7 +1,7 @@
 import type { Bookmark, NewsItem } from "../types";
 
 // Local storage for bookmarks
-const BOOKMARKS_KEY = "sixthtone_bookmarks";
+const BOOKMARKS_KEY = "seventhtone_bookmarks";
 
 export const getBookmarks = (): Bookmark[] => {
   try {
@@ -36,12 +36,10 @@ export const removeBookmark = (contId: number) => {
 
 export const getBookmarkCategories = (): string[] => {
   const bookmarks = getBookmarks();
-  // Filter out empty/falsy categories so deleted-category items (category="") are excluded
   const categories = new Set(bookmarks.map((b) => b.category).filter(Boolean) as string[]);
   return Array.from(categories);
 };
 
-/** 重命名书签分类：将所有 category === oldName 的书签改为 newName */
 export const renameBookmarkCategory = (oldName: string, newName: string) => {
   try {
     const bookmarks = getBookmarks();
@@ -52,7 +50,6 @@ export const renameBookmarkCategory = (oldName: string, newName: string) => {
   }
 };
 
-/** 删除书签分类：逐一调用 removeBookmark 删除该分类下的所有书签 */
 export const deleteBookmarkCategory = (category: string) => {
   try {
     getBookmarks()

@@ -1,9 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
-import { ChevronLeft, ChevronRight, Loader2, CheckCircle2, XCircle, Brain, RotateCcw, LayoutGrid, X } from "lucide-react";
-import { Capacitor } from "@capacitor/core";
-import { App as CapacitorApp } from "@capacitor/app";
+import { Loader2, CheckCircle2, XCircle, Brain, RotateCcw } from "lucide-react";
 import {
   generateExercises,
   evaluateTranslations,
@@ -13,9 +11,18 @@ import {
   type TranslationEval,
   type SummaryEvaluation,
 } from "../api/llm";
+import { getNewsDetail } from "../api/news";
 import { awardPracticeAnswerPoints, awardPracticeCompletionPoints, type PointsAwardResult } from "../api/points";
 import { useBottomToast } from "../utils/toast";
-
+import { useAndroidBackHandler } from "../hooks/useAndroidBackHandler";
+import PracticeTopBar from "../components/practice/PracticeTopBar";
+import PracticeAnswerSheet from "../components/practice/PracticeAnswerSheet";
+import PracticeBottomNav from "../components/practice/PracticeBottomNav";
+import VocabQuestionCard from "../components/practice/VocabQuestionCard";
+import ComprehensionQuestionCard from "../components/practice/ComprehensionQuestionCard";
+import TranslationQuestionCard from "../components/practice/TranslationQuestionCard";
+import SummaryQuestionCard from "../components/practice/SummaryQuestionCard";
+import { type AnswerStatus, type PracticeEntryType, type PracticeSectionMeta, type PracticeSheetSection } from "../components/practice/types";
 // ─── Types ────────────────────────────────────────────────────────────────────
 type QEntry =
   | { type: "vocab"; idx: number }
@@ -24,11 +31,9 @@ type QEntry =
   | { type: "cn2en"; idx: number }
   | { type: "summary" };
 
-type AnswerStatus = "unanswered" | "correct" | "wrong" | "answered";
-
 const LABELS = ["A", "B", "C", "D"];
 
-const SECTION_META: Record<QEntry["type"], { label: string; short: string; accent: string; ring: string; bg: string; badge: string }> = {
+const SECTION_META: Record<PracticeEntryType, PracticeSectionMeta> = {
   vocab: {
     label: "Vocabulary",
     short: "Vocab",
@@ -97,16 +102,51 @@ export default function NewsPractice() {
   const navigate = useNavigate();
   const location = useLocation();
   const { showToast } = useBottomToast();
-  const state = location.state as { title?: string; contentHtml?: string } | null;
+  const state = location.state as { title?: string } | null;
   const articleId = Number(params.id ?? 0);
-  const title = state?.title ?? "Practice";
-  const contentHtml = state?.contentHtml ?? "";
+  const [articleTitle, setArticleTitle] = useState(state?.title ?? "Practice");
+  const [contentHtml, setContentHtml] = useState("");
+  const [articleLoading, setArticleLoading] = useState(true);
+  const title = articleTitle || "Practice";
 
   // ── Phase & data ──────────────────────────────────────────────────────────
   type Phase = "loading" | "questions";
   const [phase, setPhase] = useState<Phase>("loading");
   const [exercises, setExercises] = useState<ExerciseSet | null>(null);
   const [loadError, setLoadError] = useState("");
+
+  const loadArticle = useCallback(() => {
+    if (!Number.isFinite(articleId) || articleId <= 0) {
+      setLoadError("Invalid article id.");
+      setArticleLoading(false);
+      return;
+    }
+
+    setArticleLoading(true);
+    setPhase("loading");
+    setLoadError("");
+
+    getNewsDetail(String(articleId))
+      .then((res) => {
+        let detailData = res?.data;
+        if (detailData && detailData.data && detailData.contId === undefined) {
+          detailData = detailData.data;
+        }
+
+        if (!detailData?.content) {
+          throw new Error("Failed to load practice article.");
+        }
+
+        setArticleTitle(detailData.name || state?.title || "Practice");
+        setContentHtml(detailData.content);
+      })
+      .catch((err: unknown) => {
+        setLoadError(err instanceof Error ? err.message : "Failed to load practice article.");
+      })
+      .finally(() => {
+        setArticleLoading(false);
+      });
+  }, [articleId, state?.title]);
 
   // ── Navigation ────────────────────────────────────────────────────────────
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -220,10 +260,7 @@ export default function NewsPractice() {
   const sheetSections = useMemo(() => {
     if (!exercises) return [];
     let offset = 0;
-    const sections: Array<{
-      type: QEntry["type"];
-      entries: Array<{ entry: QEntry; globalIdx: number }>;
-    }> = [];
+    const sections: PracticeSheetSection<QEntry>[] = [];
     const push = (type: QEntry["type"], count: number, makeEntry: (i: number) => QEntry) => {
       if (count === 0) return;
       sections.push({
@@ -426,8 +463,13 @@ export default function NewsPractice() {
   }, [title, contentHtml]);
 
   useEffect(() => {
+    loadArticle();
+  }, [loadArticle]);
+
+  useEffect(() => {
+    if (articleLoading || !contentHtml) return;
     startGeneration();
-  }, []);
+  }, [articleLoading, contentHtml, startGeneration]);
 
   useEffect(() => {
     if (!Number.isFinite(articleId) || articleId <= 0) return;
@@ -442,19 +484,13 @@ export default function NewsPractice() {
   }, [articleId, title, questions.length, answeredCount, notifyPointsAward]);
 
   // ── Back button ───────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!Capacitor.isNativePlatform()) return;
-    const listener = CapacitorApp.addListener("backButton", () => {
-      if (showSheet) {
-        setShowSheet(false);
-        return;
-      }
-      navigate(-1);
-    });
-    return () => {
-      listener.then((h) => h.remove());
-    };
-  }, [navigate, showSheet]);
+  useAndroidBackHandler(() => {
+    if (showSheet) {
+      setShowSheet(false);
+      return;
+    }
+    navigate(-1);
+  });
 
   // ── Progress ──────────────────────────────────────────────────────────────
   const progress = questions.length > 0 ? Math.round(((currentIdx + 1) / questions.length) * 100) : 0;
@@ -463,10 +499,42 @@ export default function NewsPractice() {
   const vocabCorrect = exercises ? exercises.vocabulary.filter((q) => vocabAnswers[q.id] === q.answer).length : 0;
   const compCorrect = exercises ? exercises.comprehension.filter((q) => compAnswers[q.id] === q.answer).length : 0;
 
+  const isLastQ = currentIdx === questions.length - 1;
+  const currentSubjectiveBusy =
+    currentIsSubjective && currentEntry && currentEntry.type !== "summary" && exercises
+      ? translEvalLoading.has((currentEntry.type === "en2cn" ? exercises.en2cn[currentEntry.idx] : exercises.cn2en[currentEntry.idx]).id)
+      : summaryEvalLoading;
+  const currentPrimaryLabel = currentIsSubjective
+    ? currentSubjectiveReadyForNext
+      ? isLastQ
+        ? "Done"
+        : "Next"
+      : currentSubjectiveBusy
+        ? "Checking..."
+        : "View "
+    : isLastQ
+      ? "Done"
+      : "Next";
+  const handlePrimaryAction = useCallback(async () => {
+    if (currentIsSubjective) {
+      if (currentSubjectiveReadyForNext) {
+        if (isLastQ) {
+          navigate(-1);
+          return;
+        }
+        goNext();
+        return;
+      }
+      await handleSubmitCurrentSubjective();
+      return;
+    }
+    goNext();
+  }, [currentIsSubjective, currentSubjectiveReadyForNext, isLastQ, navigate, goNext, handleSubmitCurrentSubjective]);
+
   // ═══════════════════════════════════════════════════════════════════════════
   //  PHASE: LOADING
   // ═══════════════════════════════════════════════════════════════════════════
-  if (phase === "loading") {
+  if (articleLoading || phase === "loading") {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex flex-col items-center justify-center px-6 pt-safe">
         {loadError ? (
@@ -475,7 +543,7 @@ export default function NewsPractice() {
             <p className="font-semibold text-gray-800 dark:text-gray-200 mb-2">Generation Failed</p>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">{loadError}</p>
             <button
-              onClick={startGeneration}
+              onClick={contentHtml ? startGeneration : loadArticle}
               className="inline-flex items-center gap-2 px-6 py-2.5 bg-brand dark:bg-emerald-600 text-white rounded-full font-semibold text-sm"
             >
               <RotateCcw size={14} /> Retry
@@ -500,193 +568,9 @@ export default function NewsPractice() {
   // ═══════════════════════════════════════════════════════════════════════════
   //  SHARED: TOP BAR
   // ═══════════════════════════════════════════════════════════════════════════
-  const topBar = (
-    <div className="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-gray-100 dark:border-slate-700/60 pt-safe shadow-[0_6px_20px_-18px_rgba(0,0,0,0.5)]">
-      <div className="max-w-2xl mx-auto px-3 h-14 flex items-center gap-2">
-        <button
-          onClick={() => navigate(-1)}
-          className="p-2 -ml-1 text-gray-500 dark:text-gray-400 hover:text-brand dark:hover:text-emerald-400 transition-colors shrink-0"
-        >
-          <ChevronLeft size={22} />
-        </button>
-        <div className="flex-1 min-w-0 px-1">
-          <div className="flex items-center justify-between mb-0.5">
-            <p className="text-[11px] text-gray-400 dark:text-gray-500 truncate">{title}</p>
-            <p className="text-[11px] text-gray-400 dark:text-gray-500 shrink-0 ml-2">
-              {currentIdx + 1}/{questions.length}
-            </p>
-          </div>
-          <div className="w-full h-1.5 bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden">
-            <div className="h-full bg-emerald-500 rounded-full transition-all duration-400" style={{ width: `${progress}%` }} />
-          </div>
-        </div>
-        <button
-          onClick={() => setShowSheet(true)}
-          className="p-2 -mr-1 text-gray-500 dark:text-gray-400 hover:text-brand dark:hover:text-emerald-400 transition-colors shrink-0"
-          aria-label="Answer sheet"
-        >
-          <LayoutGrid size={20} />
-        </button>
-      </div>
-    </div>
-  );
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  //  ANSWER SHEET DRAWER
-  // ═══════════════════════════════════════════════════════════════════════════
-  const statusDotCls = (status: AnswerStatus) => {
-    if (status === "correct") return "bg-emerald-500 text-white";
-    if (status === "wrong") return "bg-red-500 text-white";
-    if (status === "answered") return "bg-blue-500 text-white";
-    return "bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-gray-500";
-  };
-
-  const answerSheet = (
-    <AnimatePresence>
-      {showSheet && (
-        <>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px]"
-            onClick={() => setShowSheet(false)}
-          />
-          <motion.div
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={{ type: "spring", damping: 32, stiffness: 340 }}
-            className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-slate-800 rounded-t-2xl pb-safe"
-          >
-            {/* Handle */}
-            <div className="flex justify-center pt-3 pb-1">
-              <div className="w-10 h-1 bg-gray-200 dark:bg-slate-600 rounded-full" />
-            </div>
-            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 dark:border-slate-700">
-              <h3 className="font-bold text-gray-900 dark:text-gray-100 text-sm">答题卡 · Answer Sheet</h3>
-              <button onClick={() => setShowSheet(false)} className="p-1.5 rounded-full text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700">
-                <X size={18} />
-              </button>
-            </div>
-            <div className="px-5 py-4 space-y-4 max-h-72 overflow-y-auto">
-              {sheetSections.map((section) => {
-                const meta = SECTION_META[section.type];
-                return (
-                  <div key={section.type}>
-                    <p className={`text-[10px] font-bold uppercase tracking-widest mb-2 ${meta.accent}`}>{meta.label}</p>
-                    <div className="flex flex-wrap gap-2">
-                      {section.entries.map(({ entry, globalIdx }, i) => {
-                        const status = getStatus(entry);
-                        const isCurrent = currentIdx === globalIdx;
-                        return (
-                          <button
-                            key={i}
-                            onClick={() => jumpTo(globalIdx)}
-                            className={`w-9 h-9 rounded-xl text-xs font-bold transition-all ${statusDotCls(status)} ${isCurrent ? `ring-2 ring-offset-2 ${meta.ring}` : ""}`}
-                          >
-                            {section.type === "summary" ? "S" : i + 1}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-              {/* Legend */}
-              <div className="flex flex-wrap gap-3 pt-1 border-t border-gray-100 dark:border-slate-700">
-                {[
-                  { cls: "bg-emerald-500", label: "Correct" },
-                  { cls: "bg-red-500", label: "Wrong" },
-                  { cls: "bg-blue-500", label: "Answered" },
-                  { cls: "bg-gray-100 dark:bg-slate-700", label: "Pending" },
-                ].map(({ cls, label }) => (
-                  <div key={label} className="flex items-center gap-1.5">
-                    <div className={`w-3 h-3 rounded-full ${cls}`} />
-                    <span className="text-[10px] text-gray-500 dark:text-gray-400">{label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
-  );
-
   // ═══════════════════════════════════════════════════════════════════════════
   //  BOTTOM NAV (shared across all question types)
   // ═══════════════════════════════════════════════════════════════════════════
-  const isLastQ = currentIdx === questions.length - 1;
-  const currentSubjectiveBusy =
-    currentIsSubjective && currentEntry.type !== "summary"
-      ? exercises
-        ? translEvalLoading.has((currentEntry.type === "en2cn" ? exercises.en2cn[currentEntry.idx] : exercises.cn2en[currentEntry.idx]).id)
-        : false
-      : summaryEvalLoading;
-
-  const currentPrimaryLabel = currentIsSubjective
-    ? currentSubjectiveReadyForNext
-      ? isLastQ
-        ? "Done"
-        : "Next"
-      : currentSubjectiveBusy
-        ? "Checking..."
-        : "View "
-    : isLastQ
-      ? "Done"
-      : "Next";
-
-  const bottomNav = (
-    <div className="fixed bottom-0 left-0 right-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-gray-100 dark:border-slate-700/60 pb-safe shadow-[0_-8px_24px_-20px_rgba(0,0,0,0.5)]">
-      <div className="max-w-2xl mx-auto px-4 h-14 flex items-center gap-3">
-        {/* Previous */}
-        <button
-          onClick={goPrev}
-          disabled={currentIdx === 0}
-          className="flex items-center gap-1 px-3.5 py-2 rounded-xl text-sm font-medium text-gray-500 dark:text-gray-400 disabled:opacity-30 hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-gray-200 dark:hover:border-slate-700"
-        >
-          <ChevronLeft size={16} /> Prev
-        </button>
-
-        {/* Section indicator */}
-        <div className="flex-1 flex justify-center">
-          <span className={`text-xs font-bold uppercase tracking-wider ${SECTION_META[currentEntry.type].accent}`}>
-            {SECTION_META[currentEntry.type].short}
-          </span>
-        </div>
-
-        {/* Next / Done */}
-        {!currentIsSubjective && isLastQ ? (
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold bg-brand dark:bg-emerald-600 text-white hover:bg-brand/90 transition-colors shadow-sm shadow-emerald-500/20"
-          >
-            Done <ChevronRight size={14} />
-          </button>
-        ) : (
-          <button
-            onClick={async () => {
-              if (currentIsSubjective) {
-                if (currentSubjectiveReadyForNext) {
-                  if (isLastQ) navigate(-1);
-                  else goNext();
-                  return;
-                }
-                await handleSubmitCurrentSubjective();
-                return;
-              }
-              goNext();
-            }}
-            disabled={currentIsSubjective ? currentSubjectiveBusy : !canGoNext}
-            className="flex items-center gap-1 px-3.5 py-2 rounded-xl text-sm font-bold bg-brand dark:bg-emerald-600 text-white disabled:opacity-30 hover:bg-brand/90 transition-colors shadow-sm shadow-emerald-500/20"
-          >
-            {currentPrimaryLabel} <ChevronRight size={16} />
-          </button>
-        )}
-      </div>
-    </div>
-  );
 
   // ═══════════════════════════════════════════════════════════════════════════
   //  PHASE: QUESTIONS
@@ -786,274 +670,71 @@ export default function NewsPractice() {
 
   // ─── Vocab question ───────────────────────────────────────────────────────
   const renderVocab = (entry: Extract<QEntry, { type: "vocab" }>) => {
-    const q = exercises.vocabulary[entry.idx];
-    const selected = vocabAnswers[q.id];
-    const answered = Boolean(selected);
-    const correct = selected === q.answer;
-
+    const question = exercises.vocabulary[entry.idx];
     return (
-      <div className="space-y-4">
-        {renderSectionBadge(entry)}
-
-        {/* Sentence card */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-slate-700">
-          <p className="text-base text-gray-900 dark:text-gray-100 leading-relaxed">
-            {q.sentence.split("___").map((part, i, arr) => (
-              <span key={i}>
-                {part}
-                {i < arr.length - 1 && (
-                  <span
-                    className={`inline-block min-w-[88px] border-b-2 mx-1 px-2 text-center font-semibold transition-colors ${
-                      answered
-                        ? correct
-                          ? "border-emerald-500 text-emerald-700 dark:text-emerald-400"
-                          : "border-red-500 text-red-600 dark:text-red-400"
-                        : "border-gray-300 dark:border-gray-500 text-transparent"
-                    }`}
-                  >
-                    {answered ? selected : "\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0"}
-                  </span>
-                )}
-              </span>
-            ))}
-          </p>
-        </div>
-
-        {/* Options */}
-        <div className="space-y-2">
-          {q.options.map((opt, i) => {
-            const isSel = selected === opt;
-            const isCorr = opt === q.answer;
-            return (
-              <button
-                key={i}
-                type="button"
-                disabled={answered}
-                onClick={() => handleVocabAnswer(q.id, opt)}
-                className={optionCls(answered, isSel, isCorr)}
-              >
-                <span className={badgeCls(answered, isSel, isCorr)}>{LABELS[i]}</span>
-                <span
-                  className={`text-sm font-medium ${
-                    answered && isCorr
-                      ? "text-emerald-700 dark:text-emerald-400"
-                      : answered && isSel
-                        ? "text-red-600 dark:text-red-400"
-                        : "text-gray-800 dark:text-gray-200"
-                  }`}
-                >
-                  {opt}
-                </span>
-                {answered && isCorr && <CheckCircle2 className="ml-auto shrink-0 text-emerald-500" size={17} />}
-                {answered && isSel && !isCorr && <XCircle className="ml-auto shrink-0 text-red-500" size={17} />}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Feedback */}
-        <AnimatePresence>
-          {answered && (
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`rounded-xl p-4 border ${
-                correct
-                  ? "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800"
-                  : "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800"
-              }`}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">Explanation</span>
-              </div>
-              <p
-                className={`text-sm font-semibold mb-1 ${correct ? "text-emerald-700 dark:text-emerald-400" : "text-amber-700 dark:text-amber-400"}`}
-              >
-                {correct ? "✓ Correct!" : `✗ The answer is "${q.answer}"`}
-              </p>
-              <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{q.explanation}</p>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+      <VocabQuestionCard
+        question={question}
+        selected={vocabAnswers[question.id]}
+        labelOptions={LABELS}
+        sectionBadge={renderSectionBadge(entry)}
+        optionClassName={optionCls}
+        badgeClassName={badgeCls}
+        onAnswer={handleVocabAnswer}
+      />
     );
   };
 
   // ─── Comprehension question ───────────────────────────────────────────────
   const renderComp = (entry: Extract<QEntry, { type: "comp" }>) => {
-    const q = exercises.comprehension[entry.idx];
-    const selectedIdx = compAnswers[q.id];
-    const answered = selectedIdx !== undefined;
-    const correct = selectedIdx === q.answer;
-
+    const question = exercises.comprehension[entry.idx];
     return (
-      <div className="space-y-4">
-        {renderSectionBadge(entry)}
-
-        <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-slate-700">
-          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 leading-snug">{q.question}</p>
-        </div>
-
-        <div className="space-y-2">
-          {q.options.map((opt, i) => {
-            const isSel = selectedIdx === i;
-            const isCorr = i === q.answer;
-            return (
-              <button
-                key={i}
-                type="button"
-                disabled={answered}
-                onClick={() => handleCompAnswer(q.id, i)}
-                className={optionCls(answered, isSel, isCorr)}
-              >
-                <span className={badgeCls(answered, isSel, isCorr)}>{LABELS[i]}</span>
-                <span
-                  className={`text-sm ${
-                    answered && isCorr
-                      ? "font-medium text-emerald-700 dark:text-emerald-400"
-                      : answered && isSel
-                        ? "font-medium text-red-600 dark:text-red-400"
-                        : "text-gray-800 dark:text-gray-200"
-                  }`}
-                >
-                  {opt}
-                </span>
-                {answered && isCorr && <CheckCircle2 className="ml-auto shrink-0 text-emerald-500" size={17} />}
-                {answered && isSel && !isCorr && <XCircle className="ml-auto shrink-0 text-red-500" size={17} />}
-              </button>
-            );
-          })}
-        </div>
-
-        <AnimatePresence>
-          {answered && (
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`rounded-xl p-4 border ${
-                correct
-                  ? "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800"
-                  : "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800"
-              }`}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">Explanation</span>
-              </div>
-              <p
-                className={`text-sm font-semibold mb-1 ${correct ? "text-emerald-700 dark:text-emerald-400" : "text-amber-700 dark:text-amber-400"}`}
-              >
-                {correct ? "✓ Correct!" : `✗ The answer is "${q.options[q.answer]}"`}
-              </p>
-              <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{q.explanation}</p>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+      <ComprehensionQuestionCard
+        question={question}
+        selectedIndex={compAnswers[question.id]}
+        labelOptions={LABELS}
+        sectionBadge={renderSectionBadge(entry)}
+        optionClassName={optionCls}
+        badgeClassName={badgeCls}
+        onAnswer={handleCompAnswer}
+      />
     );
   };
 
   // ─── Translation question ─────────────────────────────────────────────────
   const renderTranslation = (entry: Extract<QEntry, { type: "en2cn" | "cn2en" }>) => {
-    const q = entry.type === "en2cn" ? exercises.en2cn[entry.idx] : exercises.cn2en[entry.idx];
-    const userText = translTexts[q.id] ?? "";
-    const revealed = translRevealed.has(q.id);
-    const isEn2Cn = entry.type === "en2cn";
-    const evalResult = translEvals[q.id];
-    const isEvalLoading = translEvalLoading.has(q.id);
-    const hasText = userText.trim().length > 0;
-
+    const question = entry.type === "en2cn" ? exercises.en2cn[entry.idx] : exercises.cn2en[entry.idx];
     return (
-      <div className="space-y-4">
-        {renderSectionBadge(entry)}
-
-        {/* Source text */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-slate-700">
-          <p className={`text-base leading-relaxed ${isEn2Cn ? "italic text-gray-800 dark:text-gray-100" : "text-gray-800 dark:text-gray-100"}`}>
-            {q.sourceText}
-          </p>
-        </div>
-
-        {/* Input */}
-        <div>
-          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">Your translation</p>
-          <textarea
-            value={userText}
-            onChange={(e) => setTranslTexts((prev) => ({ ...prev, [q.id]: e.target.value }))}
-            disabled={revealed}
-            placeholder={isEn2Cn ? "在此输入中文翻译…" : "Write your English translation here…"}
-            rows={3}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 disabled:bg-gray-50 disabled:dark:bg-slate-800/50 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand dark:focus:ring-emerald-500 resize-none transition-colors"
-          />
-        </div>
-
-        {/* Reference + result (after reveal) */}
-        {revealed && (
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
-            {renderReferenceCard(q.modelAnswer)}
-            {isEvalLoading && (
-              <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500 py-1">
-                <Loader2 size={14} className="animate-spin" />
-                <span>AI checking…</span>
-              </div>
-            )}
-            {hasText && evalResult && !isEvalLoading && renderAiScoreCard(evalResult.score, [{ text: evalResult.feedback }])}
-            {hasText && evalResult && !isEvalLoading && renderSuggestionCard(evalResult.improved)}
-          </motion.div>
-        )}
-      </div>
+      <TranslationQuestionCard
+        question={question}
+        direction={entry.type}
+        userText={translTexts[question.id] ?? ""}
+        revealed={translRevealed.has(question.id)}
+        evalResult={translEvals[question.id]}
+        evalLoading={translEvalLoading.has(question.id)}
+        sectionBadge={renderSectionBadge(entry)}
+        referenceCard={renderReferenceCard}
+        scoreCard={renderAiScoreCard}
+        suggestionCard={renderSuggestionCard}
+        onChange={(value) => setTranslTexts((prev) => ({ ...prev, [question.id]: value }))}
+      />
     );
   };
 
   // ─── Summary ──────────────────────────────────────────────────────────────
   const renderSummary = () => {
-    const wordCount = summaryText.trim() ? summaryText.trim().split(/\s+/).length : 0;
-    const locked = summaryRevealed || summaryEvalLoading;
-    const hasText = summaryText.trim().length > 0;
-
     return (
-      <div className="space-y-4">
-        {renderSectionBadge({ type: "summary" })}
-
-        <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-slate-700">
-          <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1">Write an English summary of this news (3–5 sentences).</p>
-          <p className="text-xs text-gray-400 dark:text-gray-500">Cover the main points, key facts, and any significant implication.</p>
-        </div>
-
-        <div>
-          <textarea
-            value={summaryText}
-            onChange={(e) => setSummaryText(e.target.value)}
-            disabled={locked}
-            placeholder="Write your English summary here…"
-            rows={6}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 disabled:bg-gray-50 disabled:dark:bg-slate-800/50 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand dark:focus:ring-emerald-500 resize-none transition-colors"
-          />
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 text-right">
-            {wordCount} {wordCount === 1 ? "word" : "words"}
-          </p>
-        </div>
-
-        {summaryRevealed && (
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
-            {renderReferenceCard(exercises.modelSummary)}
-            {summaryEvalLoading && (
-              <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500 py-1">
-                <Loader2 size={14} className="animate-spin" />
-                <span>AI checking…</span>
-              </div>
-            )}
-            {hasText &&
-              summaryEval &&
-              !summaryEvalLoading &&
-              renderAiScoreCard(summaryEval.score, [
-                { label: "语法", text: summaryEval.grammar },
-                { label: "内容", text: summaryEval.content },
-                { label: "词汇", text: summaryEval.vocabulary },
-              ])}
-            {hasText && summaryEval && !summaryEvalLoading && renderSuggestionCard(summaryEval.improved || exercises.modelSummary)}
-          </motion.div>
-        )}
-      </div>
+      <SummaryQuestionCard
+        summaryText={summaryText}
+        summaryRevealed={summaryRevealed}
+        summaryEval={summaryEval}
+        summaryEvalLoading={summaryEvalLoading}
+        modelSummary={exercises.modelSummary}
+        sectionBadge={renderSectionBadge({ type: "summary" })}
+        referenceCard={renderReferenceCard}
+        scoreCard={renderAiScoreCard}
+        suggestionCard={renderSuggestionCard}
+        onChange={setSummaryText}
+      />
     );
   };
 
@@ -1091,8 +772,23 @@ export default function NewsPractice() {
         else if (dx > 50) goPrev();
       }}
     >
-      {topBar}
-      {answerSheet}
+      <PracticeTopBar
+        title={title}
+        currentIndex={currentIdx}
+        totalQuestions={questions.length}
+        progress={progress}
+        onBack={() => navigate(-1)}
+        onOpenSheet={() => setShowSheet(true)}
+      />
+      <PracticeAnswerSheet
+        open={showSheet}
+        currentIndex={currentIdx}
+        sections={sheetSections}
+        sectionMeta={SECTION_META}
+        getStatus={getStatus}
+        onJump={jumpTo}
+        onClose={() => setShowSheet(false)}
+      />
 
       <div className="max-w-2xl mx-auto px-4 pt-5 pb-24">
         <AnimatePresence mode="wait">
@@ -1111,7 +807,34 @@ export default function NewsPractice() {
         </AnimatePresence>
       </div>
 
-      {bottomNav}
+      <PracticeBottomNav
+        canGoPrev={currentIdx > 0}
+        sectionAccentClass={SECTION_META[currentEntry.type].accent}
+        sectionShortLabel={SECTION_META[currentEntry.type].short}
+        showDoneOnly={!currentIsSubjective && isLastQ}
+        primaryLabel={currentPrimaryLabel}
+        primaryDisabled={currentIsSubjective ? currentSubjectiveBusy : !canGoNext}
+        onPrev={goPrev}
+        onDone={() => navigate(-1)}
+        onPrimary={() => {
+          void handlePrimaryAction();
+        }}
+      />
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

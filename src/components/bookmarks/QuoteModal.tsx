@@ -3,10 +3,10 @@ import html2canvas from "html2canvas-pro";
 import { Capacitor } from "@capacitor/core";
 import { X, Download, Loader2, Check } from "lucide-react";
 import { motion } from "motion/react";
-import { saveImageToAlbum } from "../utils/mediaSave";
-import { useBottomToast } from "../utils/toast";
-import { formatQuoteText } from "../utils/quoteText";
-import { APP_FONT_SANS, APP_FONT_SERIF } from "../utils/typography.ts";
+import { saveImageToAlbum } from "../../utils/mediaSave.ts";
+import { useBottomToast } from "../../utils/toast.ts";
+import { formatQuoteText } from "../../utils/quoteText.ts";
+import { APP_FONT_SANS, APP_FONT_SERIF } from "../../utils/typography.ts";
 
 const QUOTE_CARD_SANS_FONT = APP_FONT_SANS;
 const QUOTE_CARD_SERIF_FONT = APP_FONT_SERIF;

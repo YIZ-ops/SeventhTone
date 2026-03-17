@@ -3,8 +3,8 @@ import html2canvas from "html2canvas-pro";
 import { Capacitor } from "@capacitor/core";
 import { Directory, Filesystem } from "@capacitor/filesystem";
 import { Share } from "@capacitor/share";
-import { useBottomToast } from "../utils/toast";
-import { APP_FONT_SANS, APP_FONT_SERIF } from "../utils/typography";
+import { useBottomToast } from "../../utils/toast";
+import { APP_FONT_SANS, APP_FONT_SERIF } from "../../utils/typography";
 import DOMPurify from "dompurify";
 
 const SHARE_FONT = APP_FONT_SANS;

@@ -1,17 +1,10 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate, useOutlet } from "react-router-dom";
 import { motion } from "motion/react";
 import { ChevronRight, Clock3, Info, Settings, Star } from "lucide-react";
-import { Capacitor } from "@capacitor/core";
-import { App as CapacitorApp } from "@capacitor/app";
 import { getReadingStats } from "../api/localData";
 import { getPointsSummary } from "../api/points";
-import HistoryPage from "./History";
-import SettingsPage from "./Settings";
-import AboutPage from "./About";
-import PointsPage from "./Points";
-
-type MySection = "overview" | "points" | "history" | "settings" | "about";
+import { useAndroidBackHandler } from "../hooks/useAndroidBackHandler";
 
 function formatDuration(ms: number) {
   const totalMinutes = Math.max(0, Math.round(ms / 60000));
@@ -22,7 +15,6 @@ function formatDuration(ms: number) {
   if (minutes === 0) return `${hours} hr`;
   return `${hours} hr ${minutes} min`;
 }
-
 function formatMonthYear(date: Date) {
   return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 }
@@ -58,9 +50,7 @@ function MySubpage({ children }: { children: ReactNode }) {
   );
 }
 
-export default function My() {
-  const navigate = useNavigate();
-  const location = useLocation();
+function MyOverviewContent() {
   const stats = getReadingStats();
   const pointsSummary = getPointsSummary();
   const [calendarDate, setCalendarDate] = useState(() => new Date());
@@ -74,76 +64,8 @@ export default function My() {
     setCalendarDate((prev) => new Date(prev.getFullYear(), prev.getMonth() + delta, 1));
   };
 
-  const section: MySection =
-    location.pathname === "/me/points"
-      ? "points"
-      : location.pathname === "/me/history"
-        ? "history"
-        : location.pathname === "/me/settings"
-          ? "settings"
-          : location.pathname === "/me/about"
-            ? "about"
-            : "overview";
-
-  useEffect(() => {
-    if (section !== "overview") {
-      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-    }
-  }, [section]);
-
-  // Android 物理返回键：返回首页
-  useEffect(() => {
-    if (Capacitor.getPlatform() !== "android") return;
-    let handle: { remove: () => Promise<void> } | null = null;
-    CapacitorApp.addListener("backButton", () => {
-      if (section == "overview") {
-        navigate("/");
-      } else {
-        navigate("/me");
-      }
-    }).then((h) => {
-      handle = h;
-    });
-    return () => {
-      handle?.remove?.();
-    };
-  }, [navigate, section]);
-
-  if (section === "history") {
-    return (
-      <MySubpage>
-        <HistoryPage />
-      </MySubpage>
-    );
-  }
-
-  if (section === "points") {
-    return (
-      <MySubpage>
-        <PointsPage />
-      </MySubpage>
-    );
-  }
-
-  if (section === "settings") {
-    return (
-      <MySubpage>
-        <SettingsPage />
-      </MySubpage>
-    );
-  }
-
-  if (section === "about") {
-    return (
-      <MySubpage>
-        <AboutPage />
-      </MySubpage>
-    );
-  }
-
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-4xl mx-auto px-4 py-8 pb-16">
-      {/* Page header */}
       <div className="mb-6">
         <div className="flex items-center space-x-2 mb-3">
           <span className="h-px w-6 bg-brand dark:bg-emerald-400" />
@@ -271,6 +193,7 @@ export default function My() {
             },
           ].map(({ to, icon: Icon, title, description, iconClass }) => (
             <Link
+              key={to}
               to={to}
               className="group flex items-center gap-4 rounded-2xl border border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 px-5 py-5 shadow-sm hover:bg-gray-50 dark:hover:bg-slate-700/60 transition-colors"
             >
@@ -299,3 +222,35 @@ export default function My() {
     </motion.div>
   );
 }
+
+export default function My() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const outlet = useOutlet();
+  const isOverview = location.pathname === "/me";
+
+  useEffect(() => {
+    if (isOverview) return;
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [isOverview]);
+
+  useAndroidBackHandler(() => {
+    if (isOverview) {
+      navigate("/");
+      return;
+    }
+    navigate("/me");
+  });
+
+  if (outlet) {
+    return <MySubpage>{outlet}</MySubpage>;
+  }
+
+  return <MyOverviewContent />;
+}
+
+
+
+
+
+

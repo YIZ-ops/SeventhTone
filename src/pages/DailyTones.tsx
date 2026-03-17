@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type TouchEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
-import { App as CapacitorApp } from "@capacitor/app";
 import { ChevronLeft, ChevronRight, Download, ImageOff, Loader2, Calendar as CalendarIcon, X } from "lucide-react";
 import { getDailyTonesByDate, getDailyTonesCalendar } from "../api/dailyTones";
 import { NewsItem } from "../types";
@@ -9,6 +8,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { Media } from "@capacitor-community/media";
 import { saveRemoteImageToAlbum } from "../utils/mediaSave";
 import { useBottomToast } from "../utils/toast";
+import { useAndroidBackHandler } from "../hooks/useAndroidBackHandler";
 
 const toInputDate = (d: Date) => {
   const y = d.getFullYear();
@@ -62,18 +62,9 @@ export default function DailyTones() {
   const swipeIsH = useRef<boolean | null>(null);
   const { showToast } = useBottomToast();
 
-  useEffect(() => {
-    if (Capacitor.getPlatform() !== "android") return;
-    let handle: { remove: () => Promise<void> } | null = null;
-    CapacitorApp.addListener("backButton", () => {
-      navigate("/");
-    }).then((h) => {
-      handle = h;
-    });
-    return () => {
-      handle?.remove?.();
-    };
-  }, [navigate]);
+  useAndroidBackHandler(() => {
+    navigate("/");
+  });
 
   useEffect(() => {
     const loadCalendar = async () => {
@@ -463,3 +454,8 @@ export default function DailyTones() {
     </div>
   );
 }
+
+
+
+
+

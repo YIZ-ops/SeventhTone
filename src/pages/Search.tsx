@@ -1,13 +1,12 @@
 import { useState, useCallback, useEffect, useRef, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Capacitor } from "@capacitor/core";
-import { App as CapacitorApp } from "@capacitor/app";
 import DOMPurify from "dompurify";
 import { searchNews } from "../api/search";
 import type { SearchResultItem } from "../types";
 import { Search as SearchIcon, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { motion } from "motion/react";
+import { useAndroidBackHandler } from "../hooks/useAndroidBackHandler";
 
 const PAGE_SIZE = 10;
 
@@ -74,18 +73,9 @@ export default function Search() {
     }
   }, []);
 
-  useEffect(() => {
-    if (Capacitor.getPlatform() !== "android") return;
-    let handle: { remove: () => Promise<void> } | null = null;
-    CapacitorApp.addListener("backButton", () => {
-      navigate("/");
-    }).then((h) => {
-      handle = h;
-    });
-    return () => {
-      handle?.remove?.();
-    };
-  }, [navigate]);
+  useAndroidBackHandler(() => {
+    navigate("/");
+  });
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -240,3 +230,7 @@ export default function Search() {
     </div>
   );
 }
+
+
+
+

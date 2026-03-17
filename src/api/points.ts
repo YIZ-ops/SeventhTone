@@ -35,7 +35,7 @@ export interface PointsAwardResult {
   reason?: "duplicate" | "too_short" | "incomplete";
 }
 
-const POINTS_STORAGE_KEY = "seventh-tone-points-ledger";
+const POINTS_STORAGE_KEY = "seventhtone_points_ledger";
 const MAX_TRANSACTIONS = 500;
 const NEWS_READ_REWARD_POINTS = 5;
 const NEWS_READ_MIN_DURATION_MS = 15000;

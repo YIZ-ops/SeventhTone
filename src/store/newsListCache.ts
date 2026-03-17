@@ -1,4 +1,5 @@
 import type { NewsItem } from "../types";
+import { createExpiringMemoryCache } from "./cache";
 
 export interface NewsListCacheItem {
   news: NewsItem[];
@@ -6,12 +7,13 @@ export interface NewsListCacheItem {
   hasMore: boolean;
 }
 
-const cache: Record<string, NewsListCacheItem> = {};
+const NEWS_LIST_CACHE_TTL_MS = 10 * 60 * 1000;
+const cache = createExpiringMemoryCache<string, NewsListCacheItem>(NEWS_LIST_CACHE_TTL_MS);
 
 export function getNewsListCache(categoryId: string): NewsListCacheItem | null {
-  return cache[categoryId] ?? null;
+  return cache.get(categoryId);
 }
 
 export function setNewsListCache(categoryId: string, data: NewsListCacheItem): void {
-  cache[categoryId] = data;
+  cache.set(categoryId, data);
 }

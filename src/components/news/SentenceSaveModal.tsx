@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { X, Plus, Image as ImageIcon } from "lucide-react";
-import { getSentenceCategories } from "../api/sentences";
-import QuoteModal from "./QuoteModal";
-import { formatQuoteText } from "../utils/quoteText";
+import { getSentenceCategories } from "../../api/sentences";
+import QuoteModal from "../bookmarks/QuoteModal";
+import { formatQuoteText } from "../../utils/quoteText";
 
 interface Props {
   selectedText: string;

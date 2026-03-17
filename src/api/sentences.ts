@@ -2,7 +2,7 @@ import type { Sentence } from "../types";
 import { formatQuoteText } from "../utils/quoteText";
 
 // Local storage for sentences
-const HIGHLIGHTS_KEY = "sixthtone_sentences";
+const HIGHLIGHTS_KEY = "seventhtone_sentences";
 
 export const getSentences = (contId: number): Sentence[] => {
   try {
@@ -68,17 +68,14 @@ export const addSentence = (
   }
 };
 
-/** 高亮用到的全部分类（书签分类 + 已有高亮分类，去重） */
 export const getSentenceCategories = (): string[] => {
   const cats = new Set<string>();
   getAllSentences().forEach((h) => {
-    // 空/未设置的 category 归入 "Sentences" 默认分类
     cats.add(h.category || "Sentences");
   });
   return Array.from(cats);
 };
 
-/** 重命名高亮分类：将所有 category === oldName 的高亮改为 newName */
 export const renameSentenceCategory = (oldName: string, newName: string) => {
   try {
     const allStr = localStorage.getItem(HIGHLIGHTS_KEY);
@@ -92,7 +89,6 @@ export const renameSentenceCategory = (oldName: string, newName: string) => {
   }
 };
 
-/** 删除高亮分类：逐一调用 removeSentence 删除该分类下的所有高亮 */
 export const deleteSentenceCategory = (category: string) => {
   try {
     getAllSentences()

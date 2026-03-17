@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,6 +16,10 @@ import DailyTones from "./pages/DailyTones";
 import Search from "./pages/Search";
 import My from "./pages/My";
 import Bookmarks from "./pages/Bookmarks";
+import HistoryPage from "./pages/History";
+import SettingsPage from "./pages/Settings";
+import AboutPage from "./pages/About";
+import PointsPage from "./pages/Points";
 import BottomNav from "./components/BottomNav";
 import Header from "./components/Header";
 
@@ -38,12 +42,13 @@ function AppContent() {
           <Route path="/history" element={<Navigate to="/me/history" replace />} />
           <Route path="/daily-tones" element={<DailyTones />} />
           <Route path="/search" element={<Search />} />
-          <Route path="/me" element={<My />} />
+          <Route path="/me" element={<My />}>
+            <Route path="points" element={<PointsPage />} />
+            <Route path="history" element={<HistoryPage />} />
+            <Route path="settings" element={<SettingsPage />} />
+            <Route path="about" element={<AboutPage />} />
+          </Route>
           <Route path="/me/saved" element={<Navigate to="/bookmarks" replace />} />
-          <Route path="/me/points" element={<My />} />
-          <Route path="/me/history" element={<My />} />
-          <Route path="/me/settings" element={<My />} />
-          <Route path="/me/about" element={<My />} />
           <Route path="/news/:id" element={<NewsDetailView />} />
           <Route path="/practice/:id" element={<NewsPractice />} />
         </Routes>

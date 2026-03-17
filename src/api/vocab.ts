@@ -1,7 +1,6 @@
 import type { VocabWord } from "../types";
 
-// ── 生词本 ──────────────────────────────────────────────────────────────
-const VOCAB_KEY = "sixthtone_vocabulary";
+const VOCAB_KEY = "seventhtone_vocabulary";
 
 export const getVocab = (): VocabWord[] => {
   try {
@@ -38,4 +37,3 @@ export const removeVocab = (id: string) => {
     console.error("Failed to remove vocab word");
   }
 };
-// ────────────────────────────────────────────────────────────────────────
