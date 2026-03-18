@@ -4,6 +4,7 @@ import { BASE_URL } from "./base";
 
 export interface SearchNewsParams {
   word: string;
+  nodeId?: string | number;
   pageNum?: number;
   pageSize?: number;
   orderType?: number;
@@ -11,10 +12,10 @@ export interface SearchNewsParams {
 
 /** 搜索新闻：POST /search/news */
 export const searchNews = async (params: SearchNewsParams) => {
-  const { word, pageNum = 1, pageSize = 10, orderType = 1 } = params;
+  const { word, nodeId, pageNum = 1, pageSize = 10, orderType = 1 } = params;
   const res = await request<SearchResponse>(`${BASE_URL}/search/news`, {
     method: "POST",
-    body: JSON.stringify({ word, pageNum, pageSize, orderType }),
+    body: JSON.stringify({ word, nodeId, pageNum, pageSize, orderType }),
   });
   if (res?.code !== 200 || !res?.data) {
     throw new Error("Failed to search.");

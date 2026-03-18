@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { App as CapacitorApp } from "@capacitor/app";
-import { Loader2 } from "lucide-react";
+import { Loader2, Menu, Search as SearchIcon } from "lucide-react";
 import { motion } from "motion/react";
 import { getCategories } from "../api/categories";
 import { getNewsList, getNewsListByTopic } from "../api/news";
+import HomeCategoryDrawer from "../components/home/HomeCategoryDrawer";
 import NewsCard from "../components/news/NewsCard";
 import { getNewsListCache, setNewsListCache } from "../store/newsListCache";
 import { Category, NewsItem } from "../types";
@@ -22,6 +23,7 @@ export default function NewsList() {
   const listId = isTopicMode ? topicId : id;
   const cacheKey = listId ? (isTopicMode ? `topic-${listId}` : listId) : "";
 
+  const [categories, setCategories] = useState<Category[]>([]);
   const [category, setCategory] = useState<Category | null>(null);
   const [topicMeta, setTopicMeta] = useState<{ title: string; description?: string; tonePic?: string } | null>(null);
   const [categoriesLoading, setCategoriesLoading] = useState(!isTopicMode);
@@ -33,6 +35,7 @@ export default function NewsList() {
   const [pullY, setPullY] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [headerVisible, setHeaderVisible] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const pullYRef = useRef(0);
   const loadingGuardRef = useRef(false);
@@ -42,6 +45,10 @@ export default function NewsList() {
   const pageRef = useRef(page);
 
   useAndroidBackHandler(({ canGoBack }) => {
+    if (drawerOpen) {
+      setDrawerOpen(false);
+      return;
+    }
     if (canGoBack) {
       navigate(-1);
       return;
@@ -87,15 +94,32 @@ export default function NewsList() {
   }, [cacheKey, hasMore, news, page]);
 
   useEffect(() => {
-    if (isTopicMode) {
-      setCategoriesLoading(false);
-      return;
+    let cancelled = false;
+    if (!isTopicMode) {
+      setCategoriesLoading(true);
     }
-    setCategoriesLoading(true);
-    if (!id) return;
+
     getCategories()
-      .then((list) => setCategory(list.find((c) => c.id === id) ?? null))
-      .finally(() => setCategoriesLoading(false));
+      .then((list) => {
+        if (cancelled) return;
+        setCategories(list);
+        if (!isTopicMode) {
+          setCategory(list.find((c) => c.id === id) ?? null);
+        }
+      })
+      .catch(() => {
+        if (cancelled || isTopicMode) return;
+        setCategory(null);
+      })
+      .finally(() => {
+        if (!cancelled && !isTopicMode) {
+          setCategoriesLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [id, isTopicMode]);
 
   useEffect(() => {
@@ -111,6 +135,10 @@ export default function NewsList() {
       tonePic: state?.topicBg,
     });
   }, [isTopicMode, location.state, topicId]);
+
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [listId]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -172,6 +200,11 @@ export default function NewsList() {
     fetchNews(1);
   }, [fetchNews, listId]);
 
+  const openCategoryDrawer = useCallback(() => {
+    if (categories.length === 0) return;
+    setDrawerOpen(true);
+  }, [categories.length]);
+
   useEffect(() => {
     const startY = { current: 0 };
     const scrollYAtStart = { current: 0 };
@@ -210,6 +243,11 @@ export default function NewsList() {
   }, [onPullRefresh]);
 
   const displayMeta = isTopicMode ? topicMeta : category;
+  const solidHeader = headerVisible;
+  const transparentHeaderOnImage = Boolean(displayMeta?.tonePic) && !solidHeader;
+  const headerActionClass = transparentHeaderOnImage
+    ? "text-white/90 hover:text-white"
+    : "text-gray-500 hover:text-brand dark:text-gray-400 dark:hover:text-emerald-400";
 
   if (categoriesLoading) {
     return (
@@ -237,20 +275,34 @@ export default function NewsList() {
 
   return (
     <>
+      <HomeCategoryDrawer open={drawerOpen} categories={categories} onClose={() => setDrawerOpen(false)} />
+
       <header
-        className={`fixed top-0 left-0 right-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-gray-200/50 dark:border-slate-700/50 pt-safe shadow-sm transition-all duration-300 ${
-          headerVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-full pointer-events-none"
+        className={`fixed top-0 left-0 right-0 z-40 pt-safe transition-all duration-300 ${
+          solidHeader
+            ? "bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border-b border-gray-200/50 dark:border-slate-700/50 shadow-sm"
+            : "bg-transparent border-b border-transparent backdrop-blur-0"
         }`}
       >
-        <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-center">
-          <Link to="/home" className="flex items-center space-x-3 group">
-            <div className="w-6 h-6 bg-gray-900 dark:bg-gray-100 rounded-lg flex items-center justify-center group-hover:bg-brand dark:group-hover:bg-emerald-500 transition-colors duration-300">
-              <span className="text-white dark:text-slate-900 font-serif font-bold text-lg">S</span>
-            </div>
-            <span className="text-lg font-serif font-bold tracking-[0.15em] text-gray-900 dark:text-gray-100 group-hover:text-brand dark:group-hover:text-emerald-400 transition-colors duration-300">
-              Seventh Tone
-            </span>
-          </Link>
+        <div className="mx-auto flex h-11 max-w-4xl items-center gap-1 px-2">
+          <div className="flex w-16 shrink-0 items-center">
+            <button
+              type="button"
+              onClick={openCategoryDrawer}
+              className={`group p-2 transition-colors ${headerActionClass}`}
+              aria-label="Open categories"
+            >
+              <Menu size={20} />
+            </button>
+          </div>
+
+          <div className="min-w-0 flex flex-1 items-center justify-center" />
+
+          <div className="flex w-16 shrink-0 items-center justify-end">
+            <Link to="/search" className={`group p-2 transition-colors ${headerActionClass}`} aria-label="Search">
+              <SearchIcon size={18} />
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -267,16 +319,16 @@ export default function NewsList() {
         </div>
 
         <div
-          className={`relative w-[100vw] left-1/2 -translate-x-1/2 min-h-[200px] md:min-h-[240px] flex flex-col justify-end px-4 pt-safe pt-12 pb-8 md:px-10 overflow-hidden ${!displayMeta?.tonePic ? "bg-gray-100 dark:bg-slate-800" : ""}`}
+          className={`relative w-[100vw] left-1/2 -translate-x-1/2 min-h-[340px] md:min-h-[420px] flex flex-col justify-end px-4 pt-safe pt-32 pb-8 md:px-10 overflow-hidden ${!displayMeta?.tonePic ? "bg-gray-100 dark:bg-slate-800" : ""}`}
         >
           {displayMeta?.tonePic && (
             <>
               <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${displayMeta.tonePic})` }} />
+              <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/45 to-transparent" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
             </>
           )}
           <div className="relative z-10 max-w-4xl mx-auto w-full">
-            <span className={`inline-block h-px w-6 mb-3 ${displayMeta?.tonePic ? "bg-white/80" : "bg-brand"}`} />
             <span
               className={`block text-[10px] font-bold tracking-[0.3em] uppercase mb-2 ${displayMeta?.tonePic ? "text-white/90" : "text-gray-500 dark:text-gray-400"}`}
             >
@@ -289,7 +341,7 @@ export default function NewsList() {
             </h1>
             {displayMeta?.description && (
               <p
-                className={`mt-3 max-w-2xl text-sm md:text-base italic leading-relaxed ${
+                className={`mt-5 md:mt-6 max-w-2xl text-sm md:text-base italic leading-relaxed ${
                   displayMeta?.tonePic ? "text-white/90 drop-shadow-sm" : "text-gray-500 dark:text-gray-400"
                 }`}
               >
