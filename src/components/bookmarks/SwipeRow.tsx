@@ -58,7 +58,7 @@ export default function SwipeRow({ onDelete, children }: { onDelete: () => void;
         if (offset < 0) close();
       }}
     >
-      <div className="absolute inset-y-0 right-0 w-[76px] bg-red-500 flex flex-col items-center justify-center gap-0.5">
+      <div className="absolute inset-y-0 right-0 w-[76px] bg-red-400 flex flex-col items-center justify-center gap-0.5">
         <button
           type="button"
           onClick={(e) => {

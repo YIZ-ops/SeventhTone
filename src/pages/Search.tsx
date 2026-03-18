@@ -74,7 +74,7 @@ export default function Search() {
   }, []);
 
   useAndroidBackHandler(() => {
-    navigate("/");
+    navigate("/home");
   });
 
   const handleSubmit = (e: FormEvent) => {
@@ -121,14 +121,6 @@ export default function Search() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 pb-32">
-      <header className="mb-8">
-        <div className="flex items-center space-x-2 mb-2">
-          <span className="h-px w-8 bg-brand dark:bg-emerald-400" />
-          <span className="text-xs font-extrabold tracking-[0.2em] text-brand dark:text-emerald-400 uppercase">Search</span>
-        </div>
-        <h1 className="text-3xl md:text-4xl font-serif font-bold text-gray-900 dark:text-gray-100 tracking-tight">Search</h1>
-      </header>
-
       <form onSubmit={handleSubmit} className="mb-8">
         <div className="relative">
           <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
@@ -137,7 +129,7 @@ export default function Search() {
             value={word}
             onChange={(e) => setWord(e.target.value)}
             placeholder="Search news..."
-            className="w-full pl-12 pr-5 py-4 rounded-2xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand transition-all"
+            className="w-full pl-12 pr-5 py-4 rounded-2xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:border-brand transition-all"
             autoFocus
             autoComplete="off"
           />
@@ -230,7 +222,3 @@ export default function Search() {
     </div>
   );
 }
-
-
-
-

@@ -47,7 +47,7 @@ export default function BookmarkCategoryGrid({ categories, onOpen, onRename, onD
                 e.stopPropagation();
                 onDelete(category.name);
               }}
-              className="p-1.5 rounded-full bg-black/25 text-white/80 hover:bg-red-500 hover:text-white transition-all backdrop-blur-sm"
+              className="p-1.5 rounded-full bg-black/25 text-white/80 hover:bg-red-400 hover:text-white transition-all backdrop-blur-sm"
             >
               <Trash2 size={11} />
             </button>

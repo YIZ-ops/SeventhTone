@@ -207,3 +207,59 @@ export interface SearchResponse {
     pages: number;
   };
 }
+
+export type HomeFeedSectionLayout = "hero" | "list";
+
+export interface HomeFeedArticle {
+  contId: number;
+  nodeId: number;
+  name: string;
+  summary: string;
+  pubTime: string;
+  pubTimeLong: number;
+  pic: string;
+  appHeadPic: string;
+  link: string;
+  nodeInfo?: {
+    nodeId?: number;
+    name: string;
+  };
+  userInfo?: {
+    name: string;
+    pic: string;
+  };
+  cardMode?: string;
+  forwardType?: number;
+  contType?: number;
+}
+
+export interface HomeFeedSection {
+  title: string;
+  layout: HomeFeedSectionLayout;
+  cardMode: string;
+  items: HomeFeedArticle[];
+  nodeInfo?: {
+    nodeId?: number;
+    name?: string;
+  };
+}
+
+export interface HomeFeedRemoteSection {
+  cardMode?: string;
+  name?: string;
+  nodeInfo?: {
+    nodeId?: number;
+    name?: string;
+  };
+  childList?: Array<Record<string, unknown>>;
+}
+
+export interface HomeFeedResponse {
+  pageProps?: {
+    data?: {
+      pageInfo?: {
+        list?: HomeFeedRemoteSection[];
+      };
+    };
+  };
+}

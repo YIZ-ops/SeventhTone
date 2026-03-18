@@ -8,7 +8,7 @@ export default function BottomNav() {
         <div className="flex justify-around items-center h-12 gap-1">
           {[
             { to: "/daily-tones", icon: CalendarDays, label: "Daily" },
-            { to: "/", icon: Home, label: "Home" },
+            { to: "/home", icon: Home, label: "Home" },
             { to: "/bookmarks", icon: Bookmark, label: "Saved" },
             { to: "/me", icon: User, label: "My" },
           ].map(({ to, icon: Icon, label }) => (

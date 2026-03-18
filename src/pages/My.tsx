@@ -65,15 +65,7 @@ function MyOverviewContent() {
   };
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-4xl mx-auto px-4 py-8 pb-16">
-      <div className="mb-6">
-        <div className="flex items-center space-x-2 mb-3">
-          <span className="h-px w-6 bg-brand dark:bg-emerald-400" />
-          <span className="text-[10px] font-extrabold tracking-[0.3em] text-brand dark:text-emerald-400 uppercase">PROFILE</span>
-        </div>
-        <h1 className="text-4xl md:text-5xl font-serif font-bold text-gray-900 dark:text-gray-100 tracking-tight">My</h1>
-      </div>
-
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-4xl mx-auto px-4 py-6 pb-16">
       <div className="space-y-6">
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <div className="rounded-2xl border border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800 p-5 shadow-sm">
@@ -199,10 +191,7 @@ function MyOverviewContent() {
             >
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${iconClass}`}>
-                    <Icon size={18} />
-                  </div>
-                  <h3 className="text-md font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
+                  <h3 className="text-md font-bold uppercase tracking-[0.1em] text-gray-900 dark:text-gray-100">{title}</h3>
                   {to === "/me/points" && (
                     <span className="inline-flex items-center px-2 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300">
                       {pointsSummary.totalPoints} pts
@@ -236,7 +225,7 @@ export default function My() {
 
   useAndroidBackHandler(() => {
     if (isOverview) {
-      navigate("/");
+      navigate("/home");
       return;
     }
     navigate("/me");
@@ -248,9 +237,3 @@ export default function My() {
 
   return <MyOverviewContent />;
 }
-
-
-
-
-
-

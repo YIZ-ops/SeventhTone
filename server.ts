@@ -30,6 +30,58 @@ async function startServer() {
     res.json({ status: "ok" });
   });
 
+  app.get("/api/home-feed", async (req, res) => {
+    const parseHomeFeed = (payload: any) => (payload?.pageProps?.data?.pageInfo?.list ? payload : null);
+    let buildId = "hb8D50A9NRCU31JdhQhE1";
+
+    const fetchByBuildId = async (id: string) => {
+      const dataUrl = `https://www.sixthtone.com/_next/data/${id}/index.json`;
+      const response = await axios.get(dataUrl, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          Accept: "application/json,text/plain,*/*",
+        },
+        timeout: 10000,
+        maxRedirects: 5,
+      });
+      return parseHomeFeed(response.data);
+    };
+
+    try {
+      let homeFeedData = await fetchByBuildId(buildId);
+      if (!homeFeedData) {
+        const htmlResponse = await axios.get("https://www.sixthtone.com", {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          },
+          timeout: 10000,
+          maxRedirects: 5,
+        });
+        const html = String(htmlResponse.data || "");
+        const match = html.match(/"buildId":"([^"]+)"/);
+        const latestBuildId = match?.[1];
+
+        if (latestBuildId && latestBuildId !== buildId) {
+          buildId = latestBuildId;
+          homeFeedData = await fetchByBuildId(buildId);
+        }
+      }
+
+      if (!homeFeedData) {
+        res.status(404).json({ error: "Home feed data not found in page props" });
+        return;
+      }
+
+      res.json(homeFeedData);
+    } catch (error: any) {
+      console.error("Error fetching home feed:", error.message);
+      res.status(error.response?.status || 500).json({
+        error: "Failed to fetch home feed",
+        message: error.message,
+      });
+    }
+  });
+
   // Backend relay for news detail.
   app.get("/api/news/:id", async (req, res) => {
     const contId = req.params.id;

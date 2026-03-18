@@ -578,9 +578,9 @@ export default function NewsDetailView() {
         <article className="max-w-3xl mx-auto px-4 pb-16 select-text relative">
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-lg shadow-black/5 p-4 sm:p-4">
             {/* Header：标题和 summary 支持点击查词 */}
-            <header className="mb-6">
+            <header className="mb-4">
               <h1
-                className={`${newsScaleClasses[fontScale].title} font-serif font-bold text-gray-900 dark:text-gray-100 leading-tight mb-6 cursor-text`}
+                className={`${newsScaleClasses[fontScale].title} font-bold text-gray-900 dark:text-gray-100 leading-tight mb-6 cursor-text`}
                 onDoubleClick={(e) => {
                   if (!(e.target as HTMLElement).closest("a")) handleContentDblClick(e);
                 }}
@@ -598,7 +598,7 @@ export default function NewsDetailView() {
               </p>
 
               {news.topicList && news.topicList.length > 0 && (
-                <section className="mb-8">
+                <section className="mb-4">
                   <div className="flex flex-wrap gap-2">
                     {news.topicList.map((topic) => (
                       <button
@@ -623,24 +623,13 @@ export default function NewsDetailView() {
                 </section>
               )}
 
-              <div className="flex items-center justify-between py-4 border-y border-gray-100 dark:border-slate-700">
-                <div className="flex items-center space-x-3">
-                  {news.authorList?.[0]?.pic && (
-                    <img
-                      src={news.authorList[0].pic}
-                      alt={news.authorList[0].name}
-                      className="w-10 h-10 rounded-full object-cover"
-                      referrerPolicy="no-referrer"
-                    />
-                  )}
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                      {news.authorList?.map((a) => a.name).join(", ") || "Seventh Tone"}
-                    </p>
-                    <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                      <Clock size={12} className="mr-1" />
-                      <time dateTime={news.pubTime}>{news.pubTime}</time>
-                    </div>
+              <div className="flex justify-end">
+                <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1 text-right">
+                  <p className="text-xs font-semibold text-gray-500 italic dark:text-gray-400">
+                    {news.authorList?.map((a) => a.name).join(", ") || "Sixth Tone"}
+                  </p>
+                  <div className="shrink-0 flex items-center italic text-xs text-gray-500 dark:text-gray-400">
+                    <time dateTime={news.pubTime}>{news.pubTime}</time>
                   </div>
                 </div>
               </div>

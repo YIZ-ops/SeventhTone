@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type TouchEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Capacitor } from "@capacitor/core";
 import { ChevronLeft, ChevronRight, Download, ImageOff, Loader2, Calendar as CalendarIcon, X } from "lucide-react";
 import { getDailyTonesByDate, getDailyTonesCalendar } from "../api/dailyTones";
 import { NewsItem } from "../types";
 import { motion, AnimatePresence } from "motion/react";
-import { Media } from "@capacitor-community/media";
 import { saveRemoteImageToAlbum } from "../utils/mediaSave";
 import { useBottomToast } from "../utils/toast";
 import { useAndroidBackHandler } from "../hooks/useAndroidBackHandler";
@@ -63,7 +62,7 @@ export default function DailyTones() {
   const { showToast } = useBottomToast();
 
   useAndroidBackHandler(() => {
-    navigate("/");
+    navigate("/home");
   });
 
   useEffect(() => {
@@ -386,14 +385,10 @@ export default function DailyTones() {
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.4, ease: "easeOut" }}
               >
-                <Link to={`/news/${items[activeSlide]?.contId}`}>
-                  <h2 className="text-3xl md:text-5xl font-serif font-bold leading-tight mb-4 text-white hover:text-emerald-300 transition-colors">
-                    {items[activeSlide]?.name}
-                  </h2>
-                  {items[activeSlide]?.summary && (
-                    <p className="text-white/70 text-sm md:text-base leading-relaxed italic">{items[activeSlide].summary}</p>
-                  )}
-                </Link>
+                <h2 className="text-3xl md:text-5xl font-serif font-bold leading-tight mb-4 text-white">{items[activeSlide]?.name}</h2>
+                {items[activeSlide]?.summary && (
+                  <p className="text-white/70 text-sm md:text-base leading-relaxed italic">{items[activeSlide].summary}</p>
+                )}
               </motion.div>
             </AnimatePresence>
 

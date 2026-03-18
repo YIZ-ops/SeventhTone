@@ -264,7 +264,7 @@ export default function SentenceDetailModal({ sentence, onClose, onDelete, onSav
               <button
                 type="button"
                 onClick={onDelete}
-                className="flex-1 py-3 text-sm font-semibold text-white bg-red-500 rounded-full hover:bg-red-600 dark:hover:bg-red-600 transition-colors"
+                className="flex-1 py-3 text-sm font-semibold text-white bg-red-400 rounded-full hover:bg-red-600 dark:hover:bg-red-600 transition-colors"
               >
                 Remove
               </button>

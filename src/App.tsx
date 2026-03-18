@@ -8,7 +8,7 @@ import { BrowserRouter as Router, Navigate, Route, Routes, useLocation } from "r
 import { Capacitor } from "@capacitor/core";
 import { StatusBar, Style } from "@capacitor/status-bar";
 import { useTheme } from "./contexts/ThemeContext";
-import CategoryList from "./pages/CategoryList";
+import Home from "./pages/Home";
 import NewsList from "./pages/NewsList";
 import NewsDetailView from "./pages/NewsDetail";
 import NewsPractice from "./pages/NewsPractice";
@@ -35,7 +35,8 @@ function AppContent() {
       {!isNewsDetail && !isDailyTones && !isNewsList && !isPractice && <Header />}
       <main className={isNewsDetail || isDailyTones || isPractice ? "" : "pb-16"}>
         <Routes>
-          <Route path="/" element={<CategoryList />} />
+          <Route path="/" element={<Navigate to="/home" replace />} />
+          <Route path="/home" element={<Home />} />
           <Route path="/category/:id" element={<NewsList />} />
           <Route path="/topic/:topicId" element={<NewsList />} />
           <Route path="/bookmarks" element={<Bookmarks />} />

@@ -225,7 +225,7 @@ export default function NewsList() {
         <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-sm text-center max-w-md w-full">
           <p className="text-red-600 dark:text-red-400 font-medium mb-4">Category not found</p>
           <button
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/home")}
             className="px-6 py-2 bg-emerald-600 text-white rounded-full font-medium hover:bg-emerald-700 transition-colors"
           >
             Go Home
@@ -243,7 +243,7 @@ export default function NewsList() {
         }`}
       >
         <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-center">
-          <Link to="/" className="flex items-center space-x-3 group">
+          <Link to="/home" className="flex items-center space-x-3 group">
             <div className="w-6 h-6 bg-gray-900 dark:bg-gray-100 rounded-lg flex items-center justify-center group-hover:bg-brand dark:group-hover:bg-emerald-500 transition-colors duration-300">
               <span className="text-white dark:text-slate-900 font-serif font-bold text-lg">S</span>
             </div>

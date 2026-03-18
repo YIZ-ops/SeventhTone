@@ -22,11 +22,11 @@ export default function NewsCard({ news }: Props) {
   return (
     <Link
       to={`/news/${news.contId}`}
-      className="group block bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-600 overflow-hidden hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.08)] dark:hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.3)] transition-all duration-500 active:scale-[0.99]"
+      className="group block overflow-hidden rounded-2xl border border-gray-200/80 bg-white hover:border-gray-300 hover:shadow-[0_24px_50px_-22px_rgba(0,0,0,0.16)] transition-all duration-500 active:scale-[0.99] dark:border-slate-700 dark:bg-slate-800 dark:hover:border-slate-500 dark:hover:shadow-[0_24px_50px_-22px_rgba(0,0,0,0.34)]"
     >
-      <div className="flex flex-col gap-3 p-4 md:p-6">
-        <div className="flex gap-4 md:gap-6">
-          <div className="relative w-32 h-24 md:w-40 md:h-28 rounded-xl overflow-hidden bg-gray-50 dark:bg-slate-700 flex-shrink-0">
+      <div className="flex flex-col gap-3 p-4 md:p-5">
+        <div className="flex gap-4 md:gap-5">
+          <div className="relative h-24 w-32 flex-shrink-0 overflow-hidden rounded-xl bg-gray-50 dark:bg-slate-700 md:h-28 md:w-40">
             <img
               src={news.pic || news.appHeadPic}
               alt={news.name}
@@ -34,30 +34,20 @@ export default function NewsCard({ news }: Props) {
               loading="lazy"
               referrerPolicy="no-referrer"
             />
-            {news.nodeInfo?.name && (
-              <div className="absolute top-1 left-2">
-                <span
-                  className="inline-block max-w-[72px] truncate px-1.5 py-1 bg-white/90 backdrop-blur-sm text-[6px] font-bold text-brand uppercase tracking-[0.1em] rounded-full shadow-sm align-middle"
-                  title={news.nodeInfo.name}
-                >
-                  {news.nodeInfo.name}
-                </span>
-              </div>
-            )}
           </div>
 
-          <div className="flex flex-col min-w-0 flex-1 justify-start">
-            <h3 className="text-base md:text-xl font-bold text-gray-900 dark:text-gray-100 leading-tight break-words group-hover:text-brand dark:group-hover:text-emerald-400 transition-colors duration-300">
+          <div className="flex min-w-0 flex-1 flex-col justify-start">
+            <h3 className="break-words text-[0.98rem] font-bold leading-tight text-gray-900 transition-colors duration-300 group-hover:text-brand dark:text-gray-100 dark:group-hover:text-emerald-400 md:text-[1.16rem]">
               {news.name}
             </h3>
           </div>
         </div>
 
-        <p className="text-sm md:text-base text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed italic">{news.summary}</p>
+        <p className="line-clamp-2 text-sm leading-relaxed text-gray-500 dark:text-gray-400 md:text-[15px]">{news.summary}</p>
 
-        <div className="flex items-center justify-between text-[11px] text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+        <div className="flex items-center justify-between pt-1 text-[11px] uppercase tracking-[0.18em] text-gray-400 dark:text-gray-500">
           {news.userInfo ? (
-            <div className="flex items-center space-x-2 min-w-0">
+            <div className="flex min-w-0 items-center space-x-2">
               {news.userInfo.pic && (
                 <img
                   src={news.userInfo.pic}
@@ -66,14 +56,14 @@ export default function NewsCard({ news }: Props) {
                   referrerPolicy="no-referrer"
                 />
               )}
-              <span className="font-bold truncate group-hover:text-gray-600 dark:group-hover:text-gray-500 transition-colors">
+              <span className="truncate text-[10px] font-bold tracking-[0.14em] text-gray-500 transition-colors group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-300">
                 {news.userInfo.name}
               </span>
             </div>
           ) : (
-            <span className="font-bold">Seventh Tone</span>
+            <span className="text-[10px] font-bold tracking-[0.14em] text-gray-500 dark:text-gray-400">Seventh Tone</span>
           )}
-          <span className="text-[10px] font-medium tracking-widest">{timeDisplay}</span>
+          <span className="text-[10px] font-medium tracking-[0.2em]">{timeDisplay}</span>
         </div>
       </div>
     </Link>

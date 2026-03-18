@@ -92,7 +92,7 @@ function badgeCls(answered: boolean, isSelected: boolean, isCorrect: boolean): s
   const base = "shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold";
   if (!answered) return `${base} bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-300`;
   if (isCorrect) return `${base} bg-emerald-500 text-white`;
-  if (isSelected) return `${base} bg-red-500 text-white`;
+  if (isSelected) return `${base} bg-red-400 text-white`;
   return `${base} bg-gray-200 dark:bg-slate-600 text-gray-400`;
 }
 
@@ -823,18 +823,3 @@ export default function NewsPractice() {
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -21,6 +21,7 @@ export const normalizeNewsDetailResponse = (res: any) => {
 };
 
 export const parseSixthToneDetail = (payload: any) => payload?.pageProps?.detailData;
+export const parseSixthToneHomeFeed = (payload: any) => payload?.pageProps?.data?.pageInfo?.list ? payload : null;
 
 export const fetchSixthToneDetailByBuildId = async (contId: string, buildId: string) => {
   const url = `${SIXTH_TONE_WEB_BASE}/_next/data/${buildId}/news/${contId}.json?contId=${contId}`;
@@ -44,11 +45,47 @@ export const fetchSixthToneDetailByBuildId = async (contId: string, buildId: str
   return detailData;
 };
 
+export const fetchSixthToneHomeFeedByBuildId = async (buildId: string) => {
+  const url = `${SIXTH_TONE_WEB_BASE}/_next/data/${buildId}/index.json`;
+  const response = await CapacitorHttp.request({
+    method: "GET",
+    url,
+    headers: {
+      Accept: "application/json,text/plain,*/*",
+      "User-Agent": MOBILE_UA,
+    },
+  });
+
+  if (!response || response.status < 200 || response.status >= 300) {
+    throw new Error(`Failed to load home feed JSON: ${response?.status ?? "unknown"}`);
+  }
+
+  const homeFeedData = parseSixthToneHomeFeed(response.data);
+  if (!homeFeedData) {
+    throw new Error("Home feed payload is missing.");
+  }
+  return homeFeedData;
+};
+
 export const resolveLatestBuildIdFromNewsHtml = async (contId: string) => {
   const newsUrl = `${SIXTH_TONE_WEB_BASE}/news/${contId}`;
   const htmlResponse = await CapacitorHttp.request({
     method: "GET",
     url: newsUrl,
+    headers: {
+      Accept: "text/html,*/*",
+      "User-Agent": MOBILE_UA,
+    },
+  });
+  const html = typeof htmlResponse?.data === "string" ? htmlResponse.data : "";
+  const match = html.match(/"buildId":"([^"]+)"/);
+  return match?.[1] ?? null;
+};
+
+export const resolveLatestBuildIdFromHomeHtml = async () => {
+  const htmlResponse = await CapacitorHttp.request({
+    method: "GET",
+    url: SIXTH_TONE_WEB_BASE,
     headers: {
       Accept: "text/html,*/*",
       "User-Agent": MOBILE_UA,

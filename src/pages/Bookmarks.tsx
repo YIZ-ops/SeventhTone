@@ -105,7 +105,7 @@ export default function Bookmarks() {
       else if (t === "sentences") setSentenceView("grid");
       return;
     }
-    navigate("/");
+    navigate("/home");
   });
 
   // 滑动手势：
@@ -224,205 +224,205 @@ export default function Bookmarks() {
   const isEmpty = tab === "bookmarks" ? bookmarks.length === 0 : tab === "sentences" ? sentences.length === 0 : vocab.length === 0;
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-4xl mx-auto px-4 py-8 pb-32">
-      {/* Page header */}
-      <div className="mb-6">
-        <div className="flex items-center space-x-2 mb-3">
-          <span className="h-px w-6 bg-brand dark:bg-emerald-400" />
-          <span className="text-[10px] font-extrabold tracking-[0.3em] text-brand dark:text-emerald-400 uppercase">Library</span>
-        </div>
-        <h1 className="text-4xl md:text-5xl font-serif font-bold text-gray-900 dark:text-gray-100 tracking-tight">Collected</h1>
-      </div>
-
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="pb-32">
       {/* 三个 tab：收藏文章 / 句库 / 生词本 */}
-      <div className="flex rounded-2xl bg-gray-100 dark:bg-slate-700/50 p-1 mb-4">
-        {(["bookmarks", "sentences", "vocabulary"] as TabType[]).map((t) => {
-          const labels: Record<TabType, string> = { bookmarks: "News", sentences: "Sentences", vocabulary: "Vocabulary" };
-          const counts: Record<TabType, number> = { bookmarks: bookmarks.length, sentences: sentences.length, vocabulary: vocab.length };
-          return (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setTab(t)}
-              className={`flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all ${
-                tab === t ? "bg-white dark:bg-slate-700 text-gray-900 dark:text-gray-100 shadow-sm" : "text-gray-500 dark:text-gray-400"
-              }`}
-            >
-              {labels[t]}
-              {counts[t] > 0 ? ` (${counts[t]})` : ""}
-            </button>
-          );
-        })}
+      <div className="relative left-1/2 w-screen -translate-x-1/2">
+        <div className="w-full rounded-none bg-gray-50/80 p-1 dark:bg-slate-800/45">
+          <div className="mx-auto flex max-w-4xl px-0">
+            {(["bookmarks", "sentences", "vocabulary"] as TabType[]).map((t) => {
+              const labels: Record<TabType, string> = { bookmarks: "News", sentences: "Sentences", vocabulary: "Vocabulary" };
+              const counts: Record<TabType, number> = { bookmarks: bookmarks.length, sentences: sentences.length, vocabulary: vocab.length };
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setTab(t)}
+                  className={`flex-1 border-b-2 py-3 rounded-none text-xs font-semibold transition-colors ${
+                    tab === t
+                      ? "border-b-2 border-brand text-gray-900 dark:border-emerald-400 dark:text-gray-100"
+                      : "border-b-2 border-transparent text-gray-500 dark:text-gray-400"
+                  }`}
+                >
+                  {labels[t]}
+                  {counts[t] > 0 ? ` (${counts[t]})` : ""}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
-      {/* Inside-category header (back button + category name) */}
-      {isDetail && tab !== "vocabulary" && (
-        <div className="flex items-center gap-1 mb-5">
-          <button
-            type="button"
-            onClick={() => setCurrentView("grid")}
-            className="flex items-center justify-center p-0 text-gray-600 dark:text-gray-500 hover:text-brand dark:hover:text-emerald-400 transition-colors"
-          >
-            <ChevronLeft size={20} />
-          </button>
-          <div className="flex-1 min-w-0">
-            <h2 className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">{currentView}</h2>
+      <div className="mx-auto max-w-4xl px-4 pt-4">
+        {/* Inside-category header (back button + category name) */}
+        {isDetail && tab !== "vocabulary" && (
+          <div className="mb-5 flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => setCurrentView("grid")}
+              className="flex items-center justify-center p-0 text-gray-600 dark:text-gray-500 hover:text-brand dark:hover:text-emerald-400 transition-colors"
+            >
+              <ChevronLeft size={20} />
+            </button>
+            <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0">
+              {tab === "bookmarks" ? filteredBookmarks.length : filteredSentences.length} items
+            </span>
           </div>
-          <span className="text-xs text-gray-400 dark:text-gray-500 shrink-0">
-            {tab === "bookmarks" ? filteredBookmarks.length : filteredSentences.length} items
-          </span>
-        </div>
-      )}
-
-      {/* Empty states */}
-      {isEmpty && tab === "bookmarks" && (
-        <CollectionEmptyState icon={BookmarkIcon} title="No collected news" description="Click the bookmark button on an news to collect it here." />
-      )}
-      {isEmpty && tab === "sentences" && (
-        <CollectionEmptyState
-          icon={Highlighter}
-          title="No collected sentences"
-          description={'Select text in an news and click "Sentence" to collect it here.'}
-        />
-      )}
-      {isEmpty && tab === "vocabulary" && (
-        <CollectionEmptyState
-          icon={BookOpen}
-          title="No collected words"
-          description={
-            <>
-              Tap a word in an news to view its definition, and click <span className="text-brand">+</span> to collect it here.
-            </>
-          }
-        />
-      )}
-      {/* ── Category grid view ── */}
-      <AnimatePresence mode="wait">
-        {tab !== "vocabulary" && !isEmpty && currentView === "grid" && (
-          <motion.div
-            key="grid"
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 6 }}
-            transition={{ duration: 0.18 }}
-          >
-            {tab === "bookmarks" && (
-              <BookmarkCategoryGrid
-                categories={namedBookmarkCats}
-                onOpen={(name) => setBookmarkView(name)}
-                onRename={(name) => openRename("bookmarks", name)}
-                onDelete={(name) => setDeleteCategoryState({ tab: "bookmarks", category: name })}
-              />
-            )}
-
-            {tab === "sentences" && (
-              <SentenceCategoryGrid
-                categories={namedSentenceCats}
-                onOpen={(name) => setSentenceView(name)}
-                onRename={(name) => openRename("sentences", name)}
-                onDelete={(name) => setDeleteCategoryState({ tab: "sentences", category: name })}
-              />
-            )}
-          </motion.div>
         )}
 
-        {tab !== "vocabulary" && !isEmpty && currentView !== "grid" && (
-          <motion.div
-            key={`list-${currentView}`}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 6 }}
-            transition={{ duration: 0.18 }}
-          >
-            {isDetail && tab === "bookmarks" && filteredBookmarks.length === 0 && (
-              <div className="text-center py-20 text-gray-400 dark:text-gray-500 text-sm">This Category is empty.</div>
-            )}
-            {isDetail && tab === "sentences" && filteredSentences.length === 0 && (
-              <div className="text-center py-20 text-gray-400 dark:text-gray-500 text-sm">This Category is empty.</div>
-            )}
+        {/* Empty states */}
+        {isEmpty && tab === "bookmarks" && (
+          <CollectionEmptyState
+            icon={BookmarkIcon}
+            title="No collected news"
+            description="Click the bookmark button on an news to collect it here."
+          />
+        )}
+        {isEmpty && tab === "sentences" && (
+          <CollectionEmptyState
+            icon={Highlighter}
+            title="No collected sentences"
+            description={'Select text in an news and click "Sentence" to collect it here.'}
+          />
+        )}
+        {isEmpty && tab === "vocabulary" && (
+          <CollectionEmptyState
+            icon={BookOpen}
+            title="No collected words"
+            description={
+              <>
+                Tap a word in an news to view its definition, and click <span className="text-brand">+</span> to collect it here.
+              </>
+            }
+          />
+        )}
+        {/* ── Category grid view ── */}
+        <AnimatePresence mode="wait">
+          {tab !== "vocabulary" && !isEmpty && currentView === "grid" && (
+            <motion.div
+              key="grid"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 6 }}
+              transition={{ duration: 0.18 }}
+            >
+              {tab === "bookmarks" && (
+                <BookmarkCategoryGrid
+                  categories={namedBookmarkCats}
+                  onOpen={(name) => setBookmarkView(name)}
+                  onRename={(name) => openRename("bookmarks", name)}
+                  onDelete={(name) => setDeleteCategoryState({ tab: "bookmarks", category: name })}
+                />
+              )}
 
-            {tab === "bookmarks" && (
-              <BookmarksGroupedList groups={groupedBookmarks} onDelete={(contId) => setConfirmState({ type: "bookmark", contId })} />
-            )}
+              {tab === "sentences" && (
+                <SentenceCategoryGrid
+                  categories={namedSentenceCats}
+                  onOpen={(name) => setSentenceView(name)}
+                  onRename={(name) => openRename("sentences", name)}
+                  onDelete={(name) => setDeleteCategoryState({ tab: "sentences", category: name })}
+                />
+              )}
+            </motion.div>
+          )}
 
-            {tab === "sentences" && (
-              <SentencesGroupedList
-                groups={groupedSentences}
-                onDelete={(contId, highlightId) => setConfirmState({ type: "sentence", contId, highlightId })}
-                onOpenQuote={setActiveQuote}
-              />
-            )}
-          </motion.div>
+          {tab !== "vocabulary" && !isEmpty && currentView !== "grid" && (
+            <motion.div
+              key={`list-${currentView}`}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 6 }}
+              transition={{ duration: 0.18 }}
+            >
+              {isDetail && tab === "bookmarks" && filteredBookmarks.length === 0 && (
+                <div className="text-center py-20 text-gray-400 dark:text-gray-500 text-sm">This Category is empty.</div>
+              )}
+              {isDetail && tab === "sentences" && filteredSentences.length === 0 && (
+                <div className="text-center py-20 text-gray-400 dark:text-gray-500 text-sm">This Category is empty.</div>
+              )}
+
+              {tab === "bookmarks" && (
+                <BookmarksGroupedList groups={groupedBookmarks} onDelete={(contId) => setConfirmState({ type: "bookmark", contId })} />
+              )}
+
+              {tab === "sentences" && (
+                <SentencesGroupedList
+                  groups={groupedSentences}
+                  onDelete={(contId, highlightId) => setConfirmState({ type: "sentence", contId, highlightId })}
+                  onOpenQuote={setActiveQuote}
+                />
+              )}
+            </motion.div>
+          )}
+
+          {tab === "vocabulary" && !isEmpty && (
+            <motion.div
+              key="vocab"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 6 }}
+              transition={{ duration: 0.18 }}
+            >
+              <VocabGroupedList groups={groupedVocab} onDelete={(vocabId) => setConfirmState({ type: "vocab", vocabId })} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+        {activeQuote && (
+          <QuoteModal
+            text={activeQuote.text}
+            newsTitle={activeQuote.newsName || "Unknown news"}
+            author="Seventh Tone"
+            onClose={() => setActiveQuote(null)}
+          />
         )}
 
-        {tab === "vocabulary" && !isEmpty && (
-          <motion.div
-            key="vocab"
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 6 }}
-            transition={{ duration: 0.18 }}
-          >
-            <VocabGroupedList groups={groupedVocab} onDelete={(vocabId) => setConfirmState({ type: "vocab", vocabId })} />
-          </motion.div>
+        <ConfirmModal
+          open={confirmState.type === "bookmark"}
+          onClose={() => setConfirmState({ type: null })}
+          onConfirm={onConfirmRemove}
+          title="Remove from bookmarks?"
+          message="This news will be removed from your collection. You can bookmark it again anytime."
+          confirmLabel="Remove"
+          variant="danger"
+        />
+        <ConfirmModal
+          open={confirmState.type === "sentence"}
+          onClose={() => setConfirmState({ type: null })}
+          onConfirm={onConfirmRemove}
+          title="Remove this sentence?"
+          message="This sentence will be deleted and cannot be restored."
+          confirmLabel="Remove"
+          variant="danger"
+        />
+        <ConfirmModal
+          open={confirmState.type === "vocab"}
+          onClose={() => setConfirmState({ type: null })}
+          onConfirm={onConfirmRemove}
+          title="Remove from vocabulary?"
+          message="This word will be removed from your vocabulary."
+          confirmLabel="Remove"
+          variant="danger"
+        />
+        <ConfirmModal
+          open={deleteCategoryState !== null}
+          onClose={() => setDeleteCategoryState(null)}
+          onConfirm={onConfirmDeleteCategory}
+          title={deleteCategoryState ? `Delete category "${deleteCategoryState.category}"?` : ""}
+          message="All items in this category will be permanently deleted and cannot be recovered."
+          confirmLabel="Delete"
+          variant="danger"
+        />
+
+        {/* Rename category dialog */}
+        {renameCategoryState && (
+          <RenameCategoryDialog
+            category={renameCategoryState.category}
+            value={renameInput}
+            onChange={setRenameInput}
+            onCancel={() => setRenameCategoryState(null)}
+            onConfirm={onConfirmRenameCategory}
+          />
         )}
-      </AnimatePresence>
-      {activeQuote && (
-        <QuoteModal
-          text={activeQuote.text}
-          newsTitle={activeQuote.newsName || "Unknown news"}
-          author="Seventh Tone"
-          onClose={() => setActiveQuote(null)}
-        />
-      )}
-
-      <ConfirmModal
-        open={confirmState.type === "bookmark"}
-        onClose={() => setConfirmState({ type: null })}
-        onConfirm={onConfirmRemove}
-        title="Remove from bookmarks?"
-        message="This news will be removed from your collection. You can bookmark it again anytime."
-        confirmLabel="Remove"
-        variant="danger"
-      />
-      <ConfirmModal
-        open={confirmState.type === "sentence"}
-        onClose={() => setConfirmState({ type: null })}
-        onConfirm={onConfirmRemove}
-        title="Remove this sentence?"
-        message="This sentence will be deleted and cannot be restored."
-        confirmLabel="Remove"
-        variant="danger"
-      />
-      <ConfirmModal
-        open={confirmState.type === "vocab"}
-        onClose={() => setConfirmState({ type: null })}
-        onConfirm={onConfirmRemove}
-        title="Remove from vocabulary?"
-        message="This word will be removed from your vocabulary."
-        confirmLabel="Remove"
-        variant="danger"
-      />
-      <ConfirmModal
-        open={deleteCategoryState !== null}
-        onClose={() => setDeleteCategoryState(null)}
-        onConfirm={onConfirmDeleteCategory}
-        title={deleteCategoryState ? `Delete category "${deleteCategoryState.category}"?` : ""}
-        message="All items in this category will be permanently deleted and cannot be recovered."
-        confirmLabel="Delete"
-        variant="danger"
-      />
-
-      {/* Rename category dialog */}
-      {renameCategoryState && (
-        <RenameCategoryDialog
-          category={renameCategoryState.category}
-          value={renameInput}
-          onChange={setRenameInput}
-          onCancel={() => setRenameCategoryState(null)}
-          onConfirm={onConfirmRenameCategory}
-        />
-      )}
+      </div>
     </motion.div>
   );
 }

@@ -14,12 +14,12 @@ interface PracticeAnswerSheetProps<TEntry> {
 
 function statusDotCls(status: AnswerStatus) {
   if (status === "correct") return "bg-emerald-500 text-white";
-  if (status === "wrong") return "bg-red-500 text-white";
+  if (status === "wrong") return "bg-red-400 text-white";
   if (status === "answered") return "bg-blue-500 text-white";
   return "bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-gray-500";
 }
 
-export default function PracticeAnswerSheet<TEntry,>({
+export default function PracticeAnswerSheet<TEntry>({
   open,
   currentIndex,
   sections,
@@ -82,7 +82,7 @@ export default function PracticeAnswerSheet<TEntry,>({
               <div className="flex flex-wrap gap-3 pt-1 border-t border-gray-100 dark:border-slate-700">
                 {[
                   { cls: "bg-emerald-500", label: "Correct" },
-                  { cls: "bg-red-500", label: "Wrong" },
+                  { cls: "bg-red-400", label: "Wrong" },
                   { cls: "bg-blue-500", label: "Answered" },
                   { cls: "bg-gray-100 dark:bg-slate-700", label: "Pending" },
                 ].map(({ cls, label }) => (
