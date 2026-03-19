@@ -23,6 +23,7 @@ import { getNewsDetailCache, setNewsDetailCache } from "../store/newsDetailCache
 // import { awardNewsReadingPoints } from "../api/points";
 import { useBottomToast } from "../utils/toast";
 import { decorateNewsContent, getWordAtPoint, highlightSavedSentences } from "../utils/newsDetailContent";
+import { getAtlasActiveIndex, resolveAtlasSwipeTargetIndex } from "../utils/newsDetailAtlas";
 
 interface DictApiResponse {
   code: number;
@@ -67,18 +68,18 @@ export default function NewsDetailView() {
 
   const newsScaleClasses = {
     small: {
-      title: "text-[1.85rem] md:text-[2.35rem] lg:text-[2.95rem]",
-      summary: "text-[1rem] md:text-[1.1rem]",
+      title: "text-[1.78rem] md:text-[2.28rem] lg:text-[2.88rem]",
+      summary: "text-[0.95rem] md:text-[1.05rem]",
       prose: "prose-base md:prose-lg",
     },
     medium: {
-      title: "text-3xl md:text-4xl lg:text-5xl",
-      summary: "text-lg md:text-xl",
+      title: "text-[1.8rem] md:text-[2.15rem] lg:text-[2.85rem]",
+      summary: "text-[1.05rem] md:text-[1.2rem]",
       prose: "prose-lg md:prose-xl",
     },
     large: {
-      title: "text-[2.15rem] md:text-[2.7rem] lg:text-[3.35rem]",
-      summary: "text-[1.15rem] md:text-[1.3rem]",
+      title: "text-[2.05rem] md:text-[2.55rem] lg:text-[3.15rem]",
+      summary: "text-[1.08rem] md:text-[1.22rem]",
       prose: "prose-xl md:prose-2xl",
     },
   } as const;
@@ -389,6 +390,113 @@ export default function NewsDetailView() {
     return highlightSavedSentences(decoratedContent, sentences);
   }, [decoratedContent, sentences]);
 
+  useEffect(() => {
+    const root = contentRef.current;
+    if (!root) return;
+
+    const sliders = Array.from(root.querySelectorAll("[data-atlas-slider]")).filter(
+      (element): element is HTMLDivElement => element instanceof HTMLDivElement,
+    );
+    if (sliders.length === 0) return;
+
+    const cleanups = sliders.map((slider) => {
+      let startX: number | null = null;
+      let startY: number | null = null;
+      let startIndex = 0;
+      let isHorizontalGesture: boolean | null = null;
+
+      const getSlideCount = () => slider.querySelectorAll("[data-atlas-slide]").length;
+      const syncIndex = () => {
+        slider.dataset.atlasIndex = String(getAtlasActiveIndex(slider.scrollLeft, slider.clientWidth, getSlideCount()));
+      };
+      const scrollToIndex = (index: number) => {
+        slider.scrollTo({ left: index * slider.clientWidth, behavior: "smooth" });
+        slider.dataset.atlasIndex = String(index);
+      };
+
+      slider.style.touchAction = "pan-y pinch-zoom";
+      syncIndex();
+
+      const onTouchStart = (event: TouchEvent) => {
+        if (event.touches.length !== 1) return;
+        startX = event.touches[0].clientX;
+        startY = event.touches[0].clientY;
+        startIndex = getAtlasActiveIndex(slider.scrollLeft, slider.clientWidth, getSlideCount());
+        isHorizontalGesture = null;
+      };
+
+      const onTouchMove = (event: TouchEvent) => {
+        if (startX === null || startY === null || event.touches.length !== 1) return;
+
+        const dx = event.touches[0].clientX - startX;
+        const dy = event.touches[0].clientY - startY;
+
+        if (isHorizontalGesture === null) {
+          if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+          isHorizontalGesture = Math.abs(dx) > Math.abs(dy);
+        }
+
+        if (!isHorizontalGesture) return;
+
+        event.preventDefault();
+        slider.scrollLeft = startIndex * slider.clientWidth - dx;
+      };
+
+      const finishSwipe = (endX: number, endY: number) => {
+        if (startX === null || startY === null) return;
+
+        const nextIndex = resolveAtlasSwipeTargetIndex({
+          startX,
+          startY,
+          endX,
+          endY,
+          activeIndex: startIndex,
+          slideCount: getSlideCount(),
+        });
+
+        startX = null;
+        startY = null;
+        isHorizontalGesture = null;
+        scrollToIndex(nextIndex);
+      };
+
+      const onTouchEnd = (event: TouchEvent) => {
+        if (event.changedTouches.length !== 1) return;
+        finishSwipe(event.changedTouches[0].clientX, event.changedTouches[0].clientY);
+      };
+
+      const onTouchCancel = () => {
+        startX = null;
+        startY = null;
+        isHorizontalGesture = null;
+        scrollToIndex(startIndex);
+      };
+
+      const onScroll = () => {
+        if (startX !== null) return;
+        syncIndex();
+      };
+
+      slider.addEventListener("touchstart", onTouchStart, { passive: true });
+      slider.addEventListener("touchmove", onTouchMove, { passive: false });
+      slider.addEventListener("touchend", onTouchEnd);
+      slider.addEventListener("touchcancel", onTouchCancel);
+      slider.addEventListener("scroll", onScroll, { passive: true });
+
+      return () => {
+        slider.removeEventListener("touchstart", onTouchStart);
+        slider.removeEventListener("touchmove", onTouchMove);
+        slider.removeEventListener("touchend", onTouchEnd);
+        slider.removeEventListener("touchcancel", onTouchCancel);
+        slider.removeEventListener("scroll", onScroll);
+      };
+    });
+
+    return () => {
+      cleanups.forEach((cleanup) => cleanup());
+    };
+  }, [highlightedContent]);
+
   const handleMarkClick = useCallback(
     (e: MouseEvent<HTMLElement>) => {
       const mark = (e.target as HTMLElement).closest("mark[data-sentence-id]") as HTMLElement | null;
@@ -578,9 +686,9 @@ export default function NewsDetailView() {
         <article className="max-w-3xl mx-auto px-4 pb-16 select-text relative">
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-lg shadow-black/5 p-4 sm:p-4">
             {/* Header：标题和 summary 支持点击查词 */}
-            <header className="mb-4">
+            <header>
               <h1
-                className={`${newsScaleClasses[fontScale].title} font-bold text-gray-900 dark:text-gray-100 leading-tight mb-6 cursor-text`}
+                className={`${newsScaleClasses[fontScale].title} font-bold text-gray-900 dark:text-gray-100 leading-tight mb-4 cursor-text`}
                 onDoubleClick={(e) => {
                   if (!(e.target as HTMLElement).closest("a")) handleContentDblClick(e);
                 }}
@@ -589,7 +697,7 @@ export default function NewsDetailView() {
               </h1>
 
               <p
-                className={`${newsScaleClasses[fontScale].summary} text-gray-600 dark:text-gray-500 italic mb-4 leading-relaxed cursor-text`}
+                className={`${newsScaleClasses[fontScale].summary} text-gray-600 dark:text-gray-500 italic mb-4 leading-[1.6] cursor-text`}
                 onDoubleClick={(e) => {
                   if (!(e.target as HTMLElement).closest("a")) handleContentDblClick(e);
                 }}
@@ -638,7 +746,7 @@ export default function NewsDetailView() {
             {/* Content */}
             <div
               ref={contentRef}
-              className={`prose ${newsScaleClasses[fontScale].prose} prose-emerald max-w-none overflow-x-hidden break-words prose-p:leading-relaxed prose-p:text-gray-800 dark:prose-p:text-gray-200 prose-a:text-emerald-600 dark:prose-a:text-emerald-400 prose-img:rounded-xl prose-img:max-w-full prose-img:h-auto prose-img:mx-auto prose-pre:max-w-full prose-pre:overflow-x-auto prose-table:block prose-table:max-w-full prose-table:overflow-x-auto prose-figure:my-6 prose-figure:text-center prose-figcaption:text-xs prose-figcaption:text-gray-500 dark:prose-figcaption:text-gray-400 prose-h3:mt-5 prose-h3:mb-2 prose-h3:text-lg md:prose-h3:text-xl prose-h3:font-semibold prose-h3:tracking-tight prose-h3:text-gray-900 dark:prose-h3:text-gray-100 [&_iframe]:max-w-full [&_video]:max-w-full [&_svg]:max-w-full [&_*]:break-words select-text`}
+              className={`prose ${newsScaleClasses[fontScale].prose} prose-emerald max-w-none overflow-x-hidden break-words prose-p:leading-[1.6] prose-p:text-gray-800 dark:prose-p:text-gray-200 prose-a:text-emerald-600 dark:prose-a:text-emerald-400 prose-img:rounded-xl prose-img:max-w-full prose-img:h-auto prose-img:mx-auto prose-pre:max-w-full prose-pre:overflow-x-auto prose-table:block prose-table:max-w-full prose-table:overflow-x-auto prose-figure:my-6 prose-figure:text-center prose-figcaption:text-xs prose-figcaption:text-gray-500 dark:prose-figcaption:text-gray-400 prose-h3:mt-5 prose-h3:mb-2 prose-h3:text-lg md:prose-h3:text-xl prose-h3:font-semibold prose-h3:tracking-tight prose-h3:text-gray-900 dark:prose-h3:text-gray-100 [&_iframe]:max-w-full [&_video]:max-w-full [&_svg]:max-w-full [&_*]:break-words select-text`}
               dangerouslySetInnerHTML={{ __html: highlightedContent }}
               onClick={handleMarkClick}
               onDoubleClick={handleContentDblClick}
@@ -670,7 +778,7 @@ export default function NewsDetailView() {
                         Test Your Understanding
                       </h4>
                       <p className="mt-2 text-[13px] sm:text-[14px] text-gray-700 dark:text-gray-400">
-                        Short AI exercises built from this news to lock in vocabulary and key points.
+                        Short AI exercises built from this news to lock in vocabulary and key points
                       </p>
                     </div>
                   </div>

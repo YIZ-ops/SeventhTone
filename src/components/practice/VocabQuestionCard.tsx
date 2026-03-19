@@ -30,7 +30,7 @@ export default function VocabQuestionCard({
       {sectionBadge}
 
       <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-slate-700">
-        <p className="text-base text-gray-900 dark:text-gray-100 leading-relaxed">
+        <p className="text-base text-gray-900 dark:text-gray-100 leading-[1.6]">
           {question.sentence.split("___").map((part, index, array) => (
             <span key={index}>
               {part}
@@ -100,11 +100,10 @@ export default function VocabQuestionCard({
             <p className={`text-sm font-semibold mb-1 ${correct ? "text-emerald-700 dark:text-emerald-400" : "text-amber-700 dark:text-amber-400"}`}>
               {correct ? "✓ Correct!" : `✗ The answer is "${question.answer}"`}
             </p>
-            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{question.explanation}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 leading-[1.6]">{question.explanation}</p>
           </motion.div>
         )}
       </AnimatePresence>
     </div>
   );
 }
-

@@ -116,7 +116,7 @@ export default function SentenceDetailModal({ sentence, onClose, onDelete, onSav
         <div className="px-4 py-4 space-y-4 max-h-[70vh] overflow-y-auto">
           {/* Quote */}
           <div className="relative pl-4 border-l-2 border-brand/40 dark:border-emerald-500/40">
-            <p className="text-sm text-gray-700 dark:text-gray-200 font-serif italic leading-relaxed line-clamp-4">{formattedQuoteText}</p>
+            <p className="text-sm text-gray-700 dark:text-gray-200 font-serif italic leading-[1.6] line-clamp-4">{formattedQuoteText}</p>
           </div>
 
           {/* Thought */}
@@ -190,7 +190,7 @@ export default function SentenceDetailModal({ sentence, onClose, onDelete, onSav
               {sentence.thought ? (
                 <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl px-3 py-2.5">
                   <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Your thought</p>
-                  <p className="text-sm text-gray-700 dark:text-gray-200 leading-relaxed">{sentence.thought}</p>
+                  <p className="text-sm text-gray-700 dark:text-gray-200 leading-[1.6]">{sentence.thought}</p>
                 </div>
               ) : (
                 <button

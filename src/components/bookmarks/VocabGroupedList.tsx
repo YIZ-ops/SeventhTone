@@ -24,7 +24,7 @@ export default function VocabGroupedList({ groups, onDelete }: VocabGroupedListP
                       {word.phonetic && <span className="text-xs font-mono text-gray-400 dark:text-gray-500">/{word.phonetic}/</span>}
                     </div>
                     {word.translations.length > 0 && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2 leading-relaxed">{word.translations.join("；")}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2 leading-[1.6]">{word.translations.join("；")}</p>
                     )}
                   </div>
                 </SwipeRow>

@@ -43,7 +43,7 @@ export default function NewsCard({ news }: Props) {
           </div>
         </div>
 
-        <p className="line-clamp-2 text-sm leading-relaxed text-gray-500 dark:text-gray-400 md:text-[15px]">{news.summary}</p>
+        <p className="line-clamp-2 text-sm leading-[1.6] text-gray-500 dark:text-gray-400 md:text-[15px]">{news.summary}</p>
 
         <div className="flex items-center justify-between pt-1 text-[11px] uppercase tracking-[0.18em] text-gray-400 dark:text-gray-500">
           {news.userInfo ? (

@@ -58,6 +58,7 @@ export interface NewsDetail {
     isParticular?: boolean;
   };
   textImageList?: TextImageListType[];
+  atlasList?: TextImageListType[][];
   videoList?: unknown[];
   audioList?: unknown[];
   quoteList?: unknown[];

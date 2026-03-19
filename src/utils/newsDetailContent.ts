@@ -1,6 +1,6 @@
 import DOMPurify from "dompurify";
 import Mark from "mark.js";
-import { NewsDetail, Sentence } from "../types";
+import { NewsDetail, Sentence, TextImageListType } from "../types";
 
 interface NormalizedTextMap {
   normalized: string;
@@ -11,6 +11,10 @@ interface TextRange {
   start: number;
   length: number;
   end: number;
+}
+
+function escapeHtml(text: string) {
+  return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
 }
 
 function normalizeTextWithMap(text: string): NormalizedTextMap {
@@ -31,11 +35,7 @@ function normalizeTextWithMap(text: string): NormalizedTextMap {
   return { normalized, normalizedToRaw };
 }
 
-export function findTextRange(
-  rawText: string,
-  needle: string,
-  occupiedRanges: Array<{ start: number; end: number }>,
-): TextRange | null {
+export function findTextRange(rawText: string, needle: string, occupiedRanges: Array<{ start: number; end: number }>): TextRange | null {
   const haystack = normalizeTextWithMap(rawText);
   const target = normalizeTextWithMap(needle).normalized;
   if (!target) return null;
@@ -59,7 +59,35 @@ export function findTextRange(
   return null;
 }
 
-export function decorateNewsContent(news: Pick<NewsDetail, "content" | "textImageList" | "name">): string {
+export function buildAtlasCarouselHtml(items: TextImageListType[], title: string) {
+  if (!items.length) return "";
+
+  const slidesHtml = items
+    .map((item, index) => {
+      const desc = item.desc || "";
+      const alt = escapeHtml(desc || `${title} image ${index + 1}`);
+      const src = escapeHtml(item.url);
+      const widthAttr = item.width ? ` width="${item.width}"` : "";
+      const heightAttr = item.height ? ` height="${item.height}"` : "";
+
+      return `<div class="snap-start min-w-full" data-atlas-slide="${index}">
+        <img src="${src}" alt="${alt}" class="block h-auto w-full" loading="lazy" referrerpolicy="no-referrer"${widthAttr}${heightAttr} />
+        <div class="mt-3 flex items-start justify-between gap-3 px-1">
+          <figcaption class="flex-1 text-xs leading-[1.6] text-center text-gray-500 dark:text-gray-400">${escapeHtml(desc)}</figcaption>
+          <span class="shrink-0 text-[11px] font-medium text-gray-400 dark:text-gray-500">${index + 1} / ${items.length}</span>
+        </div>
+      </div>`;
+    })
+    .join("");
+
+  return `<figure class="news-atlas not-prose my-6" data-atlas-root>
+    <div class="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar rounded-xl bg-gray-50 dark:bg-slate-800/60" data-atlas-slider>
+      ${slidesHtml}
+    </div>
+  </figure>`;
+}
+
+export function decorateNewsContent(news: Pick<NewsDetail, "content" | "textImageList" | "atlasList" | "name">): string {
   if (!news.content) return "";
 
   const sanitized = DOMPurify.sanitize(news.content, {
@@ -70,6 +98,7 @@ export function decorateNewsContent(news: Pick<NewsDetail, "content" | "textImag
   tmp.innerHTML = sanitized;
 
   const imageList = Array.isArray(news.textImageList) ? news.textImageList : [];
+  const atlasList = Array.isArray(news.atlasList) ? news.atlasList : [];
   tmp.querySelectorAll(".illustrationWrap").forEach((wrap) => {
     const indexAttr = wrap.getAttribute("data-index");
     const index = indexAttr ? Number(indexAttr) : NaN;
@@ -98,6 +127,27 @@ export function decorateNewsContent(news: Pick<NewsDetail, "content" | "textImag
     }
 
     wrap.replaceWith(figure);
+  });
+
+  tmp.querySelectorAll(".atlasWrap").forEach((wrap) => {
+    const indexAttr = wrap.getAttribute("data-index");
+    const index = indexAttr ? Number(indexAttr) : NaN;
+    const atlasItems = Number.isFinite(index) ? atlasList[index] : undefined;
+
+    if (!Array.isArray(atlasItems) || atlasItems.length === 0) {
+      wrap.remove();
+      return;
+    }
+
+    const container = document.createElement("div");
+    container.innerHTML = buildAtlasCarouselHtml(atlasItems, news.name || "illustration");
+    const atlasFigure = container.firstElementChild;
+    if (!atlasFigure) {
+      wrap.remove();
+      return;
+    }
+
+    wrap.replaceWith(atlasFigure);
   });
 
   Array.from(tmp.querySelectorAll("strong")).forEach((strong) => {

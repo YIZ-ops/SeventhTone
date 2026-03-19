@@ -19,7 +19,7 @@ export default function AboutPage() {
       </div>
 
       {/* Mission Statement */}
-      <div className="space-y-3 text-gray-600 dark:text-gray-400 text-[15px] leading-relaxed max-w-2xl">
+      <div className="space-y-3 text-gray-600 dark:text-gray-400 text-[15px] leading-[1.6] max-w-2xl">
         <p>
           <span className="font-semibold text-gray-900 dark:text-gray-200">Seventh Tone</span> is a refined news-reading ecosystem engineered for deep
           language acquisition. We bridge the gap between passive consumption and active mastery by streamlining the transition from discovery to

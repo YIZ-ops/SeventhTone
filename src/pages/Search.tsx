@@ -4,7 +4,7 @@ import DOMPurify from "dompurify";
 import { getCategories } from "../api/categories";
 import { searchNews } from "../api/search";
 import type { Category, SearchResultItem } from "../types";
-import { Search as SearchIcon, Loader2, ChevronDown, ArrowUpDown, Check } from "lucide-react";
+import { Search as SearchIcon, Loader2, ChevronDown, ArrowUpDown, Check, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { motion } from "motion/react";
 import { useAndroidBackHandler } from "../hooks/useAndroidBackHandler";
@@ -167,7 +167,9 @@ export default function Search() {
   };
 
   const selectedCategoryLabel =
-    selectedCategoryId === ALL_CATEGORIES_ID ? "All categories" : categories.find((category) => category.id === selectedCategoryId)?.title || "All categories";
+    selectedCategoryId === ALL_CATEGORIES_ID
+      ? "All categories"
+      : categories.find((category) => category.id === selectedCategoryId)?.title || "All categories";
   const selectedOrderLabel = ORDER_OPTIONS.find((option) => option.value === orderType)?.label || "Newest";
   const sheetTitle = "Choose category";
 
@@ -230,8 +232,8 @@ export default function Search() {
           onClick={toggleOrderType}
           className="group flex shrink-0 items-center gap-2 text-sm text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
         >
-          <ArrowUpDown className="h-4 w-4 shrink-0 text-gray-400 transition-colors group-hover:text-gray-600 dark:text-gray-500 dark:group-hover:text-gray-300" />
           <span className="font-medium text-gray-800 dark:text-gray-100">{selectedOrderLabel}</span>
+          <ArrowUpDown className="h-4 w-4 shrink-0 text-gray-400 transition-colors group-hover:text-gray-600 dark:text-gray-500 dark:group-hover:text-gray-300" />
         </button>
       </div>
 
@@ -291,7 +293,7 @@ export default function Search() {
                 {safeSummary && (
                   <div className="px-4 pb-4 pt-0">
                     <p
-                      className="text-gray-500 dark:text-gray-400 leading-relaxed line-clamp-2 [&_font]:text-brand dark:[&_font]:text-emerald-400 text-sm md:text-base italic"
+                      className="text-gray-500 dark:text-gray-400 leading-[1.6] line-clamp-2 [&_font]:text-brand dark:[&_font]:text-emerald-400 text-sm md:text-base italic"
                       dangerouslySetInnerHTML={{ __html: safeSummary }}
                     />
                   </div>
@@ -325,41 +327,41 @@ export default function Search() {
                 onClick={() => setSheetMode(null)}
                 className="text-sm font-medium text-gray-400 transition-colors hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
               >
-                Close
+                <X size={18} />
               </button>
             </div>
 
-                <div className="divide-y divide-gray-100 dark:divide-slate-800">
-                  <button
-                    type="button"
-                    onClick={() => handleCategoryChange(ALL_CATEGORIES_ID)}
-                    className={`flex w-full items-center justify-between py-3 text-left text-[15px] transition-colors ${
-                      selectedCategoryId === ALL_CATEGORIES_ID
-                        ? "font-semibold text-brand dark:text-emerald-300"
-                        : "text-gray-700 hover:text-gray-900 dark:text-gray-200 dark:hover:text-gray-100"
-                    }`}
-                  >
-                    <span>All categories</span>
-                    {selectedCategoryId === ALL_CATEGORIES_ID && <Check className="h-4 w-4 shrink-0" />}
-                  </button>
-                  {categories.map((category) => (
-                    <button
-                      key={category.id}
-                      type="button"
-                      onClick={() => handleCategoryChange(category.id)}
-                      className={`flex w-full items-center justify-between py-3 text-left text-[15px] transition-colors ${
-                        selectedCategoryId === category.id
-                          ? "font-semibold text-brand dark:text-emerald-300"
-                          : "text-gray-700 hover:text-gray-900 dark:text-gray-200 dark:hover:text-gray-100"
-                      }`}
-                    >
-                      <span>{category.title}</span>
-                      {selectedCategoryId === category.id && <Check className="h-4 w-4 shrink-0" />}
-                    </button>
-                  ))}
-                </div>
-              </div>
+            <div className="divide-y divide-gray-100 dark:divide-slate-800">
+              <button
+                type="button"
+                onClick={() => handleCategoryChange(ALL_CATEGORIES_ID)}
+                className={`flex w-full items-center justify-between py-3 text-left text-[15px] transition-colors ${
+                  selectedCategoryId === ALL_CATEGORIES_ID
+                    ? "font-semibold text-brand dark:text-emerald-300"
+                    : "text-gray-700 hover:text-gray-900 dark:text-gray-200 dark:hover:text-gray-100"
+                }`}
+              >
+                <span>All categories</span>
+                {selectedCategoryId === ALL_CATEGORIES_ID && <Check className="h-4 w-4 shrink-0" />}
+              </button>
+              {categories.map((category) => (
+                <button
+                  key={category.id}
+                  type="button"
+                  onClick={() => handleCategoryChange(category.id)}
+                  className={`flex w-full items-center justify-between py-3 text-left text-[15px] transition-colors ${
+                    selectedCategoryId === category.id
+                      ? "font-semibold text-brand dark:text-emerald-300"
+                      : "text-gray-700 hover:text-gray-900 dark:text-gray-200 dark:hover:text-gray-100"
+                  }`}
+                >
+                  <span>{category.title}</span>
+                  {selectedCategoryId === category.id && <Check className="h-4 w-4 shrink-0" />}
+                </button>
+              ))}
             </div>
+          </div>
+        </div>
       )}
     </div>
   );

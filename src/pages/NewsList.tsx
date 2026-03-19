@@ -341,7 +341,7 @@ export default function NewsList() {
             </h1>
             {displayMeta?.description && (
               <p
-                className={`mt-5 md:mt-6 max-w-2xl text-sm md:text-base italic leading-relaxed ${
+                className={`mt-5 md:mt-6 max-w-2xl text-sm md:text-base italic leading-[1.6] ${
                   displayMeta?.tonePic ? "text-white/90 drop-shadow-sm" : "text-gray-500 dark:text-gray-400"
                 }`}
               >

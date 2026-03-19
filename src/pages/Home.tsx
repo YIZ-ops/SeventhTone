@@ -13,6 +13,12 @@ import type { Category, HomeFeedSection } from "../types";
 const PULL_THRESHOLD = 70;
 const PULL_MAX = 100;
 
+const resolveSectionCategoryHref = (section: HomeFeedSection) => {
+  if (section.cardMode === "5" && section.title === "MOST READ") return undefined;
+  const nodeId = section.nodeInfo?.nodeId ?? section.items[0]?.nodeInfo?.nodeId ?? section.items[0]?.nodeId;
+  return nodeId && nodeId > 0 ? `/category/${nodeId}` : undefined;
+};
+
 export default function Home() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [sections, setSections] = useState<HomeFeedSection[]>([]);
@@ -227,7 +233,11 @@ export default function Home() {
         <div className="mx-auto mt-6 max-w-4xl space-y-6 px-4 md:px-6">
           {remainingSections.map((section, index) => (
             <div key={`${section.title || section.nodeInfo?.name || "section"}-${index}`}>
-              <HomeSection title={section.title || section.nodeInfo?.name || "SECTION"} items={section.items} />
+              <HomeSection
+                title={section.title || section.nodeInfo?.name || "SECTION"}
+                items={section.items}
+                categoryHref={resolveSectionCategoryHref(section)}
+              />
             </div>
           ))}
         </div>

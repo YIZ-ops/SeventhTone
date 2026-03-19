@@ -387,7 +387,7 @@ export default function DailyTones() {
               >
                 <h2 className="text-3xl md:text-5xl font-serif font-bold leading-tight mb-4 text-white">{items[activeSlide]?.name}</h2>
                 {items[activeSlide]?.summary && (
-                  <p className="text-white/70 text-sm md:text-base leading-relaxed italic">{items[activeSlide].summary}</p>
+                  <p className="text-white/70 text-sm md:text-base leading-[1.6] italic">{items[activeSlide].summary}</p>
                 )}
               </motion.div>
             </AnimatePresence>
@@ -449,8 +449,3 @@ export default function DailyTones() {
     </div>
   );
 }
-
-
-
-
-

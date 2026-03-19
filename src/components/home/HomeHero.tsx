@@ -24,7 +24,7 @@ export default function HomeHero({ item }: HomeHeroProps) {
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/35 to-black/10" />
       </div>
 
-      <div className="relative z-10 flex min-h-[22rem] flex-col justify-end px-4 pb-6 pt-20 md:min-h-[24rem] md:px-6 md:pb-8">
+      <div className="relative z-10 flex min-h-[22rem] flex-col justify-end px-4 pb-8 pt-20 md:min-h-[24rem] md:px-6 md:pb-8">
         <h2 className="max-w-3xl text-[1.7rem] font-serif font-bold leading-[1.06] text-white md:text-[3.15rem]">{item.name}</h2>
       </div>
     </Link>

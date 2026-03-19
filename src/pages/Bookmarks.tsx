@@ -271,17 +271,13 @@ export default function Bookmarks() {
 
         {/* Empty states */}
         {isEmpty && tab === "bookmarks" && (
-          <CollectionEmptyState
-            icon={BookmarkIcon}
-            title="No collected news"
-            description="Click the bookmark button on an news to collect it here."
-          />
+          <CollectionEmptyState icon={BookmarkIcon} title="No collected news" description="Click the bookmark button on an news to collect it here" />
         )}
         {isEmpty && tab === "sentences" && (
           <CollectionEmptyState
             icon={Highlighter}
             title="No collected sentences"
-            description={'Select text in an news and click "Sentence" to collect it here.'}
+            description={'Select text in an news and click "Sentence" to collect it here'}
           />
         )}
         {isEmpty && tab === "vocabulary" && (
@@ -290,7 +286,7 @@ export default function Bookmarks() {
             title="No collected words"
             description={
               <>
-                Tap a word in an news to view its definition, and click <span className="text-brand">+</span> to collect it here.
+                Tap a word in an news to view its definition, and click <span className="text-brand">+</span> to collect it here
               </>
             }
           />

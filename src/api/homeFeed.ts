@@ -7,6 +7,8 @@ const toStringValue = (value: unknown) => (typeof value === "string" ? value : "
 const toNumberValue = (value: unknown) => (typeof value === "number" ? value : 0);
 const FILTERED_SECTION_NAMES = new Set(["DAILY TONES"]);
 const FILTERED_NODE_NAMES = new Set(["DAILYTONE", "SPECIAL PROJECTS"]);
+const MOST_READ_SECTION_NAME = "MOST READ";
+const MOST_READ_CARD_MODE = "5";
 
 export const extractHomeFeedSections = (payload: HomeFeedResponse): HomeFeedRemoteSection[] => {
   return payload.pageProps?.data?.pageInfo?.list ?? [];
@@ -14,6 +16,10 @@ export const extractHomeFeedSections = (payload: HomeFeedResponse): HomeFeedRemo
 
 export const isFilterSection = (section: HomeFeedRemoteSection) => {
   return FILTERED_SECTION_NAMES.has(toStringValue(section.name)) || FILTERED_NODE_NAMES.has(toStringValue(section.nodeInfo?.name));
+};
+
+const isMostReadSection = (section: HomeFeedRemoteSection) => {
+  return toStringValue(section.cardMode) === MOST_READ_CARD_MODE && toStringValue(section.name) === MOST_READ_SECTION_NAME;
 };
 
 export const normalizeHomeFeedArticle = (item: Record<string, unknown>): HomeFeedArticle => {
@@ -60,6 +66,8 @@ const isFilteredHomeFeedItem = (item: HomeFeedArticle, section: HomeFeedRemoteSe
 
 const flattenDisplayableHomeFeedItems = (sections: HomeFeedRemoteSection[]) => {
   return sections.flatMap((section) => {
+    if (isMostReadSection(section)) return [];
+
     const items = Array.isArray(section.childList) ? section.childList.map((item) => normalizeHomeFeedArticle(item)) : [];
     return items
       .map((item, index) => ({
@@ -72,8 +80,26 @@ const flattenDisplayableHomeFeedItems = (sections: HomeFeedRemoteSection[]) => {
   });
 };
 
+const normalizeMostReadSection = (sections: HomeFeedRemoteSection[]): HomeFeedSection | null => {
+  const remoteSection = sections.find((section) => isMostReadSection(section));
+  if (!remoteSection || !Array.isArray(remoteSection.childList)) return null;
+
+  const items = remoteSection.childList.map((item) => normalizeHomeFeedArticle(item)).filter((item) => item.contId > 0);
+  if (items.length === 0) return null;
+
+  return {
+    title: MOST_READ_SECTION_NAME,
+    layout: "list",
+    cardMode: MOST_READ_CARD_MODE,
+    items,
+    nodeInfo: remoteSection.nodeInfo,
+  };
+};
+
 export const normalizeHomeFeedResponse = (payload: HomeFeedResponse): HomeFeedSection[] => {
-  const flattenedItems = flattenDisplayableHomeFeedItems(extractHomeFeedSections(payload));
+  const remoteSections = extractHomeFeedSections(payload);
+  const mostReadSection = normalizeMostReadSection(remoteSections);
+  const flattenedItems = flattenDisplayableHomeFeedItems(remoteSections);
   const heroEntry = flattenedItems.find(({ section, index }) => toStringValue(section.cardMode) === "1" && index === 0);
   const groupedSections = new Map<string, HomeFeedSection>();
 
@@ -96,6 +122,7 @@ export const normalizeHomeFeedResponse = (payload: HomeFeedResponse): HomeFeedSe
   }
 
   return [
+    ...(mostReadSection ? [mostReadSection] : []),
     ...(heroEntry
       ? [
           {

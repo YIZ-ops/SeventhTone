@@ -81,11 +81,10 @@ export default function ComprehensionQuestionCard({
             <p className={`text-sm font-semibold mb-1 ${correct ? "text-emerald-700 dark:text-emerald-400" : "text-amber-700 dark:text-amber-400"}`}>
               {correct ? "✓ Correct!" : `✗ The answer is "${question.options[question.answer]}"`}
             </p>
-            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{question.explanation}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 leading-[1.6]">{question.explanation}</p>
           </motion.div>
         )}
       </AnimatePresence>
     </div>
   );
 }
-

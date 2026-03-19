@@ -38,7 +38,7 @@ export default function TranslationQuestionCard({
       {sectionBadge}
 
       <div className="bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-slate-700">
-        <p className={`text-base leading-relaxed ${isEnToCn ? "italic text-gray-800 dark:text-gray-100" : "text-gray-800 dark:text-gray-100"}`}>
+        <p className={`text-base leading-[1.6] ${isEnToCn ? "italic text-gray-800 dark:text-gray-100" : "text-gray-800 dark:text-gray-100"}`}>
           {question.sourceText}
         </p>
       </div>
@@ -71,4 +71,3 @@ export default function TranslationQuestionCard({
     </div>
   );
 }
-

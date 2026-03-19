@@ -595,7 +595,7 @@ export default function NewsPractice() {
         </div>
       </div>
       <div className="px-4 py-3">
-        <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{answer}</p>
+        <p className="text-sm text-gray-700 dark:text-gray-300 leading-[1.6] whitespace-pre-wrap">{answer}</p>
       </div>
     </motion.div>
   );
@@ -624,7 +624,7 @@ export default function NewsPractice() {
         {reasons.map(({ label, text }, i) => (
           <div key={i}>
             {label && <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">{label}</p>}
-            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{text}</p>
+            <p className="text-sm text-gray-700 dark:text-gray-300 leading-[1.6]">{text}</p>
           </div>
         ))}
       </div>
@@ -641,7 +641,7 @@ export default function NewsPractice() {
         <p className="text-[11px] font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400">优化建议</p>
       </div>
       <div className="px-4 py-3">
-        <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">{content}</p>
+        <p className="text-sm text-gray-700 dark:text-gray-300 leading-[1.6] whitespace-pre-wrap">{content}</p>
       </div>
     </motion.div>
   );

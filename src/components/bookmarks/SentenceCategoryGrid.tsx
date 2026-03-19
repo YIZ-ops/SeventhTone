@@ -40,7 +40,7 @@ export default function SentenceCategoryGrid({ categories, onOpen, onRename, onD
             </button>
           </div>
           {category.preview && (
-            <p className="text-xs text-gray-400 dark:text-gray-500 font-serif italic line-clamp-3 flex-1 mb-2 leading-relaxed pr-14">
+            <p className="text-xs text-gray-400 dark:text-gray-500 font-serif italic line-clamp-3 flex-1 mb-2 leading-[1.6] pr-14">
               &ldquo;{category.preview}&rdquo;
             </p>
           )}

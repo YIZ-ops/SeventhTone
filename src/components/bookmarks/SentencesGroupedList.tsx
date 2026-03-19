@@ -42,7 +42,7 @@ export default function SentencesGroupedList({ groups, onDelete, onOpenQuote }: 
                         >
                           &ldquo;
                         </span>
-                        <p className="text-sm text-gray-700 dark:text-gray-200 font-serif leading-relaxed italic line-clamp-3">{sentence.text}</p>
+                        <p className="text-sm text-gray-700 dark:text-gray-200 font-serif leading-[1.6] italic line-clamp-3">{sentence.text}</p>
                         {sentence.thought && <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 line-clamp-2">{sentence.thought}</p>}
                         <span className="text-[11px] text-brand dark:text-emerald-400 font-medium mt-2 block truncate">
                           {sentence.newsName || "Unknown news"}
