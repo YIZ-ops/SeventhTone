@@ -222,6 +222,121 @@ export default function Bookmarks() {
   const groupedVocab: GroupedItems<VocabWord>[] = groupByDay(vocab, (v) => v.addedAt);
 
   const isEmpty = tab === "bookmarks" ? bookmarks.length === 0 : tab === "sentences" ? sentences.length === 0 : vocab.length === 0;
+  const showDetailHeader = isDetail && tab !== "vocabulary";
+
+  const renderBookmarksPanel = () => {
+    if (bookmarks.length === 0) {
+      return (
+        <CollectionEmptyState icon={BookmarkIcon} title="No collected news" description="Click the bookmark button on an news to collect it here" />
+      );
+    }
+
+    return (
+      <AnimatePresence mode="wait">
+        {bookmarkView === "grid" ? (
+          <motion.div
+            key="bookmarks-grid"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 6 }}
+            transition={{ duration: 0.18 }}
+          >
+            <BookmarkCategoryGrid
+              categories={namedBookmarkCats}
+              onOpen={(name) => setBookmarkView(name)}
+              onRename={(name) => openRename("bookmarks", name)}
+              onDelete={(name) => setDeleteCategoryState({ tab: "bookmarks", category: name })}
+            />
+          </motion.div>
+        ) : (
+          <motion.div
+            key={`bookmarks-list-${bookmarkView}`}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 6 }}
+            transition={{ duration: 0.18 }}
+          >
+            {bookmarkView !== "default" && filteredBookmarks.length === 0 && (
+              <div className="py-20 text-center text-sm text-gray-400 dark:text-gray-500">This Category is empty.</div>
+            )}
+            <BookmarksGroupedList groups={groupedBookmarks} onDelete={(contId) => setConfirmState({ type: "bookmark", contId })} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    );
+  };
+
+  const renderSentencesPanel = () => {
+    if (sentences.length === 0) {
+      return (
+        <CollectionEmptyState
+          icon={Highlighter}
+          title="No collected sentences"
+          description={'Select text in an news and click "Sentence" to collect it here'}
+        />
+      );
+    }
+
+    return (
+      <AnimatePresence mode="wait">
+        {highlightView === "grid" ? (
+          <motion.div
+            key="sentences-grid"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 6 }}
+            transition={{ duration: 0.18 }}
+          >
+            <SentenceCategoryGrid
+              categories={namedSentenceCats}
+              onOpen={(name) => setSentenceView(name)}
+              onRename={(name) => openRename("sentences", name)}
+              onDelete={(name) => setDeleteCategoryState({ tab: "sentences", category: name })}
+            />
+          </motion.div>
+        ) : (
+          <motion.div
+            key={`sentences-list-${highlightView}`}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 6 }}
+            transition={{ duration: 0.18 }}
+          >
+            {highlightView !== "default" && filteredSentences.length === 0 && (
+              <div className="py-20 text-center text-sm text-gray-400 dark:text-gray-500">This Category is empty.</div>
+            )}
+            <SentencesGroupedList
+              groups={groupedSentences}
+              onDelete={(contId, highlightId) => setConfirmState({ type: "sentence", contId, highlightId })}
+              onOpenQuote={setActiveQuote}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    );
+  };
+
+  const renderVocabularyPanel = () => {
+    if (vocab.length === 0) {
+      return (
+        <CollectionEmptyState
+          icon={BookOpen}
+          title="No collected words"
+          description={
+            <>
+              Tap a word in an news to view its definition, and click <span className="text-brand">+</span> to collect it here
+            </>
+          }
+        />
+      );
+    }
+
+    return (
+      <motion.div key="vocabulary-list" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}>
+        <VocabGroupedList groups={groupedVocab} onDelete={(vocabId) => setConfirmState({ type: "vocab", vocabId })} />
+      </motion.div>
+    );
+  };
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="pb-32">
@@ -254,7 +369,7 @@ export default function Bookmarks() {
 
       <div className="mx-auto max-w-4xl px-4 pt-4">
         {/* Inside-category header (back button + category name) */}
-        {isDetail && tab !== "vocabulary" && (
+        {showDetailHeader && (
           <div className="mb-5 flex items-center justify-between">
             <button
               type="button"
@@ -269,99 +384,9 @@ export default function Bookmarks() {
           </div>
         )}
 
-        {/* Empty states */}
-        {isEmpty && tab === "bookmarks" && (
-          <CollectionEmptyState icon={BookmarkIcon} title="No collected news" description="Click the bookmark button on an news to collect it here" />
-        )}
-        {isEmpty && tab === "sentences" && (
-          <CollectionEmptyState
-            icon={Highlighter}
-            title="No collected sentences"
-            description={'Select text in an news and click "Sentence" to collect it here'}
-          />
-        )}
-        {isEmpty && tab === "vocabulary" && (
-          <CollectionEmptyState
-            icon={BookOpen}
-            title="No collected words"
-            description={
-              <>
-                Tap a word in an news to view its definition, and click <span className="text-brand">+</span> to collect it here
-              </>
-            }
-          />
-        )}
-        {/* ── Category grid view ── */}
-        <AnimatePresence mode="wait">
-          {tab !== "vocabulary" && !isEmpty && currentView === "grid" && (
-            <motion.div
-              key="grid"
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 6 }}
-              transition={{ duration: 0.18 }}
-            >
-              {tab === "bookmarks" && (
-                <BookmarkCategoryGrid
-                  categories={namedBookmarkCats}
-                  onOpen={(name) => setBookmarkView(name)}
-                  onRename={(name) => openRename("bookmarks", name)}
-                  onDelete={(name) => setDeleteCategoryState({ tab: "bookmarks", category: name })}
-                />
-              )}
-
-              {tab === "sentences" && (
-                <SentenceCategoryGrid
-                  categories={namedSentenceCats}
-                  onOpen={(name) => setSentenceView(name)}
-                  onRename={(name) => openRename("sentences", name)}
-                  onDelete={(name) => setDeleteCategoryState({ tab: "sentences", category: name })}
-                />
-              )}
-            </motion.div>
-          )}
-
-          {tab !== "vocabulary" && !isEmpty && currentView !== "grid" && (
-            <motion.div
-              key={`list-${currentView}`}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 6 }}
-              transition={{ duration: 0.18 }}
-            >
-              {isDetail && tab === "bookmarks" && filteredBookmarks.length === 0 && (
-                <div className="text-center py-20 text-gray-400 dark:text-gray-500 text-sm">This Category is empty.</div>
-              )}
-              {isDetail && tab === "sentences" && filteredSentences.length === 0 && (
-                <div className="text-center py-20 text-gray-400 dark:text-gray-500 text-sm">This Category is empty.</div>
-              )}
-
-              {tab === "bookmarks" && (
-                <BookmarksGroupedList groups={groupedBookmarks} onDelete={(contId) => setConfirmState({ type: "bookmark", contId })} />
-              )}
-
-              {tab === "sentences" && (
-                <SentencesGroupedList
-                  groups={groupedSentences}
-                  onDelete={(contId, highlightId) => setConfirmState({ type: "sentence", contId, highlightId })}
-                  onOpenQuote={setActiveQuote}
-                />
-              )}
-            </motion.div>
-          )}
-
-          {tab === "vocabulary" && !isEmpty && (
-            <motion.div
-              key="vocab"
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 6 }}
-              transition={{ duration: 0.18 }}
-            >
-              <VocabGroupedList groups={groupedVocab} onDelete={(vocabId) => setConfirmState({ type: "vocab", vocabId })} />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {tab === "bookmarks" && renderBookmarksPanel()}
+        {tab === "sentences" && renderSentencesPanel()}
+        {tab === "vocabulary" && renderVocabularyPanel()}
         {activeQuote && (
           <QuoteModal
             text={activeQuote.text}
